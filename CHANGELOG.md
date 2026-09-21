@@ -86,6 +86,25 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   documented the syntax that silently drops formatting. Both corrected, and
   the renderer now covers underline and strikethrough.
 
+### Fixed
+
+- A second `TelegramClient` aborted the process. `td_receive` is global to the
+  loaded library, but dispatch loops were keyed on `id(transport)`, so a second
+  `TdJsonTransport` started a second reader thread and libtdjson killed the
+  process with "Receive must not be called simultaneously from two different
+  threads". Loops are now keyed on the transport's receive domain, which is what
+  the module docstring already claimed.
+- Negative chat ids could not be passed as positional arguments. Supergroup and
+  channel ids look like `-1001246902558`, which the parser read as a cluster of
+  short options, so `tdelegram chat info -100...` exited 2 with no output and the
+  ordinary identifier for a group was unusable without the `--` escape.
+- `--session-dir` no longer sniffs the path. It climbed two directory levels when
+  a component was named `profiles` and when the string merely contained
+  "profile", so the same flag meant different things for `/opt/tg/profiles/work`
+  and `/opt/tg/session`, and where a secret was read from depended on how the
+  user had named their directories. The flag now names the profile directory,
+  always.
+
 ### Changed
 - `errors.PermissionError` and `errors.TimeoutError` are now
   `TelegramPermissionError` and `TelegramTimeoutError`; the old names shadowed

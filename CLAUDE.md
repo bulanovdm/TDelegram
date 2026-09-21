@@ -76,7 +76,10 @@ thread an `allow_write: bool = False` keyword down to `call()` rather than decid
 themselves.
 
 **Dispatch loop.** `td_receive` is global, not per-client, so exactly one thread may call
-it. `loop_for(transport)` returns a process-wide `DispatchLoop` keyed on `id(transport)`;
+it. `loop_for(transport)` returns a process-wide `DispatchLoop` keyed on the transport's
+`receive_domain()` — every `TdJsonTransport` over one library shares a loop, because two
+reader threads make libtdjson abort the process. Keying on `id(transport)` looks equivalent
+and is not;
 responses route by `@extra` to a pending `Future`, updates route by `@client_id` to a
 bounded (1000-item) per-client subscriber queue that drops oldest on overflow. Timed-out
 requests move their `@extra` into an `_abandoned` set so a late reply is discarded instead
@@ -136,6 +139,11 @@ out-of-window item finishes its page, then ends the walk), and a cursor-didn't-a
   Wrap each with `@handle_errors`, which turns `TelegramError` into an error envelope and
   a non-zero exit.
 - Global options live on the Typer callback and are stashed in a module-level `Ctx`.
+- Commands taking a positional chat or user reference need
+  `context_settings={"ignore_unknown_options": True}`, or a negative id like
+  `-1001246902558` is parsed as a cluster of short options and the command exits 2.
+- `--session-dir` names the profile directory itself. Do not infer anything from the
+  path's spelling.
 
 ## Testing
 

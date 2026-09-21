@@ -1,8 +1,10 @@
 """Single global reader thread with @extra/@client_id routing.
 
 `td_receive(timeout)` is global, not per-client: exactly one thread may
-call it. This module provides one DispatchLoop per Transport, shared by
-every client in the process.
+call it. Loops are therefore keyed on the transport's *receive domain*,
+not on the transport object -- two TdJsonTransport instances over one
+library share a reader thread, because two would make TDLib abort the
+process. Every client in a domain shares that loop.
 
 Responses are routed by `@extra` through a pending dict, with timed-out
 requests parked in an abandoned set so a late reply is dropped rather
@@ -158,13 +160,14 @@ class DispatchLoop:
             sub.push(event)
 
 
-_loops: dict[int, DispatchLoop] = {}
+_loops: dict[object, DispatchLoop] = {}
 _loops_lock = threading.Lock()
 
 
 def loop_for(transport: Transport) -> DispatchLoop:
     """Return the shared DispatchLoop for a transport, creating it on demand."""
-    key = id(transport)
+    domain = getattr(transport, "receive_domain", None)
+    key: object = domain() if callable(domain) else id(transport)
     with _loops_lock:
         loop = _loops.get(key)
         if loop is None:

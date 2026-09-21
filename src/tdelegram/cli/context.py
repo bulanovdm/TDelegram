@@ -38,16 +38,19 @@ class Ctx:
 
 
 def base_dir(ctx: Ctx) -> Path:
+    """Where profiles and the secrets-file fallback live.
+
+    `--session-dir` names the profile directory itself -- the one holding
+    `tdlib/` and `files/` -- and secrets fall back to a file inside it.
+
+    This used to sniff the path, climbing two levels when any component was
+    literally named "profiles" and when the string happened to contain
+    "profile". The same flag then meant different things for
+    /opt/tg/profiles/work and /opt/tg/session, so where a secret was read
+    from depended on how the user had named their directories.
+    """
     if ctx.session_dir:
-        # --session-dir points at the profile dir or its parent; accept both.
-        p = Path(ctx.session_dir).expanduser()
-        if p.name == "tdlib" or p.name == "files":
-            return p.parent.parent
-        if (p / "tdlib").exists() or "profile" in str(p):
-            # Heuristic: if it looks like a profile dir, use its parent parent.
-            if p.parent.name == "profiles":
-                return p.parent.parent
-        return p
+        return Path(ctx.session_dir).expanduser()
     return default_base_dir()
 
 

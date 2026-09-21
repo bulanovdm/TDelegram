@@ -121,7 +121,12 @@ def chat_list(
             lock.release()
 
 
-@chat_app.command("info")
+@chat_app.command(
+    "info",
+    # Telegram chat ids for groups and channels are negative, and a
+    # bare -100... is otherwise parsed as a cluster of short options.
+    context_settings={"ignore_unknown_options": True},
+)
 @handle_errors
 def chat_info(chat: str = typer.Argument(...)) -> None:
     from tdelegram.api import chats
@@ -135,7 +140,12 @@ def chat_info(chat: str = typer.Argument(...)) -> None:
             lock.release()
 
 
-@chat_app.command("resolve")
+@chat_app.command(
+    "resolve",
+    # Telegram chat ids for groups and channels are negative, and a
+    # bare -100... is otherwise parsed as a cluster of short options.
+    context_settings={"ignore_unknown_options": True},
+)
 @handle_errors
 def chat_resolve(chat: str = typer.Argument(...)) -> None:
     from tdelegram.api import chats
@@ -212,14 +222,24 @@ def _resolve(client: Any, ref: str) -> int:
 
 
 
-@chat_app.command("create")
+@chat_app.command(
+    "create",
+    # Telegram chat ids for groups and channels are negative, and a
+    # bare -100... is otherwise parsed as a cluster of short options.
+    context_settings={"ignore_unknown_options": True},
+)
 @handle_errors
 def chat_create(title: str = typer.Argument(...)) -> None:
     result = run_call(_ctx(), "createNewSupergroupChat", {"title": title})
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 
-@chat_app.command("join")
+@chat_app.command(
+    "join",
+    # Telegram chat ids for groups and channels are negative, and a
+    # bare -100... is otherwise parsed as a cluster of short options.
+    context_settings={"ignore_unknown_options": True},
+)
 @handle_errors
 def chat_join(chat: str = typer.Argument(...)) -> None:
     from tdelegram.api import chats
@@ -240,14 +260,24 @@ def chat_join(chat: str = typer.Argument(...)) -> None:
             lock.release()
 
 
-@chat_app.command("leave")
+@chat_app.command(
+    "leave",
+    # Telegram chat ids for groups and channels are negative, and a
+    # bare -100... is otherwise parsed as a cluster of short options.
+    context_settings={"ignore_unknown_options": True},
+)
 @handle_errors
 def chat_leave(chat: str = typer.Argument(...)) -> None:
     result = run_call(_ctx(), "leaveChat", {"chat_id": chat})
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 
-@chat_app.command("members")
+@chat_app.command(
+    "members",
+    # Telegram chat ids for groups and channels are negative, and a
+    # bare -100... is otherwise parsed as a cluster of short options.
+    context_settings={"ignore_unknown_options": True},
+)
 @handle_errors
 def chat_members(chat: str = typer.Argument(...), limit: int = typer.Option(100)) -> None:
     result = run_call(_ctx(), "getSupergroupMembers", {"supergroup_id": chat, "limit": limit})
@@ -416,7 +446,12 @@ media_app = typer.Typer(no_args_is_help=True)
 app.add_typer(media_app, name="media")
 
 
-@media_app.command("download")
+@media_app.command(
+    "download",
+    # Telegram chat ids for groups and channels are negative, and a
+    # bare -100... is otherwise parsed as a cluster of short options.
+    context_settings={"ignore_unknown_options": True},
+)
 @handle_errors
 def media_download(file_id: int = typer.Argument(...)) -> None:
     from tdelegram.api import media as media_api
@@ -468,7 +503,12 @@ user_app = typer.Typer(no_args_is_help=True)
 app.add_typer(user_app, name="user")
 
 
-@user_app.command("info")
+@user_app.command(
+    "info",
+    # Telegram chat ids for groups and channels are negative, and a
+    # bare -100... is otherwise parsed as a cluster of short options.
+    context_settings={"ignore_unknown_options": True},
+)
 @handle_errors
 def user_info(user_id: int = typer.Argument(...)) -> None:
     emit(run_call(_ctx(), "getUser", {"user_id": user_id}), fmt=_ctx().fmt, out=_ctx().output)
@@ -506,7 +546,12 @@ topic_app = typer.Typer(no_args_is_help=True)
 app.add_typer(topic_app, name="topic")
 
 
-@topic_app.command("list")
+@topic_app.command(
+    "list",
+    # Telegram chat ids for groups and channels are negative, and a
+    # bare -100... is otherwise parsed as a cluster of short options.
+    context_settings={"ignore_unknown_options": True},
+)
 @handle_errors
 def topic_list(chat: str = typer.Argument(...)) -> None:
     from tdelegram.api import topics
@@ -549,7 +594,12 @@ bot_app = typer.Typer(no_args_is_help=True)
 app.add_typer(bot_app, name="bot")
 
 
-@bot_app.command("callback")
+@bot_app.command(
+    "callback",
+    # Telegram chat ids for groups and channels are negative, and a
+    # bare -100... is otherwise parsed as a cluster of short options.
+    context_settings={"ignore_unknown_options": True},
+)
 @handle_errors
 def bot_callback(query_id: int = typer.Argument(...)) -> None:
     result = run_call(_ctx(), "answerCallbackQuery", {"callback_query_id": query_id})
@@ -572,7 +622,12 @@ story_app = typer.Typer(no_args_is_help=True)
 app.add_typer(story_app, name="story")
 
 
-@story_app.command("list")
+@story_app.command(
+    "list",
+    # Telegram chat ids for groups and channels are negative, and a
+    # bare -100... is otherwise parsed as a cluster of short options.
+    context_settings={"ignore_unknown_options": True},
+)
 @handle_errors
 def story_list(chat: str = typer.Argument(...)) -> None:
     emit(
@@ -586,7 +641,12 @@ secret_app = typer.Typer(no_args_is_help=True)
 app.add_typer(secret_app, name="secret")
 
 
-@secret_app.command("create")
+@secret_app.command(
+    "create",
+    # Telegram chat ids for groups and channels are negative, and a
+    # bare -100... is otherwise parsed as a cluster of short options.
+    context_settings={"ignore_unknown_options": True},
+)
 @handle_errors
 def secret_create(user: int = typer.Argument(...)) -> None:
     result = run_call(_ctx(), "createNewSecretChat", {"user_id": user})

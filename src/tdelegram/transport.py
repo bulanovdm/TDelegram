@@ -17,12 +17,27 @@ class Transport(Protocol):
     def receive(self, timeout: float) -> str | None: ...
     def execute(self, request: str) -> str | None: ...
 
+    def receive_domain(self) -> str:
+        """Identifies which transports share one `receive` source.
+
+        Transports returning the same domain must be served by a single
+        reader thread. libtdjson's `td_receive` is global to the loaded
+        library, so every TdJsonTransport over the same library shares one.
+        """
+        ...
+
 
 class TdJsonTransport:
     """Real transport over libtdjson via the modern C API."""
 
     def __init__(self, library_path: str) -> None:
+        self._library_path = library_path
         self._lib = TdJsonLib(library_path)
+
+    def receive_domain(self) -> str:
+        # td_receive is global to the library, not to this object, so every
+        # instance over the same library must share one reader thread.
+        return f"tdjson:{self._library_path}"
 
     def create_client_id(self) -> int:
         return self._lib.create_client_id()
@@ -57,6 +72,10 @@ class FakeTransport:
         self._next_client_id = 1
         self._lock = threading.Lock()
         self.default_client_id = 1
+
+    def receive_domain(self) -> str:
+        # Each fake owns its queues, so each gets its own reader thread.
+        return f"fake:{id(self)}"
 
     def create_client_id(self) -> int:
         with self._lock:

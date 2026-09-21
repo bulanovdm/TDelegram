@@ -372,3 +372,163 @@ def run_call_ok(ctx: Any) -> bool:
     from tdelegram.cli.context import run_call
 
     return run_call(ctx, "sendMessage", {"chat_id": 1})["@type"] == "message"
+
+
+# --- read commands that were never exercised ------------------------------
+
+
+def test_chat_info_normalizes(cli: FakeTransport) -> None:
+    cli.add_simple_response(
+        "searchPublicChat", {"@type": "chat", "id": -100, "title": "Group", "is_forum": True}
+    )
+    result = runner.invoke(cli_main.app, ["chat", "info", "somechat"])
+    assert result.exit_code == 0
+    record = _lines(result)[0]
+    assert record["title"] == "Group"
+    assert record["is_forum"] is True
+
+
+def test_chat_resolve_emits_the_raw_chat(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": -100, "title": "Group"})
+    result = runner.invoke(cli_main.app, ["chat", "resolve", "somechat"])
+    assert result.exit_code == 0
+    assert _lines(result)[0]["@type"] == "chat"
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["chat", "resolve", "-1001246902558"],
+        ["chat", "info", "-1001246902558"],
+        ["chat", "members", "-1001246902558"],
+        ["topic", "list", "-1001246902558"],
+    ],
+    ids=lambda a: " ".join(a[:2]),
+)
+def test_negative_chat_ids_are_accepted_positionally(
+    cli: FakeTransport, argv: list[str]
+) -> None:
+    """Group and channel ids are negative, and were parsed as option clusters.
+
+    `tdelegram chat info -1001246902558` exited 2 with no output, so the
+    ordinary identifier for a supergroup could not be passed at all without
+    the `--` escape.
+    """
+    cli.add_simple_response("getChat", {"@type": "chat", "id": -1001246902558, "title": "By id"})
+    cli.add_simple_response("getSupergroupMembers", {"@type": "chatMembers", "total_count": 0})
+    cli.add_simple_response("getForumTopics", {"@type": "forumTopics", "topics": []})
+    result = runner.invoke(cli_main.app, argv)
+    assert result.exit_code == 0, f"{' '.join(argv)} was refused by the parser"
+    assert "searchPublicChat" not in _sent(cli), "a numeric ref must not be a username lookup"
+
+
+def test_usernames_still_resolve(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": -100, "title": "By name"})
+    result = runner.invoke(cli_main.app, ["chat", "resolve", "cyprusithr"])
+    assert result.exit_code == 0
+    assert "searchPublicChat" in _sent(cli)
+
+
+def test_help_survives_the_permissive_parser(cli: FakeTransport) -> None:
+    result = runner.invoke(cli_main.app, ["chat", "info", "--help"])
+    assert result.exit_code == 0
+    assert "Usage" in result.stdout
+
+
+def test_chat_search_emits_messages(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response(
+        "searchChatMessages",
+        {"@type": "messages", "messages": [{"@type": "message", "id": 1, "chat_id": 5}]},
+    )
+    result = runner.invoke(
+        cli_main.app, ["chat", "search", "--chat", "somechat", "--query", "hi"]
+    )
+    assert result.exit_code == 0
+    assert _lines(result)[0]["id"] == 1
+
+
+def test_chat_members_lists(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getSupergroupMembers", {"@type": "chatMembers", "total_count": 2})
+    result = runner.invoke(cli_main.app, ["chat", "members", "somechat"])
+    assert result.exit_code == 0
+    assert _lines(result)[0]["total_count"] == 2
+
+
+def test_msg_get_fetches_one(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getMessage", {"@type": "message", "id": 42, "chat_id": 5})
+    result = runner.invoke(cli_main.app, ["msg", "get", "--chat", "somechat", "--id", "42"])
+    assert result.exit_code == 0
+    assert _lines(result)[0]["id"] == 42
+
+
+def test_msg_search_streams_global_results(cli: FakeTransport) -> None:
+    cli.add_response(
+        lambda r: r.get("@type") == "searchMessages",
+        lambda r: {
+            "@type": "messages",
+            "messages": [] if r.get("from_message_id") else [
+                {"@type": "message", "id": 7, "chat_id": 5,
+                 "content": {"@type": "messageText", "text": {"text": "found"}}}
+            ],
+            "next_from_message_id": 0,
+        },
+    )
+    result = runner.invoke(cli_main.app, ["msg", "search", "--query", "found"])
+    assert result.exit_code == 0
+    assert _lines(result)[0]["text"] == "found"
+
+
+def test_topic_list_streams(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response(
+        "getForumTopics",
+        {"@type": "forumTopics", "topics": [{"@type": "forumTopic", "info": {"name": "General"}}]},
+    )
+    result = runner.invoke(cli_main.app, ["topic", "list", "somechat"])
+    assert result.exit_code == 0
+
+
+def test_account_sessions(cli: FakeTransport) -> None:
+    cli.add_simple_response("getActiveSessions", {"@type": "sessions", "sessions": []})
+    result = runner.invoke(cli_main.app, ["account", "sessions"])
+    assert result.exit_code == 0
+    assert _lines(result)[0]["@type"] == "sessions"
+
+
+def test_auth_logout_is_destructive(cli: FakeTransport) -> None:
+    result = runner.invoke(cli_main.app, ["auth", "logout"])
+    assert result.exit_code == 2
+    assert "logOut" not in _sent(cli)
+
+
+def test_media_download_is_permitted_as_a_read(cli: FakeTransport) -> None:
+    """downloadFile writes to local disk only, so it is deliberately a read."""
+    cli.add_simple_response(
+        "downloadFile",
+        {"@type": "file", "id": 3, "local": {"path": "/tmp/f", "is_downloading_completed": True}},
+    )
+    result = runner.invoke(cli_main.app, ["media", "download", "3"])
+    assert result.exit_code == 0
+    assert "downloadFile" in _sent(cli)
+
+
+# --- --session-dir semantics ----------------------------------------------
+
+
+def test_session_dir_is_the_profile_directory(tmp_path: Any) -> None:
+    """No path sniffing: the flag names the profile dir, whatever it is called."""
+    from tdelegram.cli.context import Ctx, base_dir
+
+    for name in ("profiles-backup/data", "profiles/work", "session"):
+        target = tmp_path / name
+        assert base_dir(Ctx(session_dir=str(target))) == target
+
+
+def test_base_dir_defaults_to_the_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+    from tdelegram.cli.context import Ctx, base_dir
+
+    monkeypatch.setenv("TDELEGRAM_HOME", str(tmp_path / "home"))
+    assert base_dir(Ctx()) == tmp_path / "home"

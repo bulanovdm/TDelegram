@@ -69,7 +69,7 @@ ignore_errors = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=tdelegram --cov-report=term-missing --cov-fail-under=84"
+addopts = "--cov=tdelegram --cov-report=term-missing --cov-fail-under=87"
 
 [tool.coverage.run]
 source = ["tdelegram"]

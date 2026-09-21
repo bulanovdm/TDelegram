@@ -83,3 +83,54 @@ def test_update_dispatch_by_client_id() -> None:
     finally:
         a.close()
         b.close()
+
+
+def test_one_reader_thread_per_receive_domain() -> None:
+    """Two real transports must share a loop, or TDLib aborts the process.
+
+    `td_receive` is global to the loaded library. Loops were keyed on
+    `id(transport)`, so a second TelegramClient started a second reader
+    thread and libtdjson killed the process with "Receive must not be
+    called simultaneously from two different threads".
+    """
+    from tdelegram.loop import loop_for, reset_loops
+    from tdelegram.transport import FakeTransport
+
+    class LibraryBacked(FakeTransport):
+        """Stands in for TdJsonTransport: a shared, global receive source."""
+
+        def receive_domain(self) -> str:
+            return "tdjson:/usr/lib/libtdjson.so"
+
+    reset_loops()
+    try:
+        assert loop_for(LibraryBacked()) is loop_for(LibraryBacked()), (
+            "two transports over one library must share a reader thread"
+        )
+        # Fakes own their queues, so they stay independent.
+        assert loop_for(FakeTransport()) is not loop_for(FakeTransport())
+    finally:
+        reset_loops()
+
+
+def test_a_shared_loop_serves_several_clients() -> None:
+    """Sharing a loop must not merge the clients' update streams."""
+    from tdelegram.client import TelegramClient
+    from tdelegram.loop import loop_for, reset_loops
+    from tdelegram.transport import FakeTransport
+
+    class LibraryBacked(FakeTransport):
+        def receive_domain(self) -> str:
+            return "tdjson:shared"
+
+    reset_loops()
+    transport = LibraryBacked()
+    try:
+        first, second = TelegramClient(transport), TelegramClient(transport)
+        assert first.client_id != second.client_id
+        assert loop_for(transport) is loop_for(transport)
+        transport.add_update({"@type": "updateNewMessage"}, client_id=second.client_id)
+        assert second.next_update(timeout=2.0) is not None
+        assert first.next_update(timeout=0.2) is None, "updates leaked across clients"
+    finally:
+        reset_loops()
