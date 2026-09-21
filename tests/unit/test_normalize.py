@@ -169,3 +169,62 @@ def test_flood_never_retries_writes() -> None:
             client.call("sendMessage", {"chat_id": 1}, allow_write=True)
     finally:
         client.close()
+
+
+def test_rich_message_text_is_not_lost() -> None:
+    """Regression: instant-view posts flattened to an empty string.
+
+    `messageRichMessage` keeps its words in nested page blocks, so a sweep
+    filtering on `text` dropped whole posts with no sign anything was skipped.
+    """
+    from tdelegram import normalize
+
+    message = {
+        "content": {
+            "@type": "messageRichMessage",
+            "message": {
+                "@type": "richMessage",
+                "blocks": [
+                    {"@type": "pageBlockTitle", "text": {"@type": "richTextPlain",
+                                                         "text": "Senior Go Engineer"}},
+                    {"@type": "pageBlockParagraph", "text": {
+                        "@type": "richTexts",
+                        "texts": [
+                            {"@type": "richTextPlain", "text": "Remote,"},
+                            {"@type": "richTextBold", "text": {"@type": "richTextPlain",
+                                                               "text": "$5000"}},
+                        ],
+                    }},
+                ],
+            },
+        }
+    }
+    text = normalize.message_text(message)
+    assert "Senior Go Engineer" in text
+    assert "$5000" in text, "nested rich text must be reached, not just the top level"
+
+
+def test_text_bearing_contents_are_not_lost() -> None:
+    """Gift, premium-code and poll-option contents carry their own `text`."""
+    from tdelegram import normalize
+
+    for content_type in ("messageGift", "messageGiftedPremium", "messagePollOptionAdded"):
+        message = {
+            "content": {
+                "@type": content_type,
+                "text": {"@type": "formattedText", "text": "happy birthday", "entities": []},
+            }
+        }
+        assert normalize.message_text(message) == "happy birthday", content_type
+
+
+def test_captions_still_win_when_there_is_no_text() -> None:
+    from tdelegram import normalize
+
+    message = {
+        "content": {
+            "@type": "messageDocument",
+            "caption": {"@type": "formattedText", "text": "see attached", "entities": []},
+        }
+    }
+    assert normalize.message_text(message) == "see attached"

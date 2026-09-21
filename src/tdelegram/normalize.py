@@ -49,25 +49,60 @@ def links_of(value: dict[str, Any] | None) -> list[str]:
     return links
 
 
+# Keys that carry text inside TDLib's nested rich-text/page-block structures.
+_RICH_KEYS = ("text", "texts", "blocks", "caption", "page_blocks")
+
+
+def _harvest_text(node: Any, depth: int = 0) -> list[str]:
+    """Collect plain strings out of a nested RichText / PageBlock tree."""
+    if depth > 16:
+        return []
+    if isinstance(node, str):
+        return [node] if node.strip() else []
+    if isinstance(node, list):
+        found: list[str] = []
+        for item in node:
+            found.extend(_harvest_text(item, depth + 1))
+        return found
+    if isinstance(node, dict):
+        found = []
+        for key in _RICH_KEYS:
+            if key in node:
+                found.extend(_harvest_text(node[key], depth + 1))
+        return found
+    return []
+
+
+def rich_message_text(content: dict[str, Any]) -> str:
+    """Flatten a messageRichMessage (instant-view style post) to plain text."""
+    message = content.get("message")
+    if not isinstance(message, dict):
+        return ""
+    return " ".join(_harvest_text(message.get("blocks"))).strip()
+
+
 def message_text(message: dict[str, Any]) -> str:
+    """Best-effort plain text for any message content.
+
+    Reading only `messageText` and captions drops whole posts silently: a
+    `messageRichMessage` keeps its words in nested page blocks, and gift,
+    premium-code and poll-option contents carry their own `text`. A sweep
+    filtering on text then misses them with no sign anything was skipped.
+    """
     content = message.get("content") or {}
-    if content.get("@type") == "messageText":
-        return formatted_text(content.get("text"))
-    return formatted_text(content.get("caption"))
+    if content.get("@type") == "messageRichMessage":
+        return rich_message_text(content)
+    return formatted_text(content.get("text")) or formatted_text(content.get("caption"))
 
 
 def message_entities(message: dict[str, Any]) -> list[dict[str, Any]]:
     content = message.get("content") or {}
-    if content.get("@type") == "messageText":
-        return entities_of(content.get("text"))
-    return entities_of(content.get("caption"))
+    return entities_of(content.get("text")) or entities_of(content.get("caption"))
 
 
 def message_links(message: dict[str, Any]) -> list[str]:
     content = message.get("content") or {}
-    if content.get("@type") == "messageText":
-        return links_of(content.get("text"))
-    return links_of(content.get("caption"))
+    return links_of(content.get("text")) or links_of(content.get("caption"))
 
 
 def topic_id_of(message: dict[str, Any]) -> int | None:

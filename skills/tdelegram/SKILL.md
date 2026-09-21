@@ -87,6 +87,12 @@ starting, rather than discovering it one confirmation at a time.
 
 Reads need none of this ceremony. Read freely.
 
+One practical limit: TDLib allows a single client per profile, so `tdelegram`
+takes an exclusive lock on the session directory. Run commands **one at a time**.
+Backgrounding several, or leaving an `updates follow` streaming while you run
+something else, produces `Another tdelegram process holds ... .lock` rather than
+speed.
+
 The `destructive` verdict adds a typed confirmation on an interactive terminal.
 You will not have a TTY, so destructive commands simply cannot be completed by
 you alone — that is deliberate. Hand those to the user with the exact command to
@@ -118,6 +124,9 @@ Exit codes carry meaning, so check them instead of grepping output:
 `--format` takes `jsonl` (default, one object per line), `json` (a single array,
 convenient for `jq` over a whole result) or `table` (human reading only — never
 parse it). `--output FILE` appends there instead of stdout.
+
+Global flags go **before** the subcommand — `tdelegram --output f.jsonl chat
+history --chat x`, not the other way round, which fails with "No such option".
 
 ## Naming a chat
 

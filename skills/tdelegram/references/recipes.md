@@ -90,13 +90,17 @@ tdelegram msg search --query "invoice" --limit 20
 
 ## Page a large history
 
+Global flags go **before** the subcommand. `tdelegram chat history ... --output
+f.jsonl` fails with "No such option"; `tdelegram --output f.jsonl chat history
+...` works. Shell redirection is equally fine and harder to get wrong.
+
 Paging streams, so memory stays flat and you can stop early. Prefer a bounded
 window over `--limit 100000`.
 
 ```bash
 # A day at a time keeps each call small and the output reviewable.
-tdelegram chat history --chat cyprusithr --since 2d --until 1d --limit 500 \
-  --output /tmp/window.jsonl 2>/dev/null
+tdelegram --output /tmp/window.jsonl \
+  chat history --chat cyprusithr --since 2d --until 1d --limit 500 2>/dev/null
 wc -l /tmp/window.jsonl
 ```
 
@@ -132,8 +136,8 @@ Keep the raw JSONL and derive from it, rather than re-running commands to get a
 different shape.
 
 ```bash
-tdelegram chat history --chat cyprusithr --since 7d --limit 200 \
-  --output /tmp/week.jsonl 2>/dev/null
+tdelegram --output /tmp/week.jsonl \
+  chat history --chat cyprusithr --since 7d --limit 200 2>/dev/null
 
 # Busiest senders
 jq -r '.sender_id.user_id // "unknown"' /tmp/week.jsonl | sort | uniq -c | sort -rn | head

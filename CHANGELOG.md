@@ -115,6 +115,13 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   has used `--chat me` since the first commit; it was looked up as a username
   and came back `USERNAME_INVALID`.
 
+- `messageRichMessage` normalized to an empty `text`, so instant-view style
+  posts vanished from any sweep that filters on text — two of thirty-eight
+  messages in a single real window, with nothing to indicate they were skipped.
+  Rich page blocks are now flattened, and contents that carry their own `text`
+  (gifts, premium codes, poll option changes) are read instead of falling
+  straight through to the caption.
+
 ### Changed
 - `errors.PermissionError` and `errors.TimeoutError` are now
   `TelegramPermissionError` and `TelegramTimeoutError`; the old names shadowed
