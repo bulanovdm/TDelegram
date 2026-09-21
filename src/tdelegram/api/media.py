@@ -21,8 +21,10 @@ def download_message_file(
 ) -> dict[str, Any]:
     from tdelegram.api.messages import get
 
-    message = get(client, chat_ref, message_id)
-    file_id = _message_file_id(message)
+    # _message_file_id walks the raw TDLib content, which the normalized
+    # record does not carry.
+    record = get(client, chat_ref, message_id, include_raw=True)
+    file_id = _message_file_id(record.get("raw") or {})
     if file_id is None:
         raise ValueError(f"Message {message_id} has no downloadable file.")
     return _download(client, file_id, timeout=timeout)

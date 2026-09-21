@@ -114,7 +114,7 @@ def test_forum_offset_triple_stops() -> None:
         return {
             "@type": "forumTopics",
             "topics": [
-                {"info": {"topic_id": 7}, "last_message_date": 1, "last_message": {"id": 9}}
+                {"info": {"forum_topic_id": 7}, "last_message_date": 1, "last_message": {"id": 9}}
             ],
         }
 

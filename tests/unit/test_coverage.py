@@ -533,7 +533,7 @@ def test_api_messages() -> None:
         addMessageReaction={"@type": "ok"},
     )
     try:
-        assert messages.get(client, "1", 5)["id"] == 5
+        assert messages.get(client, "1", 5)["message_id"] == 5
         assert len(messages.history(client, "1", maximum=5)) == 1
         assert messages.send(client, "1", "hi", allow_write=True)["id"] == 6
         assert (
@@ -940,3 +940,34 @@ def test_safety_helpers() -> None:
     assert safety.is_destructive("deleteMessages") is True
     assert safety.preview_request("getMe", {})["verdict"] == "read"
     assert safety.reason("getMe") != ""
+
+
+def test_iter_topics_emits_each_topic_once() -> None:
+    """Regression: dedup read info.topic_id, but the field is forum_topic_id.
+
+    The set never filled, so every page was yielded again and a caller
+    counting topics got double.
+    """
+    from tdelegram.api import topics
+    from tdelegram.client import TelegramClient
+    from tdelegram.loop import reset_loops
+    from tdelegram.transport import FakeTransport
+
+    transport = FakeTransport()
+    transport.add_simple_response("searchPublicChat", {"@type": "chat", "id": -100})
+    page = {
+        "@type": "forumTopics",
+        "topics": [
+            {"info": {"forum_topic_id": 1, "name": "General"}, "last_message_date": 10},
+            {"info": {"forum_topic_id": 2, "name": "Vacancies"}, "last_message_date": 20},
+        ],
+    }
+    # TDLib keeps returning the same page when the offset does not advance.
+    transport.add_simple_response("getForumTopics", page)
+    client = TelegramClient(transport)
+    try:
+        got = [t["info"]["forum_topic_id"] for t in topics.iter_topics(client, "somechat")]
+    finally:
+        client.close()
+        reset_loops()
+    assert got == [1, 2], f"each topic must appear once, got {got}"

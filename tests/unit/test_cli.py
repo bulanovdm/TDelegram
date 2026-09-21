@@ -461,7 +461,7 @@ def test_msg_get_fetches_one(cli: FakeTransport) -> None:
     cli.add_simple_response("getMessage", {"@type": "message", "id": 42, "chat_id": 5})
     result = runner.invoke(cli_main.app, ["msg", "get", "--chat", "somechat", "--id", "42"])
     assert result.exit_code == 0
-    assert _lines(result)[0]["id"] == 42
+    assert _lines(result)[0]["message_id"] == 42
 
 
 def test_msg_search_streams_global_results(cli: FakeTransport) -> None:
@@ -586,3 +586,27 @@ def test_self_reference_resolves_to_saved_messages(cli: FakeTransport, ref: str)
     assert result.exit_code == 0
     assert _lines(result)[0]["chat_id"] == 777
     assert "searchPublicChat" not in _sent(cli), f"{ref!r} must not be looked up as a username"
+
+
+def test_msg_get_returns_the_same_shape_as_chat_history(cli: FakeTransport) -> None:
+    """Regression: `msg get` returned the raw TDLib object, so `.text` was null.
+
+    The same message had two shapes depending on how it was fetched, which made
+    a documented recipe (`msg get ... | jq -r '.text'`) silently yield null.
+    """
+    raw = {
+        "@type": "message",
+        "id": 42,
+        "chat_id": 5,
+        "date": 1700000000,
+        "content": {"@type": "messageText",
+                    "text": {"@type": "formattedText", "text": "hello there", "entities": []}},
+    }
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getMessage", raw)
+    result = runner.invoke(cli_main.app, ["msg", "get", "--chat", "somechat", "--id", "42"])
+    assert result.exit_code == 0
+    record = _lines(result)[0]
+    assert record["text"] == "hello there", "text must be flat, as chat history returns it"
+    assert record["message_id"] == 42
+    assert "date" in record and isinstance(record["date"], str), "date normalized to ISO-8601"

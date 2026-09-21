@@ -13,9 +13,19 @@ from tdelegram.entities import parse_entities
 from tdelegram.paging import paginate
 
 
-def get(client: TelegramClient, chat_ref: str, message_id: int) -> dict[str, Any]:
+def get(
+    client: TelegramClient, chat_ref: str, message_id: int, *, include_raw: bool = False
+) -> dict[str, Any]:
+    """Fetch one message as a normalized record.
+
+    `chat history` yields flat records, so returning the raw TDLib object here
+    meant the same message had two shapes depending on how it was fetched and
+    `.text` was null on one of them. `include_raw=True` keeps the original
+    under `raw`, matching `chats.info`.
+    """
     chat_id = resolve_id(client, chat_ref)
-    return client.call("getMessage", {"chat_id": chat_id, "message_id": message_id})
+    message = client.call("getMessage", {"chat_id": chat_id, "message_id": message_id})
+    return normalize.message_record(message, include_raw=include_raw)
 
 
 def iter_history(

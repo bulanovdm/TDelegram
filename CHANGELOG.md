@@ -122,6 +122,16 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   (gifts, premium codes, poll option changes) are read instead of falling
   straight through to the caption.
 
+- `iter_topics` deduped on `info.topic_id`, but the field is
+  `forum_topic_id`, so the set never filled and every page was yielded twice —
+  a caller counting a four-topic forum got eight. The fallback key was
+  `id(topic)`, a fresh address per page, so a missing id meant no dedup at all
+  rather than a weaker one; it is now stable.
+- `msg get` returned the raw TDLib message while `chat history` returned
+  normalized records, so the same message had two shapes and `.text` was null
+  on one of them. It now returns a record, with `include_raw=True` for the
+  original.
+
 ### Changed
 - `errors.PermissionError` and `errors.TimeoutError` are now
   `TelegramPermissionError` and `TelegramTimeoutError`; the old names shadowed
