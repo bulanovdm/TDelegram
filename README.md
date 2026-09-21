@@ -3,6 +3,7 @@
 [![ci](https://github.com/bulanovdm/TDelegram/actions/workflows/ci.yml/badge.svg)](https://github.com/bulanovdm/TDelegram/actions/workflows/ci.yml)
 [![python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://github.com/bulanovdm/TDelegram/blob/main/pyproject.toml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-green)](https://github.com/bulanovdm/TDelegram/blob/main/LICENSE)
+[![image](https://img.shields.io/badge/ghcr.io-tdelegram-blue)](https://github.com/bulanovdm/TDelegram/pkgs/container/tdelegram)
 
 TDLib exposes **1022 functions through a single JSON interface**. TDelegram covers
 all of them on day one through one generic transport, with ergonomics,
@@ -14,6 +15,8 @@ library plus a `tdelegram` CLI.
 TDLib is a C++ dependency with no distribution package, so installing it
 natively means a ~20 minute compile on Linux. Docker is the short way in — the
 image has TDLib already built.
+
+Published for `linux/amd64` and `linux/arm64`:
 
 ```bash
 docker pull ghcr.io/bulanovdm/tdelegram:latest

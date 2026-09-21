@@ -146,6 +146,10 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   either, and pins TDLib to the registry's commit so the gate's verdicts match
   the library actually loaded. 235MB to 201MB.
 
+- A multi-architecture image is published to `ghcr.io/bulanovdm/tdelegram` for
+  `linux/amd64` and `linux/arm64`, built on native runners because TDLib under
+  QEMU takes hours.
+
 ### Changed
 - `errors.PermissionError` and `errors.TimeoutError` are now
   `TelegramPermissionError` and `TelegramTimeoutError`; the old names shadowed

@@ -35,7 +35,9 @@ do step 1, then hand over with the exact commands. Do not loop retrying a login
 docker pull ghcr.io/bulanovdm/tdelegram:latest
 ```
 
-If that image is not published yet, build it — same result, ~20 minutes once:
+Published for `linux/amd64` and `linux/arm64`, so Apple Silicon and x86 both
+get a native image rather than an emulated one. Building it yourself gives the
+same result and takes about 20 minutes:
 
 ```bash
 git clone https://github.com/bulanovdm/TDelegram && cd TDelegram
