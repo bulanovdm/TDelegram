@@ -12,7 +12,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE: ${{ github.repository }}
 
 jobs:
   # Built on native runners per architecture. TDLib under QEMU emulation takes
@@ -32,6 +31,12 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+      - name: Resolve the image name
+        # A ghcr.io repository must be lowercase, but github.repository keeps
+        # the repo's own capitalisation (bulanovdm/TDelegram), which buildx
+        # rejects as an invalid reference.
+        run: echo "IMAGE=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
@@ -69,6 +74,12 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Resolve the image name
+        # A ghcr.io repository must be lowercase, but github.repository keeps
+        # the repo's own capitalisation (bulanovdm/TDelegram), which buildx
+        # rejects as an invalid reference.
+        run: echo "IMAGE=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - uses: actions/download-artifact@v4
         with:
           path: /tmp/digests
