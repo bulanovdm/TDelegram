@@ -114,6 +114,65 @@ OVERRIDES: dict[str, tuple[str, str]] = {
     "checkPasswordRecoveryCode": ("read", "validates a recovery code without using it"),
     "checkAuthenticationPasswordRecoveryCode": ("read", "validates without recovering"),
     "checkPremiumGiftCode": ("read", "reads gift code info; applying it is separate"),
+    # --- Audited writes: a `write` needs --yes, a `destructive` also needs a
+    # typed confirmation on a TTY. These earn the second layer. The test is
+    # irreversible loss, surrendered access, or disruption to someone else.
+    #
+    # Ownership and public identity, gone or claimable by a squatter.
+    "transferChatOwnership": ("destructive", "hands the chat to another account; irreversible"),
+    "setUsername": ("destructive", "frees the old username for anyone to claim"),
+    "setSupergroupUsername": ("destructive", "frees the old public link for anyone to claim"),
+    "disableAllSupergroupUsernames": ("destructive", "releases every public link at once"),
+    # The general member setter can ban, which is what banChatMember does. If
+    # this stayed a write it would be a way around that confirmation, so the
+    # method takes the verdict of the worst thing it can express -- at the cost
+    # of a typed confirmation for an ordinary promotion.
+    "setChatMemberStatus": ("destructive", "can ban or demote; bans disrupt another user"),
+    # Revoking access others are relying on.
+    "disconnectWebsite": ("destructive", "revokes a website login"),
+    "disconnectAllWebsites": ("destructive", "revokes every website login at once"),
+    # Credentials.
+    "setPassword": ("destructive", "changes or removes 2-step verification"),
+    "recoverPassword": ("destructive", "replaces the 2FA password via recovery"),
+    "recoverAuthenticationPassword": ("destructive", "replaces the 2FA password via recovery"),
+    # Settings whose effect is bulk deletion, now or later.
+    "setAccountTtl": ("destructive", "schedules deletion of the whole account"),
+    "setChatMessageAutoDeleteTime": ("destructive", "schedules irreversible message deletion"),
+    "setDefaultMessageAutoDeleteTime": ("destructive", "schedules irreversible message deletion"),
+    # One-way conversions and exposures.
+    "toggleSupergroupIsBroadcastGroup": ("destructive", "upgrade to broadcast group is one-way"),
+    "toggleSupergroupIsAllHistoryAvailable": (
+        "destructive",
+        "exposes past history to new members; cannot be unseen",
+    ),
+    # Bulk loss of user content.
+    "clearAllDraftMessages": ("destructive", "wipes every draft with no undo"),
+    "clearImportedContacts": ("destructive", "drops all imported contacts server-side"),
+    "unpinAllChatMessages": ("destructive", "unpins everything; the previous set is not recorded"),
+    "unpinAllForumTopicMessages": ("destructive", "unpins an entire topic at once"),
+    "unpinAllDirectMessagesChatTopicMessages": ("destructive", "unpins an entire topic at once"),
+    "dropGiftOriginalDetails": ("destructive", "removes provenance from a gift permanently"),
+    # Money and assets that do not come back.
+    "sendPaymentForm": ("destructive", "completes a payment; funds leave"),
+    "sendGift": ("destructive", "spends currency on a gift"),
+    "sendResoldGift": ("destructive", "spends currency on a resold gift"),
+    "placeGiftAuctionBid": ("destructive", "commits currency to a bid"),
+    "increaseGiftAuctionBid": ("destructive", "commits more currency to a bid"),
+    "transferBusinessAccountStars": ("destructive", "moves currency out of the account"),
+    "transferGift": ("destructive", "hands a gift to someone else; irreversible"),
+    # Access you may not be able to regain.
+    "leaveChat": ("destructive", "a private chat cannot be rejoined without a new invite"),
+    # Reviewed and deliberately left as writes, so a heuristic change cannot
+    # quietly promote or demote them without this file changing too.
+    "setChatPermissions": ("write", "restricts members, but is reversible"),
+    "setMessageSenderBlockList": ("write", "blocking is reversible"),
+    "clearRecentStickers": ("write", "clears a local convenience list"),
+    "clearRecentlyFoundChats": ("write", "clears a local convenience list"),
+    "unpinChatMessage": ("write", "unpins one known message; re-pinnable"),
+    "reportChat": ("write", "reporting abuse should not be gated behind friction"),
+    "reportSupergroupSpam": ("write", "reporting abuse should not be gated behind friction"),
+    "discardCall": ("write", "ends a call; nothing is destroyed"),
+    "optimizeStorage": ("write", "deletes local cache only"),
 }
 
 READ_PREFIXES = (

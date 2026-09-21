@@ -125,3 +125,54 @@ def test_read_prefix_requires_a_word_boundary() -> None:
 
     assert classify("cancelPasswordReset")[0] != "read"
     assert classify("canPostStory")[0] == "read", "genuine can* probes stay reads"
+
+
+# Irreversible operations. A `write` only needs --yes; a `destructive` also
+# needs a typed confirmation on a TTY. Demoting any of these to `write` drops
+# a layer of protection from the most final things the API can do.
+MUST_BE_DESTRUCTIVE = [
+    "transferChatOwnership",
+    "transferGift",
+    "transferBusinessAccountStars",
+    "setUsername",
+    "setSupergroupUsername",
+    "disableAllSupergroupUsernames",
+    "setPassword",
+    "recoverPassword",
+    "setAccountTtl",
+    "setChatMessageAutoDeleteTime",
+    "disconnectAllWebsites",
+    "toggleSupergroupIsBroadcastGroup",
+    "toggleSupergroupIsAllHistoryAvailable",
+    "clearAllDraftMessages",
+    "unpinAllChatMessages",
+    "sendPaymentForm",
+    "leaveChat",
+    # Already destructive before the audit; pinned so they stay that way.
+    "deleteAccount",
+    "deleteChatHistory",
+    "banChatMember",
+    "logOut",
+    "terminateAllOtherSessions",
+]
+
+
+def test_irreversible_methods_are_destructive() -> None:
+    registry = _registry()
+    weak = [
+        f"{m}={registry[m]['verdict']}"
+        for m in MUST_BE_DESTRUCTIVE
+        if m in registry and registry[m]["verdict"] != "destructive"
+    ]
+    assert not weak, f"these lost the typed-confirmation layer: {weak}"
+
+
+def test_a_general_setter_cannot_undercut_a_specific_one() -> None:
+    """setChatMemberStatus can ban, so it must be gated like banChatMember.
+
+    The gate is per method, not per payload. If the general form were merely
+    a write, `--yes` alone would ban someone while the dedicated method still
+    demanded a typed confirmation -- a way around the stricter gate.
+    """
+    registry = _registry()
+    assert registry["setChatMemberStatus"]["verdict"] == registry["banChatMember"]["verdict"]

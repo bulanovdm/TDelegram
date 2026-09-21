@@ -51,8 +51,27 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   regardless of the registry. `tdelegram bot inline` reached a third-party bot
   unconfirmed because of it. The hints are gone; only `--yes` grants permission
   and the registry alone decides.
-- Contract tests pin every reviewed verdict and assert that a list of
-  side-effecting methods is never classified `read`.
+- Audited the `write` verdicts too. A `write` needs `--yes`; a `destructive`
+  also needs a typed confirmation on a TTY, so an irreversible method sitting
+  in `write` had lost a layer. 29 methods moved from `write` to `destructive`:
+  ownership and public-identity surrender (`transferChatOwnership`,
+  `setUsername`, `setSupergroupUsername`, `disableAllSupergroupUsernames`),
+  access revocation (`disconnectWebsite`, `disconnectAllWebsites`), credentials
+  (`setPassword`, `recoverPassword`), settings whose effect is bulk deletion
+  (`setAccountTtl`, `setChatMessageAutoDeleteTime`), one-way conversions
+  (`toggleSupergroupIsBroadcastGroup`, `toggleSupergroupIsAllHistoryAvailable`),
+  bulk content loss (`clearAllDraftMessages`, `unpinAll*`), irreversible money
+  and asset movement (`sendPaymentForm`, `sendGift`, `transferGift`,
+  `placeGiftAuctionBid`), and `leaveChat`. Nothing was demoted.
+- Closed a gate bypass: `setChatMemberStatus` can ban, which is exactly what
+  `banChatMember` does, but it was only a `write`. `--yes` alone would ban
+  someone while the dedicated method still demanded a typed confirmation. The
+  gate is per method, not per payload, so the general setter now takes the
+  verdict of the worst thing it can express. The cost is a typed confirmation
+  for an ordinary promotion, which is the right side to err on.
+- Contract tests pin every reviewed verdict, assert that side-effecting methods
+  are never `read`, that irreversible ones are never merely `write`, and that a
+  general setter never undercuts the specific method it can stand in for.
 
 ### Fixed (found by the new tests)
 

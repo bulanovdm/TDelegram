@@ -106,9 +106,19 @@ def join_by_invite(
     )
 
 
-def leave(client: TelegramClient, chat_ref: str, *, allow_write: bool = False) -> dict[str, Any]:
+def leave(
+    client: TelegramClient,
+    chat_ref: str,
+    *,
+    allow_write: bool = False,
+    allow_destructive: bool = False,
+) -> dict[str, Any]:
+    """Leave a chat. A private chat cannot be rejoined without a new invite."""
     return client.call(
-        "leaveChat", {"chat_id": resolve_id(client, chat_ref)}, allow_write=allow_write
+        "leaveChat",
+        {"chat_id": resolve_id(client, chat_ref)},
+        allow_write=allow_write,
+        allow_destructive=allow_destructive,
     )
 
 

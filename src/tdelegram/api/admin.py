@@ -15,7 +15,9 @@ def set_member_status(
     status: dict[str, Any],
     *,
     allow_write: bool = False,
+    allow_destructive: bool = False,
 ) -> dict[str, Any]:
+    """Set a member's status. Can ban, so it is gated like banChatMember."""
     return client.call(
         "setChatMemberStatus",
         {
@@ -24,6 +26,7 @@ def set_member_status(
             "status": status,
         },
         allow_write=allow_write,
+        allow_destructive=allow_destructive,
     )
 
 
@@ -34,6 +37,7 @@ def promote(
     *,
     title: str = "",
     allow_write: bool = False,
+    allow_destructive: bool = False,
 ) -> dict[str, Any]:
     return set_member_status(
         client,
@@ -41,14 +45,25 @@ def promote(
         user_id,
         {"@type": "chatMemberStatusAdministrator", "custom_title": title, "can_be_edited": True},
         allow_write=allow_write,
+        allow_destructive=allow_destructive,
     )
 
 
 def demote(
-    client: TelegramClient, chat_ref: str, user_id: int, *, allow_write: bool = False
+    client: TelegramClient,
+    chat_ref: str,
+    user_id: int,
+    *,
+    allow_write: bool = False,
+    allow_destructive: bool = False,
 ) -> dict[str, Any]:
     return set_member_status(
-        client, chat_ref, user_id, {"@type": "chatMemberStatusMember"}, allow_write=allow_write
+        client,
+        chat_ref,
+        user_id,
+        {"@type": "chatMemberStatusMember"},
+        allow_write=allow_write,
+        allow_destructive=allow_destructive,
     )
 
 
@@ -90,6 +105,7 @@ def restrict(
     *,
     permissions: dict[str, Any] | None = None,
     allow_write: bool = False,
+    allow_destructive: bool = False,
 ) -> dict[str, Any]:
     return set_member_status(
         client,
@@ -102,13 +118,21 @@ def restrict(
             "is_member": True,
         },
         allow_write=allow_write,
+        allow_destructive=allow_destructive,
     )
 
 
 def unrestrict(
-    client: TelegramClient, chat_ref: str, user_id: int, *, allow_write: bool = False
+    client: TelegramClient,
+    chat_ref: str,
+    user_id: int,
+    *,
+    allow_write: bool = False,
+    allow_destructive: bool = False,
 ) -> dict[str, Any]:
-    return demote(client, chat_ref, user_id, allow_write=allow_write)
+    return demote(
+        client, chat_ref, user_id, allow_write=allow_write, allow_destructive=allow_destructive
+    )
 
 
 def slowmode(

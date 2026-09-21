@@ -27,7 +27,16 @@ def set_draft(
     )
 
 
-def clear_drafts(client: TelegramClient, *, allow_write: bool = False) -> dict[str, Any]:
+def clear_drafts(
+    client: TelegramClient,
+    *,
+    allow_write: bool = False,
+    allow_destructive: bool = False,
+) -> dict[str, Any]:
+    """Wipe every draft. There is no undo."""
     return client.call(
-        "clearAllDraftMessages", {"exclude_secret_chats": False}, allow_write=allow_write
+        "clearAllDraftMessages",
+        {"exclude_secret_chats": False},
+        allow_write=allow_write,
+        allow_destructive=allow_destructive,
     )

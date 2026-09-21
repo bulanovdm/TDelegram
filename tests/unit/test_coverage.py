@@ -492,7 +492,7 @@ def test_api_chats() -> None:
         assert chats.create_basic_group(client, [1], "t", allow_write=True)["id"] == 8
         assert chats.join(client, "123", allow_write=True)["@type"] == "ok"
         assert chats.join_by_invite(client, "https://t.me/x", allow_write=True)["id"] == 1
-        assert chats.leave(client, "123", allow_write=True)["@type"] == "ok"
+        assert chats.leave(client, "123", allow_write=True, allow_destructive=True)["@type"] == "ok"
         assert chats.archive(client, "123", allow_write=True)["@type"] == "ok"
         assert chats.set_pinned(client, "123", allow_write=True)["@type"] == "ok"
         assert chats.mark_read(client, "123", allow_write=True)["chat_id"] == 1
@@ -673,12 +673,13 @@ def test_api_admin_account_topics_reactions() -> None:
         createChatFolder={"@type": "chatFolderInfo"},
         deleteChatFolder={"@type": "ok"},
     )
+    ok = {"allow_write": True, "allow_destructive": True}
     try:
-        assert admin.promote(client, "1", 2, allow_write=True)["@type"] == "ok"
-        assert admin.demote(client, "1", 2, allow_write=True)["@type"] == "ok"
-        assert admin.ban(client, "1", 2, allow_write=True, allow_destructive=True)["@type"] == "ok"
-        assert admin.restrict(client, "1", 2, allow_write=True)["@type"] == "ok"
-        assert admin.unrestrict(client, "1", 2, allow_write=True)["@type"] == "ok"
+        assert admin.promote(client, "1", 2, **ok)["@type"] == "ok"
+        assert admin.demote(client, "1", 2, **ok)["@type"] == "ok"
+        assert admin.ban(client, "1", 2, **ok)["@type"] == "ok"
+        assert admin.restrict(client, "1", 2, **ok)["@type"] == "ok"
+        assert admin.unrestrict(client, "1", 2, **ok)["@type"] == "ok"
         assert admin.slowmode(client, "1", 10, allow_write=True)["@type"] == "ok"
         assert admin.create_invite(client, "1", allow_write=True)["@type"] == "chatInviteLink"
         assert (
@@ -717,7 +718,8 @@ def test_api_admin_account_topics_reactions() -> None:
         assert polls.stop_poll(client, "1", 5, allow_write=True)["@type"] == "ok"
         assert polls.poll_voters(client, "1", 5, 0)["@type"] == "messageSenders"
         assert drafts.set_draft(client, "1", "hi", allow_write=True)["@type"] == "ok"
-        assert drafts.clear_drafts(client, allow_write=True)["@type"] == "ok"
+        cleared = drafts.clear_drafts(client, allow_write=True, allow_destructive=True)
+        assert cleared["@type"] == "ok"
         assert folders.list_folders(client)["@type"] in ("chatFolders", "chatFolder", "ok")
         created = folders.create_folder(client, "f", [1], allow_write=True)
         assert created["@type"] == "chatFolderInfo"

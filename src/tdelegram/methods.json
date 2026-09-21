@@ -372,16 +372,16 @@
     "verdict": "write"
   },
   "clearAllDraftMessages": {
-    "reason": "heuristic: clearAllDraftMessages mutates remote or account state",
-    "verdict": "write"
+    "reason": "wipes every draft with no undo",
+    "verdict": "destructive"
   },
   "clearAutosaveSettingsExceptions": {
     "reason": "heuristic: clearAutosaveSettingsExceptions mutates remote or account state",
     "verdict": "write"
   },
   "clearImportedContacts": {
-    "reason": "heuristic: clearImportedContacts mutates remote or account state",
-    "verdict": "write"
+    "reason": "drops all imported contacts server-side",
+    "verdict": "destructive"
   },
   "clearRecentEmojiStatuses": {
     "reason": "heuristic: clearRecentEmojiStatuses mutates remote or account state",
@@ -392,11 +392,11 @@
     "verdict": "write"
   },
   "clearRecentStickers": {
-    "reason": "heuristic: clearRecentStickers mutates remote or account state",
+    "reason": "clears a local convenience list",
     "verdict": "write"
   },
   "clearRecentlyFoundChats": {
-    "reason": "heuristic: clearRecentlyFoundChats mutates remote or account state",
+    "reason": "clears a local convenience list",
     "verdict": "write"
   },
   "clearSearchedForTags": {
@@ -788,15 +788,15 @@
     "verdict": "destructive"
   },
   "disableAllSupergroupUsernames": {
-    "reason": "heuristic: disableAllSupergroupUsernames mutates remote or account state",
-    "verdict": "write"
+    "reason": "releases every public link at once",
+    "verdict": "destructive"
   },
   "disableProxy": {
     "reason": "heuristic: disableProxy mutates remote or account state",
     "verdict": "write"
   },
   "discardCall": {
-    "reason": "heuristic: discardCall mutates remote or account state",
+    "reason": "ends a call; nothing is destroyed",
     "verdict": "write"
   },
   "disconnectAffiliateProgram": {
@@ -804,20 +804,20 @@
     "verdict": "write"
   },
   "disconnectAllWebsites": {
-    "reason": "heuristic: disconnectAllWebsites mutates remote or account state",
-    "verdict": "write"
+    "reason": "revokes every website login at once",
+    "verdict": "destructive"
   },
   "disconnectWebsite": {
-    "reason": "heuristic: disconnectWebsite mutates remote or account state",
-    "verdict": "write"
+    "reason": "revokes a website login",
+    "verdict": "destructive"
   },
   "downloadFile": {
     "reason": "fetches bytes to local disk; no remote mutation",
     "verdict": "read"
   },
   "dropGiftOriginalDetails": {
-    "reason": "heuristic: dropGiftOriginalDetails mutates remote or account state",
-    "verdict": "write"
+    "reason": "removes provenance from a gift permanently",
+    "verdict": "destructive"
   },
   "editBotMediaPreview": {
     "reason": "heuristic: editBotMediaPreview mutates remote or account state",
@@ -2336,8 +2336,8 @@
     "verdict": "write"
   },
   "increaseGiftAuctionBid": {
-    "reason": "heuristic: increaseGiftAuctionBid mutates remote or account state",
-    "verdict": "write"
+    "reason": "commits more currency to a bid",
+    "verdict": "destructive"
   },
   "inviteGroupCallParticipant": {
     "reason": "heuristic: inviteGroupCallParticipant mutates remote or account state",
@@ -2380,8 +2380,8 @@
     "verdict": "write"
   },
   "leaveChat": {
-    "reason": "heuristic: leaveChat mutates remote or account state",
-    "verdict": "write"
+    "reason": "a private chat cannot be rejoined without a new invite",
+    "verdict": "destructive"
   },
   "leaveGroupCall": {
     "reason": "heuristic: leaveGroupCall mutates remote or account state",
@@ -2468,7 +2468,7 @@
     "verdict": "write"
   },
   "optimizeStorage": {
-    "reason": "heuristic: optimizeStorage mutates remote or account state",
+    "reason": "deletes local cache only",
     "verdict": "write"
   },
   "parseMarkdown": {
@@ -2488,8 +2488,8 @@
     "verdict": "read"
   },
   "placeGiftAuctionBid": {
-    "reason": "heuristic: placeGiftAuctionBid mutates remote or account state",
-    "verdict": "write"
+    "reason": "commits currency to a bid",
+    "verdict": "destructive"
   },
   "postStory": {
     "reason": "heuristic: postStory mutates remote or account state",
@@ -2576,12 +2576,12 @@
     "verdict": "write"
   },
   "recoverAuthenticationPassword": {
-    "reason": "heuristic: recoverAuthenticationPassword mutates remote or account state",
-    "verdict": "write"
+    "reason": "replaces the 2FA password via recovery",
+    "verdict": "destructive"
   },
   "recoverPassword": {
-    "reason": "heuristic: recoverPassword mutates remote or account state",
-    "verdict": "write"
+    "reason": "replaces the 2FA password via recovery",
+    "verdict": "destructive"
   },
   "refundStarPayment": {
     "reason": "heuristic: refundStarPayment mutates remote or account state",
@@ -2776,7 +2776,7 @@
     "verdict": "write"
   },
   "reportChat": {
-    "reason": "heuristic: reportChat mutates remote or account state",
+    "reason": "reporting abuse should not be gated behind friction",
     "verdict": "write"
   },
   "reportChatPhoto": {
@@ -2808,7 +2808,7 @@
     "verdict": "write"
   },
   "reportSupergroupSpam": {
-    "reason": "heuristic: reportSupergroupSpam mutates remote or account state",
+    "reason": "reporting abuse should not be gated behind friction",
     "verdict": "write"
   },
   "reportVideoMessageAdvertisement": {
@@ -3092,8 +3092,8 @@
     "verdict": "write"
   },
   "sendGift": {
-    "reason": "heuristic: sendGift mutates remote or account state",
-    "verdict": "write"
+    "reason": "spends currency on a gift",
+    "verdict": "destructive"
   },
   "sendGiftPurchaseOffer": {
     "reason": "heuristic: sendGiftPurchaseOffer mutates remote or account state",
@@ -3124,8 +3124,8 @@
     "verdict": "write"
   },
   "sendPaymentForm": {
-    "reason": "heuristic: sendPaymentForm mutates remote or account state",
-    "verdict": "write"
+    "reason": "completes a payment; funds leave",
+    "verdict": "destructive"
   },
   "sendPhoneNumberCode": {
     "reason": "heuristic: sendPhoneNumberCode mutates remote or account state",
@@ -3140,8 +3140,8 @@
     "verdict": "write"
   },
   "sendResoldGift": {
-    "reason": "heuristic: sendResoldGift mutates remote or account state",
-    "verdict": "write"
+    "reason": "spends currency on a resold gift",
+    "verdict": "destructive"
   },
   "sendRichMessageDraft": {
     "reason": "heuristic: sendRichMessageDraft mutates remote or account state",
@@ -3164,8 +3164,8 @@
     "verdict": "write"
   },
   "setAccountTtl": {
-    "reason": "heuristic: setAccountTtl mutates remote or account state",
-    "verdict": "write"
+    "reason": "schedules deletion of the whole account",
+    "verdict": "destructive"
   },
   "setAlarm": {
     "reason": "heuristic: setAlarm mutates remote or account state",
@@ -3324,16 +3324,16 @@
     "verdict": "write"
   },
   "setChatMemberStatus": {
-    "reason": "heuristic: setChatMemberStatus mutates remote or account state",
-    "verdict": "write"
+    "reason": "can ban or demote; bans disrupt another user",
+    "verdict": "destructive"
   },
   "setChatMemberTag": {
     "reason": "heuristic: setChatMemberTag mutates remote or account state",
     "verdict": "write"
   },
   "setChatMessageAutoDeleteTime": {
-    "reason": "heuristic: setChatMessageAutoDeleteTime mutates remote or account state",
-    "verdict": "write"
+    "reason": "schedules irreversible message deletion",
+    "verdict": "destructive"
   },
   "setChatMessageSender": {
     "reason": "heuristic: setChatMessageSender mutates remote or account state",
@@ -3348,7 +3348,7 @@
     "verdict": "write"
   },
   "setChatPermissions": {
-    "reason": "heuristic: setChatPermissions mutates remote or account state",
+    "reason": "restricts members, but is reversible",
     "verdict": "write"
   },
   "setChatPhoto": {
@@ -3416,8 +3416,8 @@
     "verdict": "write"
   },
   "setDefaultMessageAutoDeleteTime": {
-    "reason": "heuristic: setDefaultMessageAutoDeleteTime mutates remote or account state",
-    "verdict": "write"
+    "reason": "schedules irreversible message deletion",
+    "verdict": "destructive"
   },
   "setDefaultReactionType": {
     "reason": "heuristic: setDefaultReactionType mutates remote or account state",
@@ -3516,7 +3516,7 @@
     "verdict": "write"
   },
   "setMessageSenderBlockList": {
-    "reason": "heuristic: setMessageSenderBlockList mutates remote or account state",
+    "reason": "blocking is reversible",
     "verdict": "write"
   },
   "setMessageSenderBotVerification": {
@@ -3552,8 +3552,8 @@
     "verdict": "write"
   },
   "setPassword": {
-    "reason": "heuristic: setPassword mutates remote or account state",
-    "verdict": "write"
+    "reason": "changes or removes 2-step verification",
+    "verdict": "destructive"
   },
   "setPersonalChat": {
     "reason": "heuristic: setPersonalChat mutates remote or account state",
@@ -3668,8 +3668,8 @@
     "verdict": "write"
   },
   "setSupergroupUsername": {
-    "reason": "heuristic: setSupergroupUsername mutates remote or account state",
-    "verdict": "write"
+    "reason": "frees the old public link for anyone to claim",
+    "verdict": "destructive"
   },
   "setTdlibParameters": {
     "reason": "configures the TDLib instance",
@@ -3700,8 +3700,8 @@
     "verdict": "write"
   },
   "setUsername": {
-    "reason": "heuristic: setUsername mutates remote or account state",
-    "verdict": "write"
+    "reason": "frees the old username for anyone to claim",
+    "verdict": "destructive"
   },
   "setVideoChatDefaultParticipant": {
     "reason": "heuristic: setVideoChatDefaultParticipant mutates remote or account state",
@@ -3964,12 +3964,12 @@
     "verdict": "write"
   },
   "toggleSupergroupIsAllHistoryAvailable": {
-    "reason": "heuristic: toggleSupergroupIsAllHistoryAvailable mutates remote or account state",
-    "verdict": "write"
+    "reason": "exposes past history to new members; cannot be unseen",
+    "verdict": "destructive"
   },
   "toggleSupergroupIsBroadcastGroup": {
-    "reason": "heuristic: toggleSupergroupIsBroadcastGroup mutates remote or account state",
-    "verdict": "write"
+    "reason": "upgrade to broadcast group is one-way",
+    "verdict": "destructive"
   },
   "toggleSupergroupIsForum": {
     "reason": "heuristic: toggleSupergroupIsForum mutates remote or account state",
@@ -4004,16 +4004,16 @@
     "verdict": "write"
   },
   "transferBusinessAccountStars": {
-    "reason": "heuristic: transferBusinessAccountStars mutates remote or account state",
-    "verdict": "write"
+    "reason": "moves currency out of the account",
+    "verdict": "destructive"
   },
   "transferChatOwnership": {
-    "reason": "heuristic: transferChatOwnership mutates remote or account state",
-    "verdict": "write"
+    "reason": "hands the chat to another account; irreversible",
+    "verdict": "destructive"
   },
   "transferGift": {
-    "reason": "heuristic: transferGift mutates remote or account state",
-    "verdict": "write"
+    "reason": "hands a gift to someone else; irreversible",
+    "verdict": "destructive"
   },
   "translateMessageRichMessage": {
     "reason": "heuristic: translateMessageRichMessage mutates remote or account state",
@@ -4032,19 +4032,19 @@
     "verdict": "write"
   },
   "unpinAllChatMessages": {
-    "reason": "heuristic: unpinAllChatMessages mutates remote or account state",
-    "verdict": "write"
+    "reason": "unpins everything; the previous set is not recorded",
+    "verdict": "destructive"
   },
   "unpinAllDirectMessagesChatTopicMessages": {
-    "reason": "heuristic: unpinAllDirectMessagesChatTopicMessages mutates remote or account state",
-    "verdict": "write"
+    "reason": "unpins an entire topic at once",
+    "verdict": "destructive"
   },
   "unpinAllForumTopicMessages": {
-    "reason": "heuristic: unpinAllForumTopicMessages mutates remote or account state",
-    "verdict": "write"
+    "reason": "unpins an entire topic at once",
+    "verdict": "destructive"
   },
   "unpinChatMessage": {
-    "reason": "heuristic: unpinChatMessage mutates remote or account state",
+    "reason": "unpins one known message; re-pinnable",
     "verdict": "write"
   },
   "upgradeBasicGroupChatToSupergroupChat": {
