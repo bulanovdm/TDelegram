@@ -205,6 +205,12 @@ def resolve_secret(
             file_value = file_get(base_dir, account)
             if file_value is not None and (file_value != "" or allow_empty):
                 return file_value
+    if allow_empty and not sys.stdin.isatty():
+        # Nothing can be asked for without a terminal, and blank is an allowed
+        # answer for this secret, so blank is the answer. Prompting here can
+        # only end in EOF -- which is what every containerised, cron-driven or
+        # piped invocation used to hit on the unencrypted-database key.
+        return ""
     fn = prompt_fn or default_prompt
     try:
         value = fn(prompt_text or f"{account}: ", secret).strip()

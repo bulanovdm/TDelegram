@@ -287,3 +287,41 @@ def test_login_code_provider_is_ephemeral(monkeypatch: pytest.MonkeyPatch, tmp_p
     monkeypatch.setattr(creds, "os_store_get", lambda service, account: "stale-code")
     provider = ConsoleCredentialProvider(tmp_path, prompt_fn=lambda t, s: "fresh-code")
     assert provider.get_code() == "fresh-code", "a stored code must not shadow the prompt"
+
+
+def test_optional_secret_is_blank_without_a_terminal(
+    monkeypatch: pytest.MonkeyPatch, no_store: None, tmp_path: Path
+) -> None:
+    """Regression: containers and cron jobs died prompting for an optional key.
+
+    The TDLib database key is blank for an unencrypted database. With no TTY
+    there is nobody to ask, so the prompt could only fail with EOF -- which is
+    exactly what `docker run ... chat list` hit on every data command.
+    """
+    monkeypatch.delenv("TELEGRAM_DB_KEY", raising=False)
+    monkeypatch.setattr(creds.sys.stdin, "isatty", lambda: False)
+    value = creds.resolve_secret(
+        account="database_key",
+        env_name="TELEGRAM_DB_KEY",
+        base_dir=tmp_path,
+        allow_empty=True,
+        prompt_fn=lambda t, s: pytest.fail("must not prompt without a terminal"),
+    )
+    assert value == ""
+
+
+def test_required_secret_still_fails_loudly_without_a_terminal(
+    monkeypatch: pytest.MonkeyPatch, no_store: None, tmp_path: Path
+) -> None:
+    """Only optional secrets default to blank; a required one must not."""
+    monkeypatch.delenv("TELEGRAM_API_HASH", raising=False)
+    monkeypatch.setattr(creds.sys.stdin, "isatty", lambda: False)
+
+    def eof(text: str, secret: bool) -> str:
+        raise EOFError
+
+    with pytest.raises(RuntimeError):
+        creds.resolve_secret(
+            account="api_hash", env_name="TELEGRAM_API_HASH",
+            base_dir=tmp_path, prompt_fn=eof,
+        )

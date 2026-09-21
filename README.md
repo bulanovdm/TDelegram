@@ -11,24 +11,41 @@ library plus a `tdelegram` CLI.
 
 ## Install
 
-Not on PyPI yet — install from source:
+TDLib is a C++ dependency with no distribution package, so installing it
+natively means a ~20 minute compile on Linux. Docker is the short way in — the
+image has TDLib already built.
 
 ```bash
-pip install git+https://github.com/bulanovdm/TDelegram
-# macOS (TDLib)
-brew install tdlib
-# Linux: build tdlib from source, then point TDELEGRAM_TDJSON at libtdjson.so
+docker pull ghcr.io/bulanovdm/tdelegram:latest
+
+# The session lives in /session; mount it or every run starts logged out.
+docker run --rm -i -v "$HOME/.tdelegram:/session" \
+  ghcr.io/bulanovdm/tdelegram auth status
 ```
 
-TDLib is a separate native dependency: `libtdjson` must be present, and
-TDelegram finds it via `TDELEGRAM_TDJSON`, then the usual install prefixes.
-
-Docker (libtdjson baked in):
+One alias makes every command in this README work verbatim:
 
 ```bash
-docker build -t tdelegram .
-docker run -it -v ~/.tdelegram:/root/.tdelegram tdelegram chat list
+alias tdelegram='docker run --rm -i -v "$HOME/.tdelegram:/session" \
+  -v "$PWD:/work" -w /work -e TELEGRAM_API_ID -e TELEGRAM_API_HASH \
+  ghcr.io/bulanovdm/tdelegram'
 ```
+
+`auth login` is the exception — it prompts, so run that one with `-it`.
+
+### Native
+
+Preferable on macOS, and the fallback wherever Docker is not available:
+
+```bash
+brew install tdlib                                       # macOS
+pip install "git+https://github.com/bulanovdm/TDelegram"  # not on PyPI yet
+```
+
+On Linux, build TDLib from source and point `TDELEGRAM_TDJSON` at the resulting
+`libtdjson.so`. Full instructions, including getting an `api_id`/`api_hash` and
+the first login, are in
+[skills/tdelegram/references/setup.md](skills/tdelegram/references/setup.md).
 
 ## Quickstart
 

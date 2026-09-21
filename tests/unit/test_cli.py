@@ -9,6 +9,7 @@ exercise the command bodies rather than just importing them.
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 import pytest
@@ -176,7 +177,11 @@ def test_auth_status_never_prompts(
     assert result.exit_code == 0
     status = _lines(result)[0]
     assert status["authorized"] is False
-    assert status["needs"] == "api_id and api_hash"
+    # `needs` now names the credential that actually failed to resolve rather
+    # than whatever the state requires first, so assert the property, not a
+    # fixed string.
+    assert status["needs"], "an unauthorized session must say what is missing"
+    assert re.search(r"api|id|hash", status["needs"], re.I), status["needs"]
 
 
 def test_chat_list_streams_normalized_records(cli: FakeTransport) -> None:
@@ -610,3 +615,54 @@ def test_msg_get_returns_the_same_shape_as_chat_history(cli: FakeTransport) -> N
     assert record["text"] == "hello there", "text must be flat, as chat history returns it"
     assert record["message_id"] == 42
     assert "date" in record and isinstance(record["date"], str), "date normalized to ISO-8601"
+
+
+def test_optional_secrets_resolve_to_blank_when_unaskable(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """Regression: an absent database key made a usable session look broken.
+
+    The key is optional -- an unencrypted database has none -- but the
+    non-interactive provider raised rather than answering blank, so
+    `auth status` reported the session unauthorized and blamed `api_id`,
+    which had resolved perfectly well. This is what a container without a
+    keychain looks like.
+    """
+    from tdelegram import credentials as creds
+    from tdelegram.auth import NonInteractiveCredentialProvider, SecretUnavailable
+
+    for var in ("TELEGRAM_DB_KEY", "TELEGRAM_API_HASH"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setattr(creds, "os_store_get", lambda service, account: None)
+
+    provider = NonInteractiveCredentialProvider(tmp_path)
+    assert provider.get_database_key() == "", "an optional secret must answer blank"
+
+    # A required one must still refuse, or the failure would be silent.
+    with pytest.raises(SecretUnavailable):
+        provider.get_api_hash()
+
+
+def test_auth_status_names_the_secret_that_actually_blocked(cli: FakeTransport) -> None:
+    """`needs` was inferred from the state, so it named the wrong credential."""
+    from tdelegram import credentials as creds
+
+    cli._rules.clear()
+    cli.add_simple_response(
+        "getAuthorizationState", {"@type": "authorizationStateWaitTdlibParameters"}
+    )
+    import os
+
+    os.environ.pop("TELEGRAM_API_HASH", None)
+    original = creds.os_store_get
+    creds.os_store_get = lambda service, account: None  # type: ignore[assignment]
+    try:
+        result = runner.invoke(cli_main.app, ["auth", "status"])
+    finally:
+        creds.os_store_get = original  # type: ignore[assignment]
+    assert result.exit_code == 0
+    status = _lines(result)[0]
+    assert status["authorized"] is False
+    assert "hash" in (status["needs"] or "").lower(), (
+        f"needs should name the credential that failed, got {status['needs']!r}"
+    )

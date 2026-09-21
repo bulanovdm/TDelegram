@@ -132,6 +132,20 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   on one of them. It now returns a record, with `include_raw=True` for the
   original.
 
+- An optional secret with no terminal to ask at now resolves to blank instead
+  of prompting. The TDLib database key is blank for an unencrypted database, but
+  every containerised, cron-driven or piped invocation prompted for it and died
+  on EOF, so `docker run ... chat list` failed on each data command.
+- `auth status` names the credential that actually failed to resolve. It
+  inferred `needs` from the authorization state, so a session missing only the
+  database key was reported as missing `api_id and api_hash`, which had resolved
+  perfectly well.
+- The Docker image ships `libtdjson` once rather than twice: the `libtdjson.so*`
+  glob also matched the unversioned development symlink, and COPY dereferences
+  symlinks, duplicating 34MB. The image no longer carries TDLib's C++ headers
+  either, and pins TDLib to the registry's commit so the gate's verdicts match
+  the library actually loaded. 235MB to 201MB.
+
 ### Changed
 - `errors.PermissionError` and `errors.TimeoutError` are now
   `TelegramPermissionError` and `TelegramTimeoutError`; the old names shadowed

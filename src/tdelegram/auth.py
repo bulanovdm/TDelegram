@@ -151,6 +151,30 @@ class NonInteractiveCredentialProvider(ConsoleCredentialProvider):
     def __init__(self, base_dir: Path | None = None) -> None:
         super().__init__(base_dir, prompt_fn=_refuse_to_prompt)
 
+    def _resolve(
+        self,
+        account: str,
+        env: str,
+        prompt: str,
+        *,
+        secret: bool,
+        allow_empty: bool = False,
+        ephemeral: bool = False,
+    ) -> str:
+        try:
+            return super()._resolve(
+                account, env, prompt, secret=secret, allow_empty=allow_empty, ephemeral=ephemeral
+            )
+        except SecretUnavailable:
+            # An optional secret nobody can be asked for is simply blank. An
+            # unencrypted database has no key, and refusing here made a
+            # perfectly usable session look unauthorized -- and blamed the
+            # wrong credential, because the caller could only guess from the
+            # state which requirement had failed.
+            if allow_empty:
+                return ""
+            raise
+
 
 # States the handshake can clear using only already-stored secrets. Anything
 # else (a login code, a 2FA password) needs a human, so reporting stops there.
@@ -179,6 +203,7 @@ def current_state(
     """
     state = str(client.send_request({"@type": "getAuthorizationState"}).get("@type", ""))
     seen: set[str] = set()
+    blocked_on = ""
     while state in UNATTENDED_STATES and state not in seen:
         seen.add(state)
         try:
@@ -190,7 +215,10 @@ def current_state(
                 files_directory=files_directory,
                 use_test_dc=use_test_dc,
             )
-        except (SecretUnavailable, RuntimeError):
+        except SecretUnavailable as exc:
+            blocked_on = str(exc).strip().rstrip(":").strip()
+            break
+        except RuntimeError:
             break
         if request is None:
             break
@@ -201,7 +229,10 @@ def current_state(
     return {
         "@type": state,
         "authorized": state == "authorizationStateReady",
-        "needs": _needed_for(state),
+        # Prefer the secret that actually failed to resolve. Inferring from the
+        # state alone reports whatever that state needs first, which is not
+        # necessarily what is missing.
+        "needs": blocked_on or _needed_for(state),
     }
 
 

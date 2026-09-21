@@ -1,0 +1,111 @@
+name: docker
+
+# Publishes ghcr.io/bulanovdm/tdelegram so the documented install is a pull
+# rather than a 20-minute TDLib compile on the user's machine. That is the only
+# thing that makes Docker a reasonable default.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ${{ github.repository }}
+
+jobs:
+  # Built on native runners per architecture. TDLib under QEMU emulation takes
+  # hours, and Apple Silicon needs arm64, so neither arch can simply be dropped.
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+
+      - name: Export the digest
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${{ steps.build.outputs.digest }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ strategy.job-index }}
+          path: /tmp/digests/*
+          retention-days: 1
+
+  # One multi-arch tag pointing at both per-arch images.
+  manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Create the manifest list
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE }}@sha256:%s ' *)
+        env:
+          DOCKER_METADATA_OUTPUT_JSON: ${{ steps.meta.outputs.json }}
+
+      - name: Smoke-test the published image
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.meta.outputs.version }}"
+          docker run --rm "$IMAGE" version
+          # The registry must ship inside the image: the write gate fails closed
+          # without it, so an image missing methods.json refuses every call.
+          docker run --rm --entrypoint python "$IMAGE" \
+            -c "from tdelegram import safety; assert safety.verdict('sendMessage') == 'write'; print('gate ok')"

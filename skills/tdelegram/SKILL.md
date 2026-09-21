@@ -32,12 +32,17 @@ Check it is installed with `tdelegram version`. If that fails, TDelegram is not
 set up on this machine — follow `references/setup.md` rather than improvising
 with another Telegram library.
 
-The short version: `libtdjson` is a native dependency installed separately
-(`brew install tdlib`, or built from source on Linux), then
-`pip install "git+https://github.com/bulanovdm/TDelegram"`. Two of the steps are
-not yours to do — the `api_id`/`api_hash` come from a web form behind a Telegram
-login, and the login code arrives on the user's phone and expires in minutes.
-Install what you can, then hand over with the exact commands.
+The short version: `docker pull ghcr.io/bulanovdm/tdelegram:latest`, run it with
+`-v "$HOME/.tdelegram:/session"`, and alias `tdelegram` to that so every command
+below works unchanged. Docker is recommended because TDLib is a C++ dependency
+that otherwise takes a ~20 minute compile; natively it is `brew install tdlib`
+(easy on macOS) plus
+`pip install "git+https://github.com/bulanovdm/TDelegram"`.
+
+Two of the steps are not yours to do — the `api_id`/`api_hash` come from a web
+form behind a Telegram login, and the login code arrives on the user's phone and
+expires in minutes. Install what you can, then hand over with the exact
+commands.
 
 ## Start every session by checking the session
 
