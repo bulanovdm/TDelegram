@@ -571,3 +571,18 @@ def test_chat_references_are_resolved_before_the_call(
             assert isinstance(call[field], int), (
                 f"{method} got {field}={call[field]!r}; TDLib needs an integer"
             )
+
+
+@pytest.mark.parametrize("ref", ["me", "self", "saved", "Me", "@me"])
+def test_self_reference_resolves_to_saved_messages(cli: FakeTransport, ref: str) -> None:
+    """`me` names Saved Messages, the private chat with yourself.
+
+    The README's quickstart used `--chat me` from the start; it resolved as a
+    username and came back USERNAME_INVALID.
+    """
+    cli.add_simple_response("getMe", {"@type": "user", "id": 777})
+    cli.add_simple_response("getChat", {"@type": "chat", "id": 777, "title": "Saved Messages"})
+    result = runner.invoke(cli_main.app, ["chat", "info", ref])
+    assert result.exit_code == 0
+    assert _lines(result)[0]["chat_id"] == 777
+    assert "searchPublicChat" not in _sent(cli), f"{ref!r} must not be looked up as a username"

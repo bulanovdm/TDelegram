@@ -16,12 +16,27 @@ def _chat_list_object(scope: str) -> dict[str, str]:
     return {"@type": "chatListMain"}
 
 
+SELF_REFS = frozenset({"me", "self", "saved"})
+
+
 def resolve(client: TelegramClient, chat_ref: str) -> dict[str, Any]:
+    """Resolve @handle, a bare handle, a numeric id, or `me` to a chat object.
+
+    `me` is the usual way to name Saved Messages, which is simply the private
+    chat with yourself. Without it the reference goes to searchPublicChat and
+    comes back USERNAME_INVALID, which is a confusing answer to a reasonable
+    request.
+    """
     value = chat_ref.strip()
     if value.startswith("@"):
         value = value[1:]
     if not value:
         raise ValueError("A Telegram chat username or numeric chat ID is required.")
+    if value.casefold() in SELF_REFS:
+        own_id = client.call("getMe", {}).get("id")
+        if not isinstance(own_id, int):
+            raise ValueError("Could not determine the current account's user id.")
+        return client.call("getChat", {"chat_id": own_id})
     import re
 
     if re.fullmatch(r"-?\d+", value):

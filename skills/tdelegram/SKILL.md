@@ -125,8 +125,7 @@ parse it). `--output FILE` appends there instead of stdout.
 
 - `@durov` or bare `durov` — resolved with `searchPublicChat`
 - `-1001246902558` — a numeric id, used directly
-- `me` — resolves as a username, so prefer your own numeric id from
-  `tdelegram account info` when you mean Saved Messages
+- `me`, `self` or `saved` — Saved Messages, the private chat with yourself
 
 Group and channel ids are negative. They work as positional arguments, but if you
 are building a command string dynamically, `--chat -100...` is the form least

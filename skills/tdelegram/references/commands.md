@@ -57,6 +57,9 @@ Placed before the subcommand: `tdelegram --format json chat list`.
 | `chat join <chat>` | write | |
 | `chat leave <chat>` | **destructive** | a private chat cannot be rejoined without a new invite |
 
+Chat references accept `@handle`, a bare handle, a numeric id (negative for
+groups and channels), or `me` / `self` / `saved` for Saved Messages.
+
 `--since` / `--until` accept `7d`, `24h`, `2w`, or ISO-8601 (`2026-09-01`,
 `2026-09-01T12:00:00Z`).
 

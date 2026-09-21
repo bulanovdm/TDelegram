@@ -111,6 +111,10 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   `chat join`, `chat leave`, `admin ban`, `admin promote`, `draft set` and
   `story list` now resolve the reference first, like `msg send` always did.
 
+- `me`, `self` and `saved` resolve to Saved Messages. The README's quickstart
+  has used `--chat me` since the first commit; it was looked up as a username
+  and came back `USERNAME_INVALID`.
+
 ### Changed
 - `errors.PermissionError` and `errors.TimeoutError` are now
   `TelegramPermissionError` and `TelegramTimeoutError`; the old names shadowed
