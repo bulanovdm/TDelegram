@@ -32,9 +32,13 @@ Do this once, before the first release. It cannot be done from this repo.
 #    pyproject.toml: version = "0.2.0"
 #    CHANGELOG.md:   ## 0.2.0 — YYYY-MM-DD
 
-# 2. On the FIRST release only, correct the README: it currently says
-#    "Not on PyPI yet". Claiming an install that does not work is worse
-#    than saying it is unavailable.
+# 2. On the FIRST release only:
+#    - correct the README, which currently says "Not on PyPI yet".
+#      Claiming an install that does not work is worse than saying it
+#      is unavailable.
+#    - set the repository website, left empty for the same reason:
+#      gh repo edit bulanovdm/TDelegram \
+#        --homepage https://pypi.org/project/tdelegram/
 
 # 3. Land it on main and let CI go green.
 git commit -am "Release 0.2.0" && git push
