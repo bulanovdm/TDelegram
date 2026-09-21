@@ -43,5 +43,15 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
 - Coverage measures the CLI. Previously `cli/main.py` and `cli/commands/*` were
   excluded, which is where both launch bugs lived; only the ctypes binding is
   exempt now.
+- `auth status` answers "am I logged in?" rather than reporting the raw
+  pre-handshake state. TDLib parameters are per-process, so a saved session
+  always starts at `authorizationStateWaitTdlibParameters`; status now clears
+  the steps stored secrets can clear via `NonInteractiveCredentialProvider`,
+  then reports `authorized` plus what a human would still need to supply. It
+  never prompts.
+- `concurrent.futures.TimeoutError` is caught under its own name. It only
+  became an alias of the builtin in 3.11, so on 3.10 a request timeout escaped
+  as a bare futures error instead of `TelegramTimeoutError`.
 - Removed the unreachable `cli/commands/` package.
 - Ship `py.typed`.
+- Added `CODE_OF_CONDUCT.md`, issue and pull request templates.

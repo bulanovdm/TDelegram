@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest a capability or an ergonomics change
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The task, not the solution. What are you working around today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like instead?
+    validations:
+      required: true
+
+  - type: input
+    id: tdlib-method
+    attributes:
+      label: Relevant TDLib method, if you know it
+      description: >
+        All 1022 are already reachable via `tdelegram call --request`, so this
+        is usually about ergonomics rather than coverage. Naming the method
+        helps either way.
+      placeholder: "getChatSponsoredMessages"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: mutating
+    attributes:
+      label: Does it mutate anything?
+      options:
+        - label: Yes, it writes or deletes (it will need the confirmation gate)
+        - label: No, it is read-only

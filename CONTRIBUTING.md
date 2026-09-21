@@ -1,5 +1,7 @@
 # Contributing
 
+By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 - Python 3.10+. `pip install -e ".[dev]"`.
 - Tests run with **no account, no network, no TDLib**: `pytest` (FakeTransport).
 - Opt-in live test: `TDELEGRAM_INTEGRATION=1 pytest tests/integration -q`.
@@ -12,3 +14,4 @@
   `tests/contract/test_registry.py` alongside the regenerated JSON.
   The contract test fails CI on unclassified functions — classify, don't default.
 - Mutating behavior needs a test proving the gate (preview without `--yes`).
+- Never put session data, an `api_hash`, or real message content in a test or a diff.

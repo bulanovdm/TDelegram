@@ -1,5 +1,9 @@
 # TDelegram — a full-featured Telegram client (library + CLI)
 
+[![ci](https://github.com/bulanovdm/TDelegram/actions/workflows/ci.yml/badge.svg)](https://github.com/bulanovdm/TDelegram/actions/workflows/ci.yml)
+[![python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://github.com/bulanovdm/TDelegram/blob/main/pyproject.toml)
+[![license](https://img.shields.io/badge/license-Apache--2.0-green)](https://github.com/bulanovdm/TDelegram/blob/main/LICENSE)
+
 TDLib exposes **1022 functions through a single JSON interface**. TDelegram covers
 all of them on day one through one generic transport, with ergonomics,
 normalization, safety, errors and docs on top. No MCP layer: an importable Python

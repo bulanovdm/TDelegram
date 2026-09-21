@@ -112,11 +112,71 @@ def test_data_command_performs_the_handshake(cli: FakeTransport) -> None:
     assert sent.index("checkDatabaseEncryptionKey") < sent.index("getMe")
 
 
-def test_auth_status_does_not_log_in(cli: FakeTransport) -> None:
-    """`status` reports the state as found; logging in first would defeat it."""
+def test_auth_status_reports_authorized(cli: FakeTransport) -> None:
+    """An authorized session answers the probe and needs nothing further."""
     result = runner.invoke(cli_main.app, ["auth", "status"])
     assert result.exit_code == 0
-    assert _sent(cli) == ["getAuthorizationState"]
+    status = _lines(result)[0]
+    assert status["authorized"] is True
+    assert status["needs"] is None
+    assert status["@type"] == "authorizationStateReady"
+
+
+def test_auth_status_clears_the_steps_stored_secrets_can_clear(cli: FakeTransport) -> None:
+    """A saved session still starts at WaitTdlibParameters in a fresh process.
+
+    Reporting that verbatim would be useless, so status replays the steps it
+    can before answering.
+    """
+    cli._rules.clear()
+    states = iter(
+        [
+            {"@type": "authorizationStateWaitTdlibParameters"},
+            {"@type": "authorizationStateReady"},
+        ]
+    )
+    cli.add_response(lambda r: r.get("@type") == "getAuthorizationState", lambda r: next(states))
+    result = runner.invoke(cli_main.app, ["auth", "status"])
+    assert result.exit_code == 0
+    status = _lines(result)[0]
+    assert status["authorized"] is True
+    assert "setTdlibParameters" in _sent(cli), "status must clear what it can"
+
+
+def test_auth_status_says_what_is_missing(cli: FakeTransport) -> None:
+    cli._rules.clear()
+    cli.add_simple_response(
+        "getAuthorizationState", {"@type": "authorizationStateWaitPhoneNumber"}
+    )
+    result = runner.invoke(cli_main.app, ["auth", "status"])
+    assert result.exit_code == 0
+    status = _lines(result)[0]
+    assert status["authorized"] is False
+    assert status["needs"] == "a phone number"
+
+
+def test_auth_status_never_prompts(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: `status` must not block on stdin when secrets are absent."""
+    for var in ("TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_DB_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    # Any prompt attempt is a failure, not a hang.
+    import tdelegram.credentials as creds
+
+    monkeypatch.setattr(
+        creds, "default_prompt", lambda *a, **k: pytest.fail("status prompted for a secret")
+    )
+    monkeypatch.setattr(creds, "os_store_get", lambda service, account: None)
+    cli._rules.clear()
+    cli.add_simple_response(
+        "getAuthorizationState", {"@type": "authorizationStateWaitTdlibParameters"}
+    )
+    result = runner.invoke(cli_main.app, ["auth", "status"])
+    assert result.exit_code == 0
+    status = _lines(result)[0]
+    assert status["authorized"] is False
+    assert status["needs"] == "api_id and api_hash"
 
 
 def test_chat_list_streams_normalized_records(cli: FakeTransport) -> None:

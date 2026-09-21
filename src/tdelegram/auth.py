@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import platform
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -27,14 +28,32 @@ class CredentialProvider(Protocol):
     def get_email_code(self) -> str: ...
 
 
-class ConsoleCredentialProvider:
-    """Interactive provider using_env/keyring/file fallbacks via credentials.resolve_secret."""
+class SecretUnavailable(RuntimeError):
+    """A secret was needed but could not be resolved without asking a human."""
 
-    def __init__(self, base_dir: Path | None = None) -> None:
+
+def _refuse_to_prompt(prompt: str, secret: bool) -> str:
+    raise SecretUnavailable(prompt.strip() or "a secret is required")
+
+
+class ConsoleCredentialProvider:
+    """Resolves secrets via env, OS store, file, and finally a console prompt.
+
+    Pass `prompt_fn` to change the last step. `NonInteractiveCredentialProvider`
+    uses that to read stored secrets without ever blocking on stdin.
+    """
+
+    def __init__(
+        self,
+        base_dir: Path | None = None,
+        *,
+        prompt_fn: Callable[[str, bool], str] | None = None,
+    ) -> None:
         from tdelegram import credentials as creds
 
         self._creds = creds
         self._base_dir = base_dir
+        self._prompt_fn = prompt_fn
 
     def _resolve(
         self, account: str, env: str, prompt: str, *, secret: bool, allow_empty: bool = False
@@ -46,6 +65,7 @@ class ConsoleCredentialProvider:
             prompt_text=prompt,
             secret=secret,
             allow_empty=allow_empty,
+            prompt_fn=self._prompt_fn,
         )
 
     def get_api_id(self) -> int:
@@ -101,6 +121,85 @@ class ConsoleCredentialProvider:
         return self._resolve(
             "email_code", "TELEGRAM_EMAIL_CODE", "Telegram email verification code: ", secret=False
         )
+
+
+class NonInteractiveCredentialProvider(ConsoleCredentialProvider):
+    """Reads stored secrets, but raises SecretUnavailable instead of prompting.
+
+    Lets a caller drive the handshake as far as stored credentials allow and
+    then report where it stopped, rather than blocking on stdin.
+    """
+
+    def __init__(self, base_dir: Path | None = None) -> None:
+        super().__init__(base_dir, prompt_fn=_refuse_to_prompt)
+
+
+# States the handshake can clear using only already-stored secrets. Anything
+# else (a login code, a 2FA password) needs a human, so reporting stops there.
+UNATTENDED_STATES = frozenset(
+    {
+        "authorizationStateWaitTdlibParameters",
+        "authorizationStateWaitEncryptionKey",
+    }
+)
+
+
+def current_state(
+    client: Any,
+    provider: CredentialProvider,
+    *,
+    database_directory: str = "",
+    files_directory: str = "",
+    use_test_dc: bool = False,
+) -> dict[str, Any]:
+    """Report the authorization state without prompting for anything.
+
+    TDLib parameters live on the client instance, so a fresh process always
+    starts at `authorizationStateWaitTdlibParameters` no matter how complete
+    the saved session is. Answering "am I logged in?" therefore means clearing
+    the steps that stored secrets can clear, then reporting what is left.
+    """
+    state = str(client.send_request({"@type": "getAuthorizationState"}).get("@type", ""))
+    seen: set[str] = set()
+    while state in UNATTENDED_STATES and state not in seen:
+        seen.add(state)
+        try:
+            request = response_for_state(
+                state,
+                {},
+                provider,
+                database_directory=database_directory,
+                files_directory=files_directory,
+                use_test_dc=use_test_dc,
+            )
+        except (SecretUnavailable, RuntimeError):
+            break
+        if request is None:
+            break
+        result = client.send_request(request)
+        if isinstance(result, dict) and result.get("@type") == "error":
+            break
+        state = str(client.send_request({"@type": "getAuthorizationState"}).get("@type", ""))
+    return {
+        "@type": state,
+        "authorized": state == "authorizationStateReady",
+        "needs": _needed_for(state),
+    }
+
+
+def _needed_for(state: str) -> str | None:
+    """What a human would have to supply to move past this state."""
+    return {
+        "authorizationStateReady": None,
+        "authorizationStateWaitTdlibParameters": "api_id and api_hash",
+        "authorizationStateWaitEncryptionKey": "the local database key",
+        "authorizationStateWaitPhoneNumber": "a phone number",
+        "authorizationStateWaitCode": "the login code",
+        "authorizationStateWaitPassword": "the 2FA password",
+        "authorizationStateWaitEmailAddress": "a login email address",
+        "authorizationStateWaitEmailCode": "the email login code",
+        "authorizationStateWaitRegistration": "account registration",
+    }.get(state, "an unknown step")
 
 
 def tdlib_parameters(

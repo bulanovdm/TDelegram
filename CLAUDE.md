@@ -109,7 +109,10 @@ Two non-obvious TDLib facts govern this code, and violating either produces a ha
 2. TDLib parameters live on the **client instance, not in the database**. A saved session
    does not carry them, so every new process must replay `setTdlibParameters` (plus the
    encryption key) before any call works. `make_client()` therefore runs `ensure_login()`
-   by default; pass `login=False` only to inspect the raw pre-handshake state.
+   by default. `login=False` skips it, which is why `auth status` can report the state
+   without prompting: it uses `auth.current_state()` with a
+   `NonInteractiveCredentialProvider`, clearing only the steps stored secrets can clear
+   (`UNATTENDED_STATES`) and reporting what a human would still have to supply.
 
 Test doubles must honor fact 1 — a fake whose `next_update()` hands out updates unprompted
 models a TDLib that does not exist and will hide bootstrap bugs. `DormantClient` in

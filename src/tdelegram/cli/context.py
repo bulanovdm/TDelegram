@@ -8,7 +8,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from tdelegram.auth import ConsoleCredentialProvider, run_auth
+from tdelegram.auth import (
+    ConsoleCredentialProvider,
+    NonInteractiveCredentialProvider,
+    current_state,
+    run_auth,
+)
 from tdelegram.cli.output import emit, error_envelope, warn
 from tdelegram.client import TelegramClient
 from tdelegram.config import SessionLock, default_base_dir, discover_library
@@ -100,6 +105,32 @@ def ensure_login(client: TelegramClient, ctx: Ctx) -> None:
         database_directory=str(db_dir),
         files_directory=str(files_dir),
     )
+
+
+def report_auth_state(ctx: Ctx) -> dict[str, Any]:
+    """Answer "am I logged in?" using stored secrets only, never a prompt."""
+    client, lock = make_client(ctx, login=False)
+    try:
+        profile_dir: Path = getattr(
+            client, "_profile_dir", base_dir(ctx) / "profiles" / ctx.profile
+        )
+        provider = NonInteractiveCredentialProvider(
+            base_dir=getattr(client, "_base_dir", None)
+        )
+        state = current_state(
+            client,
+            provider,
+            database_directory=str(profile_dir / "tdlib"),
+            files_directory=str(profile_dir / "files"),
+        )
+        state["profile"] = ctx.profile
+        return state
+    finally:
+        try:
+            client.close()
+        finally:
+            if lock is not None:
+                lock.release()
 
 
 def run_call(

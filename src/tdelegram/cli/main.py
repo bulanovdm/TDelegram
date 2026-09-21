@@ -74,9 +74,10 @@ def auth_logout() -> None:
 @auth_app.command("status")
 @handle_errors
 def auth_status() -> None:
-    # Report the state as found; logging in first would defeat the point.
-    result = run_call(_ctx(), "getAuthorizationState", {}, login=False)
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    """Report whether this profile is logged in, without prompting."""
+    from tdelegram.cli.context import report_auth_state
+
+    emit(report_auth_state(_ctx()), fmt=_ctx().fmt, out=_ctx().output)
 
 
 # -- account ------------------------------------------------------------
