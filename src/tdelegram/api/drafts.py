@@ -1,0 +1,33 @@
+"""Per-chat draft messages."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from tdelegram.api.chats import resolve_id
+from tdelegram.client import TelegramClient
+
+
+def set_draft(
+    client: TelegramClient, chat_ref: str, text: str, *, allow_write: bool = False
+) -> dict[str, Any]:
+    return client.call(
+        "setChatDraftMessage",
+        {
+            "chat_id": resolve_id(client, chat_ref),
+            "draft_message": {
+                "@type": "draftMessage",
+                "input_message_text": {
+                    "@type": "inputMessageText",
+                    "text": {"@type": "formattedText", "text": text, "entities": []},
+                },
+            },
+        },
+        allow_write=allow_write,
+    )
+
+
+def clear_drafts(client: TelegramClient, *, allow_write: bool = False) -> dict[str, Any]:
+    return client.call(
+        "clearAllDraftMessages", {"exclude_secret_chats": False}, allow_write=allow_write
+    )

@@ -1,0 +1,43 @@
+"""Domain APIs over TelegramClient."""
+
+from tdelegram.api import (
+    account,
+    admin,
+    bots,
+    chats,
+    contacts,
+    drafts,
+    folders,
+    media,
+    messages,
+    polls,
+    proxies,
+    reactions,
+    search,
+    secret,
+    stories,
+    topics,
+    updates,
+    users,
+)
+
+__all__ = [
+    "account",
+    "admin",
+    "bots",
+    "chats",
+    "contacts",
+    "drafts",
+    "folders",
+    "media",
+    "messages",
+    "polls",
+    "proxies",
+    "reactions",
+    "search",
+    "secret",
+    "stories",
+    "topics",
+    "updates",
+    "users",
+]

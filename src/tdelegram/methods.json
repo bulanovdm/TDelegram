@@ -1,0 +1,4090 @@
+{
+  "acceptCall": {
+    "reason": "heuristic: acceptCall mutates remote or account state",
+    "verdict": "write"
+  },
+  "acceptOauthRequest": {
+    "reason": "heuristic: acceptOauthRequest mutates remote or account state",
+    "verdict": "write"
+  },
+  "acceptTermsOfService": {
+    "reason": "heuristic: acceptTermsOfService mutates remote or account state",
+    "verdict": "write"
+  },
+  "activateStoryStealthMode": {
+    "reason": "heuristic: activateStoryStealthMode mutates remote or account state",
+    "verdict": "write"
+  },
+  "addBotMediaPreview": {
+    "reason": "heuristic: addBotMediaPreview mutates remote or account state",
+    "verdict": "write"
+  },
+  "addChatFolderByInviteLink": {
+    "reason": "heuristic: addChatFolderByInviteLink mutates remote or account state",
+    "verdict": "write"
+  },
+  "addChatMember": {
+    "reason": "heuristic: addChatMember mutates remote or account state",
+    "verdict": "write"
+  },
+  "addChatMembers": {
+    "reason": "heuristic: addChatMembers mutates remote or account state",
+    "verdict": "write"
+  },
+  "addChatToList": {
+    "reason": "heuristic: addChatToList mutates remote or account state",
+    "verdict": "write"
+  },
+  "addChatWelcomeMessage": {
+    "reason": "heuristic: addChatWelcomeMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "addChecklistTasks": {
+    "reason": "heuristic: addChecklistTasks mutates remote or account state",
+    "verdict": "write"
+  },
+  "addContact": {
+    "reason": "heuristic: addContact mutates remote or account state",
+    "verdict": "write"
+  },
+  "addCustomServerLanguagePack": {
+    "reason": "heuristic: addCustomServerLanguagePack mutates remote or account state",
+    "verdict": "write"
+  },
+  "addFavoriteSticker": {
+    "reason": "heuristic: addFavoriteSticker mutates remote or account state",
+    "verdict": "write"
+  },
+  "addFileToDownloads": {
+    "reason": "heuristic: addFileToDownloads mutates remote or account state",
+    "verdict": "write"
+  },
+  "addGiftCollectionGifts": {
+    "reason": "heuristic: addGiftCollectionGifts mutates remote or account state",
+    "verdict": "write"
+  },
+  "addLocalMessage": {
+    "reason": "heuristic: addLocalMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "addLogMessage": {
+    "reason": "heuristic: addLogMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "addLoginPasskey": {
+    "reason": "heuristic: addLoginPasskey mutates remote or account state",
+    "verdict": "write"
+  },
+  "addMessageReaction": {
+    "reason": "heuristic: addMessageReaction mutates remote or account state",
+    "verdict": "write"
+  },
+  "addNetworkStatistics": {
+    "reason": "heuristic: addNetworkStatistics mutates remote or account state",
+    "verdict": "write"
+  },
+  "addOffer": {
+    "reason": "heuristic: addOffer mutates remote or account state",
+    "verdict": "write"
+  },
+  "addPendingLiveStoryReaction": {
+    "reason": "heuristic: addPendingLiveStoryReaction mutates remote or account state",
+    "verdict": "write"
+  },
+  "addPendingPaidMessageReaction": {
+    "reason": "heuristic: addPendingPaidMessageReaction mutates remote or account state",
+    "verdict": "write"
+  },
+  "addPollOption": {
+    "reason": "heuristic: addPollOption mutates remote or account state",
+    "verdict": "write"
+  },
+  "addProfileAudio": {
+    "reason": "heuristic: addProfileAudio mutates remote or account state",
+    "verdict": "write"
+  },
+  "addProxy": {
+    "reason": "heuristic: addProxy mutates remote or account state",
+    "verdict": "write"
+  },
+  "addQuickReplyShortcutInlineQueryResultMessage": {
+    "reason": "heuristic: addQuickReplyShortcutInlineQueryResultMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "addQuickReplyShortcutMessage": {
+    "reason": "heuristic: addQuickReplyShortcutMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "addQuickReplyShortcutMessageAlbum": {
+    "reason": "heuristic: addQuickReplyShortcutMessageAlbum mutates remote or account state",
+    "verdict": "write"
+  },
+  "addRecentSticker": {
+    "reason": "heuristic: addRecentSticker mutates remote or account state",
+    "verdict": "write"
+  },
+  "addRecentlyFoundChat": {
+    "reason": "heuristic: addRecentlyFoundChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "addSavedAnimation": {
+    "reason": "heuristic: addSavedAnimation mutates remote or account state",
+    "verdict": "write"
+  },
+  "addSavedNotificationSound": {
+    "reason": "heuristic: addSavedNotificationSound mutates remote or account state",
+    "verdict": "write"
+  },
+  "addStickerToSet": {
+    "reason": "heuristic: addStickerToSet mutates remote or account state",
+    "verdict": "write"
+  },
+  "addStoryAlbumStories": {
+    "reason": "heuristic: addStoryAlbumStories mutates remote or account state",
+    "verdict": "write"
+  },
+  "addTextCompositionStyle": {
+    "reason": "heuristic: addTextCompositionStyle mutates remote or account state",
+    "verdict": "write"
+  },
+  "addWebBrowserSettingsException": {
+    "reason": "heuristic: addWebBrowserSettingsException mutates remote or account state",
+    "verdict": "write"
+  },
+  "allowBotToSendMessages": {
+    "reason": "heuristic: allowBotToSendMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "allowUnpaidMessagesFromUser": {
+    "reason": "heuristic: allowUnpaidMessagesFromUser mutates remote or account state",
+    "verdict": "write"
+  },
+  "answerCallbackQuery": {
+    "reason": "heuristic: answerCallbackQuery mutates remote or account state",
+    "verdict": "write"
+  },
+  "answerChatJoinRequestQuery": {
+    "reason": "heuristic: answerChatJoinRequestQuery mutates remote or account state",
+    "verdict": "write"
+  },
+  "answerCustomQuery": {
+    "reason": "heuristic: answerCustomQuery mutates remote or account state",
+    "verdict": "write"
+  },
+  "answerGuestQuery": {
+    "reason": "heuristic: answerGuestQuery mutates remote or account state",
+    "verdict": "write"
+  },
+  "answerInlineQuery": {
+    "reason": "heuristic: answerInlineQuery mutates remote or account state",
+    "verdict": "write"
+  },
+  "answerPreCheckoutQuery": {
+    "reason": "heuristic: answerPreCheckoutQuery mutates remote or account state",
+    "verdict": "write"
+  },
+  "answerShippingQuery": {
+    "reason": "heuristic: answerShippingQuery mutates remote or account state",
+    "verdict": "write"
+  },
+  "answerWebAppQuery": {
+    "reason": "heuristic: answerWebAppQuery mutates remote or account state",
+    "verdict": "write"
+  },
+  "applyPremiumGiftCode": {
+    "reason": "heuristic: applyPremiumGiftCode mutates remote or account state",
+    "verdict": "write"
+  },
+  "approveSuggestedPost": {
+    "reason": "heuristic: approveSuggestedPost mutates remote or account state",
+    "verdict": "write"
+  },
+  "assignStoreTransaction": {
+    "reason": "heuristic: assignStoreTransaction mutates remote or account state",
+    "verdict": "write"
+  },
+  "banChatMember": {
+    "reason": "kicks and bans; disrupts another user",
+    "verdict": "destructive"
+  },
+  "banGroupCallParticipants": {
+    "reason": "heuristic: banGroupCallParticipants irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "blockMessageSenderFromReplies": {
+    "reason": "heuristic: blockMessageSenderFromReplies mutates remote or account state",
+    "verdict": "write"
+  },
+  "boostChat": {
+    "reason": "heuristic: boostChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "buyGiftUpgrade": {
+    "reason": "heuristic: buyGiftUpgrade mutates remote or account state",
+    "verdict": "write"
+  },
+  "canBotSendMessages": {
+    "reason": "heuristic: can* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "canPostStory": {
+    "reason": "heuristic: can* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "canPurchaseFromStore": {
+    "reason": "heuristic: can* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "canSendGift": {
+    "reason": "heuristic: can* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "canSendMessageToUser": {
+    "reason": "heuristic: can* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "canTransferOwnership": {
+    "reason": "heuristic: can* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "cancelDownloadFile": {
+    "reason": "heuristic: can* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "cancelPasswordReset": {
+    "reason": "heuristic: can* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "cancelPreliminaryUploadFile": {
+    "reason": "heuristic: can* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "cancelRecoveryEmailAddressVerification": {
+    "reason": "heuristic: can* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "changeImportedContacts": {
+    "reason": "heuristic: changeImportedContacts mutates remote or account state",
+    "verdict": "write"
+  },
+  "changeStickerSet": {
+    "reason": "heuristic: changeStickerSet mutates remote or account state",
+    "verdict": "write"
+  },
+  "changeWebBrowserSettings": {
+    "reason": "heuristic: changeWebBrowserSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "checkAuthenticationBotToken": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkAuthenticationCode": {
+    "reason": "advances the login state machine",
+    "verdict": "write"
+  },
+  "checkAuthenticationEmailCode": {
+    "reason": "advances the login state machine",
+    "verdict": "write"
+  },
+  "checkAuthenticationPasskey": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkAuthenticationPassword": {
+    "reason": "advances the login state machine",
+    "verdict": "write"
+  },
+  "checkAuthenticationPasswordRecoveryCode": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkAuthenticationPremiumPurchase": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkAuthenticationWebToken": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkBotUsername": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkChatFolderInviteLink": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkChatInviteLink": {
+    "reason": "validates an invite link without joining",
+    "verdict": "read"
+  },
+  "checkChatUsername": {
+    "reason": "heuristic: checkChatUsername* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "checkCreatedPublicChatsLimit": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkEmailAddressVerificationCode": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkLoginEmailAddressCode": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkOauthRequestMatchCode": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkPasswordRecoveryCode": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkPhoneNumberCode": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkPremiumGiftCode": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkQuickReplyShortcutName": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkRecoveryEmailAddressCode": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "checkStickerSetName": {
+    "reason": "heuristic: checkSticker* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "checkWebAppFileDownload": {
+    "reason": "heuristic: check* validation without mutation",
+    "verdict": "read"
+  },
+  "cleanFileName": {
+    "reason": "heuristic: cleanFileName mutates remote or account state",
+    "verdict": "write"
+  },
+  "clearAllDraftMessages": {
+    "reason": "heuristic: clearAllDraftMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "clearAutosaveSettingsExceptions": {
+    "reason": "heuristic: clearAutosaveSettingsExceptions mutates remote or account state",
+    "verdict": "write"
+  },
+  "clearImportedContacts": {
+    "reason": "heuristic: clearImportedContacts mutates remote or account state",
+    "verdict": "write"
+  },
+  "clearRecentEmojiStatuses": {
+    "reason": "heuristic: clearRecentEmojiStatuses mutates remote or account state",
+    "verdict": "write"
+  },
+  "clearRecentReactions": {
+    "reason": "heuristic: clearRecentReactions mutates remote or account state",
+    "verdict": "write"
+  },
+  "clearRecentStickers": {
+    "reason": "heuristic: clearRecentStickers mutates remote or account state",
+    "verdict": "write"
+  },
+  "clearRecentlyFoundChats": {
+    "reason": "heuristic: clearRecentlyFoundChats mutates remote or account state",
+    "verdict": "write"
+  },
+  "clearSearchedForTags": {
+    "reason": "heuristic: clearSearchedForTags mutates remote or account state",
+    "verdict": "write"
+  },
+  "clickAnimatedEmojiMessage": {
+    "reason": "heuristic: clickAnimatedEmojiMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "clickChatSponsoredMessage": {
+    "reason": "heuristic: clickChatSponsoredMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "clickPremiumSubscriptionButton": {
+    "reason": "heuristic: clickPremiumSubscriptionButton mutates remote or account state",
+    "verdict": "write"
+  },
+  "clickVideoMessageAdvertisement": {
+    "reason": "heuristic: clickVideoMessageAdvertisement mutates remote or account state",
+    "verdict": "write"
+  },
+  "close": {
+    "reason": "shuts down the TDLib client instance",
+    "verdict": "destructive"
+  },
+  "closeChat": {
+    "reason": "marks chat closed; local state only",
+    "verdict": "read"
+  },
+  "closeGiftAuction": {
+    "reason": "heuristic: closeGiftAuction mutates remote or account state",
+    "verdict": "write"
+  },
+  "closeSecretChat": {
+    "reason": "heuristic: closeSecretChat irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "closeStory": {
+    "reason": "heuristic: closeStory mutates remote or account state",
+    "verdict": "write"
+  },
+  "closeWebApp": {
+    "reason": "heuristic: closeWebApp mutates remote or account state",
+    "verdict": "write"
+  },
+  "commitPendingLiveStoryReactions": {
+    "reason": "heuristic: commitPendingLiveStoryReactions mutates remote or account state",
+    "verdict": "write"
+  },
+  "commitPendingPaidMessageReactions": {
+    "reason": "heuristic: commitPendingPaidMessageReactions mutates remote or account state",
+    "verdict": "write"
+  },
+  "composeRichMessageWithAi": {
+    "reason": "heuristic: composeRichMessageWithAi mutates remote or account state",
+    "verdict": "write"
+  },
+  "composeTextWithAi": {
+    "reason": "heuristic: composeTextWithAi mutates remote or account state",
+    "verdict": "write"
+  },
+  "confirmBusinessConnectedBot": {
+    "reason": "heuristic: confirmBusinessConnectedBot mutates remote or account state",
+    "verdict": "write"
+  },
+  "confirmQrCodeAuthentication": {
+    "reason": "heuristic: confirmQrCodeAuthentication mutates remote or account state",
+    "verdict": "write"
+  },
+  "confirmSession": {
+    "reason": "heuristic: confirmSession mutates remote or account state",
+    "verdict": "write"
+  },
+  "connectAffiliateProgram": {
+    "reason": "heuristic: connectAffiliateProgram mutates remote or account state",
+    "verdict": "write"
+  },
+  "craftGift": {
+    "reason": "heuristic: craftGift mutates remote or account state",
+    "verdict": "write"
+  },
+  "createBasicGroupChat": {
+    "reason": "heuristic: createBasicGroupChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "createBot": {
+    "reason": "heuristic: createBot mutates remote or account state",
+    "verdict": "write"
+  },
+  "createBusinessChatLink": {
+    "reason": "heuristic: createBusinessChatLink mutates remote or account state",
+    "verdict": "write"
+  },
+  "createCall": {
+    "reason": "heuristic: createCall mutates remote or account state",
+    "verdict": "write"
+  },
+  "createChatFolder": {
+    "reason": "heuristic: createChatFolder mutates remote or account state",
+    "verdict": "write"
+  },
+  "createChatFolderInviteLink": {
+    "reason": "heuristic: createChatFolderInviteLink mutates remote or account state",
+    "verdict": "write"
+  },
+  "createChatInviteLink": {
+    "reason": "heuristic: createChatInviteLink mutates remote or account state",
+    "verdict": "write"
+  },
+  "createChatSubscriptionInviteLink": {
+    "reason": "heuristic: createChatSubscriptionInviteLink mutates remote or account state",
+    "verdict": "write"
+  },
+  "createCommunity": {
+    "reason": "heuristic: createCommunity mutates remote or account state",
+    "verdict": "write"
+  },
+  "createForumTopic": {
+    "reason": "heuristic: createForumTopic mutates remote or account state",
+    "verdict": "write"
+  },
+  "createGiftCollection": {
+    "reason": "heuristic: createGiftCollection mutates remote or account state",
+    "verdict": "write"
+  },
+  "createGroupCall": {
+    "reason": "heuristic: createGroupCall mutates remote or account state",
+    "verdict": "write"
+  },
+  "createInvoiceLink": {
+    "reason": "heuristic: createInvoiceLink mutates remote or account state",
+    "verdict": "write"
+  },
+  "createNewBasicGroupChat": {
+    "reason": "heuristic: createNewBasicGroupChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "createNewSecretChat": {
+    "reason": "heuristic: createNewSecretChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "createNewStickerSet": {
+    "reason": "heuristic: createNewStickerSet mutates remote or account state",
+    "verdict": "write"
+  },
+  "createNewSupergroupChat": {
+    "reason": "heuristic: createNewSupergroupChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "createPrivateChat": {
+    "reason": "heuristic: createPrivateChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "createRichMessageWithAi": {
+    "reason": "heuristic: createRichMessageWithAi mutates remote or account state",
+    "verdict": "write"
+  },
+  "createSecretChat": {
+    "reason": "heuristic: createSecretChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "createStoryAlbum": {
+    "reason": "heuristic: createStoryAlbum mutates remote or account state",
+    "verdict": "write"
+  },
+  "createSupergroupChat": {
+    "reason": "heuristic: createSupergroupChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "createTemporaryPassword": {
+    "reason": "heuristic: createTemporaryPassword mutates remote or account state",
+    "verdict": "write"
+  },
+  "createTextCompositionStyle": {
+    "reason": "heuristic: createTextCompositionStyle mutates remote or account state",
+    "verdict": "write"
+  },
+  "createVideoChat": {
+    "reason": "heuristic: createVideoChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "declineGroupCallInvitation": {
+    "reason": "heuristic: declineGroupCallInvitation mutates remote or account state",
+    "verdict": "write"
+  },
+  "declineOauthRequest": {
+    "reason": "heuristic: declineOauthRequest mutates remote or account state",
+    "verdict": "write"
+  },
+  "declineSuggestedPost": {
+    "reason": "heuristic: declineSuggestedPost mutates remote or account state",
+    "verdict": "write"
+  },
+  "decryptGroupCallData": {
+    "reason": "heuristic: decryptGroupCallData mutates remote or account state",
+    "verdict": "write"
+  },
+  "deleteAccount": {
+    "reason": "irreversibly deletes the Telegram account",
+    "verdict": "destructive"
+  },
+  "deleteAllCallMessages": {
+    "reason": "heuristic: deleteAllCallMessages irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteAllChatWelcomeMessages": {
+    "reason": "heuristic: deleteAllChatWelcomeMessages irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteAllRecentMessageReactionsFromSender": {
+    "reason": "heuristic: deleteAllRecentMessageReactionsFromSender irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteAllRevokedChatInviteLinks": {
+    "reason": "heuristic: deleteAllRevokedChatInviteLinks irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteBotMediaPreviews": {
+    "reason": "heuristic: deleteBotMediaPreviews irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteBusinessChatLink": {
+    "reason": "heuristic: deleteBusinessChatLink irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteBusinessConnectedBot": {
+    "reason": "heuristic: deleteBusinessConnectedBot irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteBusinessMessages": {
+    "reason": "heuristic: deleteBusinessMessages irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteBusinessStory": {
+    "reason": "heuristic: deleteBusinessStory irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteChat": {
+    "reason": "irreversibly deletes a chat",
+    "verdict": "destructive"
+  },
+  "deleteChatBackground": {
+    "reason": "heuristic: deleteChatBackground irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteChatFolder": {
+    "reason": "heuristic: deleteChatFolder irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteChatFolderInviteLink": {
+    "reason": "heuristic: deleteChatFolderInviteLink irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteChatHistory": {
+    "reason": "irreversibly deletes chat history",
+    "verdict": "destructive"
+  },
+  "deleteChatMessagesByDate": {
+    "reason": "heuristic: deleteChatMessagesByDate irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteChatMessagesBySender": {
+    "reason": "heuristic: deleteChatMessagesBySender irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteChatReplyMarkup": {
+    "reason": "heuristic: deleteChatReplyMarkup irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteChatWelcomeMessage": {
+    "reason": "heuristic: deleteChatWelcomeMessage irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteCommands": {
+    "reason": "heuristic: deleteCommands irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteDefaultBackground": {
+    "reason": "heuristic: deleteDefaultBackground irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteDirectMessagesChatTopicHistory": {
+    "reason": "heuristic: deleteDirectMessagesChatTopicHistory irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteDirectMessagesChatTopicMessagesByDate": {
+    "reason": "heuristic: deleteDirectMessagesChatTopicMessagesByDate irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteEphemeralMessage": {
+    "reason": "heuristic: deleteEphemeralMessage irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteFile": {
+    "reason": "heuristic: deleteFile irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteForumTopic": {
+    "reason": "heuristic: deleteForumTopic irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteGiftCollection": {
+    "reason": "heuristic: deleteGiftCollection irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteGroupCallMessages": {
+    "reason": "heuristic: deleteGroupCallMessages irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteGroupCallMessagesBySender": {
+    "reason": "heuristic: deleteGroupCallMessagesBySender irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteLanguagePack": {
+    "reason": "heuristic: deleteLanguagePack irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteMessageEphemeralContent": {
+    "reason": "heuristic: deleteMessageEphemeralContent irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteMessageReactionsFromSender": {
+    "reason": "heuristic: deleteMessageReactionsFromSender irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteMessages": {
+    "reason": "irreversibly deletes messages",
+    "verdict": "destructive"
+  },
+  "deletePassportElement": {
+    "reason": "heuristic: deletePassportElement irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deletePollOption": {
+    "reason": "heuristic: deletePollOption irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteProfilePhoto": {
+    "reason": "heuristic: deleteProfilePhoto irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteQuickReplyShortcut": {
+    "reason": "heuristic: deleteQuickReplyShortcut irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteQuickReplyShortcutMessages": {
+    "reason": "heuristic: deleteQuickReplyShortcutMessages irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteRevokedChatInviteLink": {
+    "reason": "heuristic: deleteRevokedChatInviteLink irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteSavedCredentials": {
+    "reason": "heuristic: deleteSavedCredentials irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteSavedMessagesTopicHistory": {
+    "reason": "heuristic: deleteSavedMessagesTopicHistory irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteSavedMessagesTopicMessagesByDate": {
+    "reason": "heuristic: deleteSavedMessagesTopicMessagesByDate irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteSavedOrderInfo": {
+    "reason": "heuristic: deleteSavedOrderInfo irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteStickerSet": {
+    "reason": "heuristic: deleteStickerSet irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteStory": {
+    "reason": "heuristic: deleteStory irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteStoryAlbum": {
+    "reason": "heuristic: deleteStoryAlbum irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "deleteTextCompositionStyle": {
+    "reason": "heuristic: deleteTextCompositionStyle irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "destroy": {
+    "reason": "heuristic: destroy irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "disableAllSupergroupUsernames": {
+    "reason": "heuristic: disableAllSupergroupUsernames mutates remote or account state",
+    "verdict": "write"
+  },
+  "disableProxy": {
+    "reason": "heuristic: disableProxy mutates remote or account state",
+    "verdict": "write"
+  },
+  "discardCall": {
+    "reason": "heuristic: discardCall mutates remote or account state",
+    "verdict": "write"
+  },
+  "disconnectAffiliateProgram": {
+    "reason": "heuristic: disconnectAffiliateProgram mutates remote or account state",
+    "verdict": "write"
+  },
+  "disconnectAllWebsites": {
+    "reason": "heuristic: disconnectAllWebsites mutates remote or account state",
+    "verdict": "write"
+  },
+  "disconnectWebsite": {
+    "reason": "heuristic: disconnectWebsite mutates remote or account state",
+    "verdict": "write"
+  },
+  "downloadFile": {
+    "reason": "fetches bytes to local disk; no remote mutation",
+    "verdict": "read"
+  },
+  "dropGiftOriginalDetails": {
+    "reason": "heuristic: dropGiftOriginalDetails mutates remote or account state",
+    "verdict": "write"
+  },
+  "editBotMediaPreview": {
+    "reason": "heuristic: editBotMediaPreview mutates remote or account state",
+    "verdict": "write"
+  },
+  "editBusinessChatLink": {
+    "reason": "heuristic: editBusinessChatLink mutates remote or account state",
+    "verdict": "write"
+  },
+  "editBusinessMessageCaption": {
+    "reason": "heuristic: editBusinessMessageCaption mutates remote or account state",
+    "verdict": "write"
+  },
+  "editBusinessMessageChecklist": {
+    "reason": "heuristic: editBusinessMessageChecklist mutates remote or account state",
+    "verdict": "write"
+  },
+  "editBusinessMessageLiveLocation": {
+    "reason": "heuristic: editBusinessMessageLiveLocation mutates remote or account state",
+    "verdict": "write"
+  },
+  "editBusinessMessageMedia": {
+    "reason": "heuristic: editBusinessMessageMedia mutates remote or account state",
+    "verdict": "write"
+  },
+  "editBusinessMessageReplyMarkup": {
+    "reason": "heuristic: editBusinessMessageReplyMarkup mutates remote or account state",
+    "verdict": "write"
+  },
+  "editBusinessMessageText": {
+    "reason": "heuristic: editBusinessMessageText mutates remote or account state",
+    "verdict": "write"
+  },
+  "editBusinessStory": {
+    "reason": "heuristic: editBusinessStory mutates remote or account state",
+    "verdict": "write"
+  },
+  "editCallbackQueryMessage": {
+    "reason": "heuristic: editCallbackQueryMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "editChatFolder": {
+    "reason": "heuristic: editChatFolder mutates remote or account state",
+    "verdict": "write"
+  },
+  "editChatFolderInviteLink": {
+    "reason": "heuristic: editChatFolderInviteLink mutates remote or account state",
+    "verdict": "write"
+  },
+  "editChatInviteLink": {
+    "reason": "heuristic: editChatInviteLink mutates remote or account state",
+    "verdict": "write"
+  },
+  "editChatSubscriptionInviteLink": {
+    "reason": "heuristic: editChatSubscriptionInviteLink mutates remote or account state",
+    "verdict": "write"
+  },
+  "editChatWelcomeMessage": {
+    "reason": "heuristic: editChatWelcomeMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "editCustomLanguagePackInfo": {
+    "reason": "heuristic: editCustomLanguagePackInfo mutates remote or account state",
+    "verdict": "write"
+  },
+  "editEphemeralMessage": {
+    "reason": "heuristic: editEphemeralMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "editEphemeralMessageCaption": {
+    "reason": "heuristic: editEphemeralMessageCaption mutates remote or account state",
+    "verdict": "write"
+  },
+  "editForumTopic": {
+    "reason": "heuristic: editForumTopic mutates remote or account state",
+    "verdict": "write"
+  },
+  "editInlineMessageCaption": {
+    "reason": "heuristic: editInlineMessageCaption mutates remote or account state",
+    "verdict": "write"
+  },
+  "editInlineMessageLiveLocation": {
+    "reason": "heuristic: editInlineMessageLiveLocation mutates remote or account state",
+    "verdict": "write"
+  },
+  "editInlineMessageMedia": {
+    "reason": "heuristic: editInlineMessageMedia mutates remote or account state",
+    "verdict": "write"
+  },
+  "editInlineMessageReplyMarkup": {
+    "reason": "heuristic: editInlineMessageReplyMarkup mutates remote or account state",
+    "verdict": "write"
+  },
+  "editInlineMessageText": {
+    "reason": "heuristic: editInlineMessageText mutates remote or account state",
+    "verdict": "write"
+  },
+  "editMessageCaption": {
+    "reason": "heuristic: editMessageCaption mutates remote or account state",
+    "verdict": "write"
+  },
+  "editMessageChecklist": {
+    "reason": "heuristic: editMessageChecklist mutates remote or account state",
+    "verdict": "write"
+  },
+  "editMessageLiveLocation": {
+    "reason": "heuristic: editMessageLiveLocation mutates remote or account state",
+    "verdict": "write"
+  },
+  "editMessageMedia": {
+    "reason": "heuristic: editMessageMedia mutates remote or account state",
+    "verdict": "write"
+  },
+  "editMessageReplyMarkup": {
+    "reason": "heuristic: editMessageReplyMarkup mutates remote or account state",
+    "verdict": "write"
+  },
+  "editMessageSchedulingState": {
+    "reason": "heuristic: editMessageSchedulingState mutates remote or account state",
+    "verdict": "write"
+  },
+  "editMessageText": {
+    "reason": "heuristic: editMessageText mutates remote or account state",
+    "verdict": "write"
+  },
+  "editProxy": {
+    "reason": "heuristic: editProxy mutates remote or account state",
+    "verdict": "write"
+  },
+  "editQuickReplyMessage": {
+    "reason": "heuristic: editQuickReplyMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "editStarSubscription": {
+    "reason": "heuristic: editStarSubscription mutates remote or account state",
+    "verdict": "write"
+  },
+  "editStory": {
+    "reason": "heuristic: editStory mutates remote or account state",
+    "verdict": "write"
+  },
+  "editStoryCover": {
+    "reason": "heuristic: editStoryCover mutates remote or account state",
+    "verdict": "write"
+  },
+  "editTextCompositionStyle": {
+    "reason": "heuristic: editTextCompositionStyle mutates remote or account state",
+    "verdict": "write"
+  },
+  "editUserStarSubscription": {
+    "reason": "heuristic: editUserStarSubscription mutates remote or account state",
+    "verdict": "write"
+  },
+  "enableProxy": {
+    "reason": "heuristic: enableProxy mutates remote or account state",
+    "verdict": "write"
+  },
+  "encryptGroupCallData": {
+    "reason": "heuristic: encryptGroupCallData mutates remote or account state",
+    "verdict": "write"
+  },
+  "endGroupCall": {
+    "reason": "heuristic: endGroupCall mutates remote or account state",
+    "verdict": "write"
+  },
+  "endGroupCallRecording": {
+    "reason": "heuristic: endGroupCallRecording mutates remote or account state",
+    "verdict": "write"
+  },
+  "endGroupCallScreenSharing": {
+    "reason": "heuristic: endGroupCallScreenSharing mutates remote or account state",
+    "verdict": "write"
+  },
+  "finishFileGeneration": {
+    "reason": "heuristic: finishFileGeneration mutates remote or account state",
+    "verdict": "write"
+  },
+  "fixRichMessageWithAi": {
+    "reason": "heuristic: fixRichMessageWithAi mutates remote or account state",
+    "verdict": "write"
+  },
+  "fixTextWithAi": {
+    "reason": "heuristic: fixTextWithAi mutates remote or account state",
+    "verdict": "write"
+  },
+  "forwardMessages": {
+    "reason": "heuristic: forwardMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "getAccountTtl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getActiveSessions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getAllPassportElements": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getAllStickerEmojis": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getAnimatedEmoji": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getApplicationConfig": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getApplicationDownloadLink": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getArchiveChatListSettings": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getArchivedStickerSets": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getAttachedStickerSets": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getAttachmentMenuBot": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getAuthenticationPasskeyParameters": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getAuthorizationState": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getAutoDownloadSettingsPresets": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getAutosaveSettings": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getAvailableChatBoostSlots": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getAvailableGifts": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBackgroundUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBankCardInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBasicGroup": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBasicGroupFullInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBlockedMessageSenders": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBotInfoDescription": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBotInfoShortDescription": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBotMediaPreviewInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBotMediaPreviews": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBotName": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBotSimilarBotCount": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBotSimilarBots": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBusinessAccountStarAmount": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBusinessChatLinkInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBusinessChatLinks": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBusinessConnectedBot": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBusinessConnection": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getBusinessFeatures": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCallbackQueryAnswer": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCallbackQueryMessage": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChat": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatActiveStories": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatAdministrators": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatArchivedStories": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatAvailableMessageSenders": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatAvailablePaidMessageReactionSenders": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatBoostFeatures": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatBoostLevelFeatures": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatBoostLink": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatBoostLinkInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatBoostStatus": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatBoosts": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatEventLog": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatFolder": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatFolderChatCount": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatFolderChatsToLeave": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatFolderDefaultIconName": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatFolderInviteLinks": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatFolderNewChats": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatHistory": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatInviteLink": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatInviteLinkCounts": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatInviteLinkMembers": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatInviteLinks": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatJoinRequests": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatListsToAddChat": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatMember": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatMessageByDate": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatMessageCalendar": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatMessageCount": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatMessagePosition": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatNotificationSettingsExceptions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatOwnerAfterLeaving": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatPinnedMessage": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatPostedToChatPageStories": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatRevenueStatistics": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatRevenueTransactions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatRevenueWithdrawalUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatScheduledMessages": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatSimilarChatCount": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatSimilarChats": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatSparseMessagePositions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatSponsoredMessages": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatStatistics": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatStoryAlbums": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatStoryInteractions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChats": {
+    "reason": "read-only chat list fetch",
+    "verdict": "read"
+  },
+  "getChatsForChatFolderInviteLink": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getChatsToPostStories": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCloseFriends": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCollectibleItemInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCommands": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getConnectedAffiliateProgram": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getConnectedAffiliatePrograms": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getConnectedWebsites": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getContacts": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCountries": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCountry": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCountryCode": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCountryFlagEmoji": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCreatedPublicChats": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCurrentState": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCurrentWeather": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCustomEmojiReactionAnimations": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getCustomEmojiStickers": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDatabaseStatistics": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDeepLinkInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDefaultBackgroundCustomEmojiStickers": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDefaultChatEmojiStatuses": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDefaultChatPhotoCustomEmojiStickers": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDefaultEmojiStatuses": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDefaultMessageAutoDeleteTime": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDefaultProfilePhotoCustomEmojiStickers": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDirectMessagesChatTopic": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDirectMessagesChatTopicHistory": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDirectMessagesChatTopicMessageByDate": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDirectMessagesChatTopicRevenue": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getDisallowedChatEmojiStatuses": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getEmojiCategories": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getEmojiReaction": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getEmojiSuggestionsUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getExternalLink": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getExternalLinkInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getFavoriteStickers": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getFile": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getFileDownloadedPrefixSize": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getFileExtension": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getFileMimeType": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getForumTopic": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getForumTopicDefaultIcons": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getForumTopicHistory": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getForumTopicLink": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getForumTopics": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getFullRichMessage": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGameHighScores": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGiftAuctionAcquiredGifts": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGiftAuctionState": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGiftChatThemes": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGiftCollections": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGiftUpgradePreview": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGiftsForCrafting": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGiveawayInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGramRevenueStatistics": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGramWithdrawalUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGreetingStickers": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGrossingWebAppBots": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGroupCall": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGroupCallParticipants": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGroupCallStreamSegment": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGroupCallStreams": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGroupsInCommon": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getGuardBotWebAppUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getImportedContactCount": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getInactiveSupergroupChats": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getInlineGameHighScores": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getInlineQueryResults": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getInstalledBackgrounds": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getInstalledStickerSets": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getInternalLink": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getInternalLinkType": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getJsonString": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getJsonValue": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getKeywordEmojis": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLanguagePackInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLanguagePackString": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLanguagePackStrings": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLinkPreview": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLinkWebBrowserType": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLiveStoryAvailableMessageSenders": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLiveStoryRtmpUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLiveStoryStreamer": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLiveStoryTopDonors": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLocalizationTargetInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLogStream": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLogTagVerbosityLevel": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLogTags": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLogVerbosityLevel": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLoginPasskeys": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLoginUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getLoginUrlInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMainWebApp": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getManagedBotAccessSettings": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getManagedBotToken": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMapThumbnailFile": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMarkdownText": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMe": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMenuButton": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessage": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageAddedReactions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageAuthor": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageAvailableReactions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageEffect": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageEmbeddingCode": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageFileType": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageImportConfirmationText": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageLink": {
+    "reason": "pure lookup returning a link; no state change",
+    "verdict": "read"
+  },
+  "getMessageLinkInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageLocally": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageProperties": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessagePublicForwards": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageReadDate": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageStatistics": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageThread": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageThreadHistory": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessageViewers": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getMessages": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getNetworkStatistics": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getNewChatPrivacySettings": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getOauthLinkInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getOption": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getOwnedBots": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getOwnedStickerSets": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPaidMessageRevenue": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPasskeyParameters": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPassportAuthorizationForm": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPassportAuthorizationFormAvailableElements": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPassportElement": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPasswordState": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPaymentForm": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPaymentReceipt": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPersonalChatHistory": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPhoneNumberInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPhoneNumberInfoSync": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPollOptionProperties": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPollVoteStatistics": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPollVoters": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPreferredCountryLanguage": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPremiumFeatures": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPremiumGiftPaymentOptions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPremiumGiveawayPaymentOptions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPremiumInfoSticker": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPremiumLimit": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPremiumState": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPremiumStickerExamples": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPremiumStickers": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPreparedInlineMessage": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPreparedKeyboardButton": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getProxies": {
+    "reason": "read-only proxy list fetch",
+    "verdict": "read"
+  },
+  "getPublicPostSearchLimits": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getPushReceiverId": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getReadDatePrivacySettings": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getReceivedGift": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getReceivedGifts": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getRecentEmojiStatuses": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getRecentInlineBots": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getRecentStickers": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getRecentlyOpenedChats": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getRecentlyVisitedTMeUrls": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getRecommendedChatFolders": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getRecommendedChats": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getRecoveryEmailAddress": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getRemoteFile": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getRepliedMessage": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSavedAnimations": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSavedMessagesTags": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSavedMessagesTopicHistory": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSavedMessagesTopicMessageByDate": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSavedNotificationSound": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSavedNotificationSounds": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSavedOrderInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getScopeNotificationSettings": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSearchSponsoredChats": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSearchedForTags": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSecretChat": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStakeDiceState": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStarAdAccountUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStarGiftPaymentOptions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStarGiveawayPaymentOptions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStarPaymentOptions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStarRevenueStatistics": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStarSubscriptions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStarTransactions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStarWithdrawalUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStatisticalGraph": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStickerEmojis": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStickerOutline": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStickerOutlineSvgPath": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStickerSet": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStickerSetName": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStickers": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStorageStatistics": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStorageStatisticsFast": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStory": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStoryAlbumStories": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStoryAvailableReactions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStoryInteractions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStoryNotificationSettingsExceptions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStoryPublicForwards": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getStoryStatistics": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSuggestedFileName": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSuggestedStickerSetName": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSuitableDiscussionChats": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSuitablePersonalChats": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSupergroup": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSupergroupFullInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSupergroupMembers": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSupportName": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getSupportUser": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getTemporaryPasswordState": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getTextCompositionStyleExample": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getTextEntities": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getThemeParametersJsonString": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getThemedChatEmojiStatuses": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getThemedEmojiStatuses": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getTimeZones": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getTonTransactions": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getTopChats": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getTrendingStickerSets": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUpgradedGift": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUpgradedGiftEmojiStatuses": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUpgradedGiftValueInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUpgradedGiftVariants": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUpgradedGiftWithdrawalUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUpgradedGiftsPromotionalAnimation": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUser": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUserChatBoosts": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUserFullInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUserLink": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUserPrivacySettingRules": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUserProfileAudios": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUserProfilePhotos": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getUserSupportInfo": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getVideoChatAvailableParticipants": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getVideoChatInviteLink": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getVideoChatRtmpUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getVideoMessageAdvertisements": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getWebAppLinkUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getWebAppPlaceholder": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getWebAppUrl": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "getWebPageInstantView": {
+    "reason": "heuristic: get* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "giftPremiumWithStars": {
+    "reason": "heuristic: giftPremiumWithStars mutates remote or account state",
+    "verdict": "write"
+  },
+  "hideContactCloseBirthdays": {
+    "reason": "heuristic: hideContactCloseBirthdays mutates remote or account state",
+    "verdict": "write"
+  },
+  "hideSuggestedAction": {
+    "reason": "heuristic: hideSuggestedAction mutates remote or account state",
+    "verdict": "write"
+  },
+  "importContacts": {
+    "reason": "heuristic: importContacts mutates remote or account state",
+    "verdict": "write"
+  },
+  "importMessages": {
+    "reason": "heuristic: importMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "increaseGiftAuctionBid": {
+    "reason": "heuristic: increaseGiftAuctionBid mutates remote or account state",
+    "verdict": "write"
+  },
+  "inviteGroupCallParticipant": {
+    "reason": "heuristic: inviteGroupCallParticipant mutates remote or account state",
+    "verdict": "write"
+  },
+  "inviteVideoChatParticipants": {
+    "reason": "heuristic: inviteVideoChatParticipants mutates remote or account state",
+    "verdict": "write"
+  },
+  "isLoginEmailAddressRequired": {
+    "reason": "heuristic: isLoginEmailAddressRequired mutates remote or account state",
+    "verdict": "write"
+  },
+  "isProfileAudio": {
+    "reason": "heuristic: isProfileAudio mutates remote or account state",
+    "verdict": "write"
+  },
+  "joinChat": {
+    "reason": "heuristic: joinChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "joinChatByInviteLink": {
+    "reason": "heuristic: joinChatByInviteLink mutates remote or account state",
+    "verdict": "write"
+  },
+  "joinGroupCall": {
+    "reason": "heuristic: joinGroupCall mutates remote or account state",
+    "verdict": "write"
+  },
+  "joinLiveStory": {
+    "reason": "heuristic: joinLiveStory mutates remote or account state",
+    "verdict": "write"
+  },
+  "joinVideoChat": {
+    "reason": "heuristic: joinVideoChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "launchPrepaidGiveaway": {
+    "reason": "heuristic: launchPrepaidGiveaway mutates remote or account state",
+    "verdict": "write"
+  },
+  "leaveChat": {
+    "reason": "heuristic: leaveChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "leaveGroupCall": {
+    "reason": "heuristic: leaveGroupCall mutates remote or account state",
+    "verdict": "write"
+  },
+  "listenToAudio": {
+    "reason": "heuristic: listenToAudio mutates remote or account state",
+    "verdict": "write"
+  },
+  "loadActiveStories": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "loadChatWelcomeMessages": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "loadChats": {
+    "reason": "loads chat list into memory; local state only",
+    "verdict": "read"
+  },
+  "loadCommunityFullInfo": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "loadDirectMessagesChatTopics": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "loadGroupCallParticipants": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "loadQuickReplyShortcutMessages": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "loadQuickReplyShortcuts": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "loadSavedMessagesTopics": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "logOut": {
+    "reason": "ends the session on all devices state; requires re-login",
+    "verdict": "destructive"
+  },
+  "markChecklistTasksAsDone": {
+    "reason": "heuristic: markChecklistTasksAsDone mutates remote or account state",
+    "verdict": "write"
+  },
+  "openBotSimilarBot": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "openChat": {
+    "reason": "marks chat open; local/read-receipt state only",
+    "verdict": "read"
+  },
+  "openChatSimilarChat": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "openGiftAuction": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "openMessageContent": {
+    "reason": "marks content viewed; local state only",
+    "verdict": "read"
+  },
+  "openSponsoredChat": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "openStory": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "openWebApp": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "optimizeStorage": {
+    "reason": "heuristic: optimizeStorage mutates remote or account state",
+    "verdict": "write"
+  },
+  "parseMarkdown": {
+    "reason": "heuristic: parse* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "parseTextEntities": {
+    "reason": "heuristic: parse* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "pinChatMessage": {
+    "reason": "heuristic: pinChatMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "pingProxy": {
+    "reason": "connectivity probe; no state change",
+    "verdict": "read"
+  },
+  "placeGiftAuctionBid": {
+    "reason": "heuristic: placeGiftAuctionBid mutates remote or account state",
+    "verdict": "write"
+  },
+  "postStory": {
+    "reason": "heuristic: postStory mutates remote or account state",
+    "verdict": "write"
+  },
+  "preliminaryUploadFile": {
+    "reason": "heuristic: preliminaryUploadFile mutates remote or account state",
+    "verdict": "write"
+  },
+  "processChatFolderNewChats": {
+    "reason": "heuristic: processChatFolderNewChats mutates remote or account state",
+    "verdict": "write"
+  },
+  "processChatHasProtectedContentDisableRequest": {
+    "reason": "heuristic: processChatHasProtectedContentDisableRequest mutates remote or account state",
+    "verdict": "write"
+  },
+  "processChatJoinRequest": {
+    "reason": "heuristic: processChatJoinRequest mutates remote or account state",
+    "verdict": "write"
+  },
+  "processChatJoinRequests": {
+    "reason": "heuristic: processChatJoinRequests mutates remote or account state",
+    "verdict": "write"
+  },
+  "processGiftPurchaseOffer": {
+    "reason": "heuristic: processGiftPurchaseOffer mutates remote or account state",
+    "verdict": "write"
+  },
+  "processPushNotification": {
+    "reason": "heuristic: processPushNotification mutates remote or account state",
+    "verdict": "write"
+  },
+  "rateSpeechRecognition": {
+    "reason": "heuristic: rateSpeechRecognition mutates remote or account state",
+    "verdict": "write"
+  },
+  "readAllChatMentions": {
+    "reason": "heuristic: readAllChatMentions mutates remote or account state",
+    "verdict": "write"
+  },
+  "readAllChatPollVotes": {
+    "reason": "heuristic: readAllChatPollVotes mutates remote or account state",
+    "verdict": "write"
+  },
+  "readAllChatReactions": {
+    "reason": "clears local reaction badges only",
+    "verdict": "read"
+  },
+  "readAllDirectMessagesChatTopicReactions": {
+    "reason": "heuristic: readAllDirectMessagesChatTopicReactions mutates remote or account state",
+    "verdict": "write"
+  },
+  "readAllForumTopicMentions": {
+    "reason": "heuristic: readAllForumTopicMentions mutates remote or account state",
+    "verdict": "write"
+  },
+  "readAllForumTopicPollVotes": {
+    "reason": "heuristic: readAllForumTopicPollVotes mutates remote or account state",
+    "verdict": "write"
+  },
+  "readAllForumTopicReactions": {
+    "reason": "heuristic: readAllForumTopicReactions mutates remote or account state",
+    "verdict": "write"
+  },
+  "readBusinessMessage": {
+    "reason": "heuristic: readBusinessMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "readChatList": {
+    "reason": "heuristic: readChatList mutates remote or account state",
+    "verdict": "write"
+  },
+  "readFilePart": {
+    "reason": "heuristic: readFilePart mutates remote or account state",
+    "verdict": "write"
+  },
+  "readdQuickReplyShortcutMessages": {
+    "reason": "heuristic: readdQuickReplyShortcutMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "recognizeSpeech": {
+    "reason": "heuristic: recognizeSpeech mutates remote or account state",
+    "verdict": "write"
+  },
+  "recoverAuthenticationPassword": {
+    "reason": "heuristic: recoverAuthenticationPassword mutates remote or account state",
+    "verdict": "write"
+  },
+  "recoverPassword": {
+    "reason": "heuristic: recoverPassword mutates remote or account state",
+    "verdict": "write"
+  },
+  "refundStarPayment": {
+    "reason": "heuristic: refundStarPayment mutates remote or account state",
+    "verdict": "write"
+  },
+  "registerDevice": {
+    "reason": "heuristic: registerDevice mutates remote or account state",
+    "verdict": "write"
+  },
+  "registerUser": {
+    "reason": "heuristic: registerUser mutates remote or account state",
+    "verdict": "write"
+  },
+  "removeAllFilesFromDownloads": {
+    "reason": "heuristic: removeAllFilesFromDownloads irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeAllWebBrowserSettingsExceptions": {
+    "reason": "heuristic: removeAllWebBrowserSettingsExceptions irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeBusinessConnectedBotFromChat": {
+    "reason": "heuristic: removeBusinessConnectedBotFromChat irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeChatActionBar": {
+    "reason": "heuristic: removeChatActionBar irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeContacts": {
+    "reason": "removes contacts; re-addable",
+    "verdict": "write"
+  },
+  "removeFavoriteSticker": {
+    "reason": "heuristic: removeFavoriteSticker irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeFileFromDownloads": {
+    "reason": "heuristic: removeFileFromDownloads irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeGiftCollectionGifts": {
+    "reason": "heuristic: removeGiftCollectionGifts irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeInstalledBackground": {
+    "reason": "heuristic: removeInstalledBackground irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeLoginPasskey": {
+    "reason": "heuristic: removeLoginPasskey irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeMessageReaction": {
+    "reason": "removes own reaction; reversible",
+    "verdict": "write"
+  },
+  "removeMessageSenderBotVerification": {
+    "reason": "heuristic: removeMessageSenderBotVerification irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeNotification": {
+    "reason": "heuristic: removeNotification irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeNotificationGroup": {
+    "reason": "heuristic: removeNotificationGroup irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removePendingLiveStoryReactions": {
+    "reason": "heuristic: removePendingLiveStoryReactions irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removePendingPaidMessageReactions": {
+    "reason": "heuristic: removePendingPaidMessageReactions irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeProfileAudio": {
+    "reason": "heuristic: removeProfileAudio irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeProxy": {
+    "reason": "heuristic: removeProxy irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeRecentHashtag": {
+    "reason": "heuristic: removeRecentHashtag irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeRecentSticker": {
+    "reason": "heuristic: removeRecentSticker irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeRecentlyFoundChat": {
+    "reason": "heuristic: removeRecentlyFoundChat irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeSavedAnimation": {
+    "reason": "heuristic: removeSavedAnimation irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeSavedNotificationSound": {
+    "reason": "heuristic: removeSavedNotificationSound irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeSearchedForTag": {
+    "reason": "heuristic: removeSearchedForTag irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeStickerFromSet": {
+    "reason": "heuristic: removeStickerFromSet irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeStoryAlbumStories": {
+    "reason": "heuristic: removeStoryAlbumStories irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeTextCompositionStyle": {
+    "reason": "heuristic: removeTextCompositionStyle irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeTopChat": {
+    "reason": "heuristic: removeTopChat irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "removeWebBrowserSettingsException": {
+    "reason": "heuristic: removeWebBrowserSettingsException irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "reorderActiveUsernames": {
+    "reason": "heuristic: reorderActiveUsernames mutates remote or account state",
+    "verdict": "write"
+  },
+  "reorderBotActiveUsernames": {
+    "reason": "heuristic: reorderBotActiveUsernames mutates remote or account state",
+    "verdict": "write"
+  },
+  "reorderBotMediaPreviews": {
+    "reason": "heuristic: reorderBotMediaPreviews mutates remote or account state",
+    "verdict": "write"
+  },
+  "reorderChatFolders": {
+    "reason": "heuristic: reorderChatFolders mutates remote or account state",
+    "verdict": "write"
+  },
+  "reorderGiftCollectionGifts": {
+    "reason": "heuristic: reorderGiftCollectionGifts mutates remote or account state",
+    "verdict": "write"
+  },
+  "reorderGiftCollections": {
+    "reason": "heuristic: reorderGiftCollections mutates remote or account state",
+    "verdict": "write"
+  },
+  "reorderInstalledStickerSets": {
+    "reason": "heuristic: reorderInstalledStickerSets mutates remote or account state",
+    "verdict": "write"
+  },
+  "reorderQuickReplyShortcuts": {
+    "reason": "heuristic: reorderQuickReplyShortcuts mutates remote or account state",
+    "verdict": "write"
+  },
+  "reorderStoryAlbumStories": {
+    "reason": "heuristic: reorderStoryAlbumStories mutates remote or account state",
+    "verdict": "write"
+  },
+  "reorderStoryAlbums": {
+    "reason": "heuristic: reorderStoryAlbums mutates remote or account state",
+    "verdict": "write"
+  },
+  "reorderSupergroupActiveUsernames": {
+    "reason": "heuristic: reorderSupergroupActiveUsernames mutates remote or account state",
+    "verdict": "write"
+  },
+  "replaceLiveStoryRtmpUrl": {
+    "reason": "heuristic: replaceLiveStoryRtmpUrl mutates remote or account state",
+    "verdict": "write"
+  },
+  "replacePrimaryChatInviteLink": {
+    "reason": "heuristic: replacePrimaryChatInviteLink mutates remote or account state",
+    "verdict": "write"
+  },
+  "replaceStickerInSet": {
+    "reason": "heuristic: replaceStickerInSet mutates remote or account state",
+    "verdict": "write"
+  },
+  "replaceVideoChatRtmpUrl": {
+    "reason": "heuristic: replaceVideoChatRtmpUrl mutates remote or account state",
+    "verdict": "write"
+  },
+  "reportAuthenticationCodeMissing": {
+    "reason": "heuristic: reportAuthenticationCodeMissing mutates remote or account state",
+    "verdict": "write"
+  },
+  "reportChat": {
+    "reason": "heuristic: reportChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "reportChatPhoto": {
+    "reason": "heuristic: reportChatPhoto mutates remote or account state",
+    "verdict": "write"
+  },
+  "reportChatSponsoredMessage": {
+    "reason": "heuristic: reportChatSponsoredMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "reportMessageReactions": {
+    "reason": "heuristic: reportMessageReactions mutates remote or account state",
+    "verdict": "write"
+  },
+  "reportPhoneNumberCodeMissing": {
+    "reason": "heuristic: reportPhoneNumberCodeMissing mutates remote or account state",
+    "verdict": "write"
+  },
+  "reportSponsoredChat": {
+    "reason": "heuristic: reportSponsoredChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "reportStory": {
+    "reason": "heuristic: reportStory mutates remote or account state",
+    "verdict": "write"
+  },
+  "reportSupergroupAntiSpamFalsePositive": {
+    "reason": "heuristic: reportSupergroupAntiSpamFalsePositive mutates remote or account state",
+    "verdict": "write"
+  },
+  "reportSupergroupSpam": {
+    "reason": "heuristic: reportSupergroupSpam mutates remote or account state",
+    "verdict": "write"
+  },
+  "reportVideoMessageAdvertisement": {
+    "reason": "heuristic: reportVideoMessageAdvertisement mutates remote or account state",
+    "verdict": "write"
+  },
+  "requestAuthenticationPasswordRecovery": {
+    "reason": "heuristic: requestAuthenticationPasswordRecovery mutates remote or account state",
+    "verdict": "write"
+  },
+  "requestPasswordRecovery": {
+    "reason": "heuristic: requestPasswordRecovery mutates remote or account state",
+    "verdict": "write"
+  },
+  "requestQrCodeAuthentication": {
+    "reason": "heuristic: requestQrCodeAuthentication mutates remote or account state",
+    "verdict": "write"
+  },
+  "resendAuthenticationCode": {
+    "reason": "heuristic: resendAuthenticationCode mutates remote or account state",
+    "verdict": "write"
+  },
+  "resendEmailAddressVerificationCode": {
+    "reason": "heuristic: resendEmailAddressVerificationCode mutates remote or account state",
+    "verdict": "write"
+  },
+  "resendLoginEmailAddressCode": {
+    "reason": "heuristic: resendLoginEmailAddressCode mutates remote or account state",
+    "verdict": "write"
+  },
+  "resendMessages": {
+    "reason": "heuristic: resendMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "resendPhoneNumberCode": {
+    "reason": "heuristic: resendPhoneNumberCode mutates remote or account state",
+    "verdict": "write"
+  },
+  "resendRecoveryEmailAddressCode": {
+    "reason": "heuristic: resendRecoveryEmailAddressCode mutates remote or account state",
+    "verdict": "write"
+  },
+  "resetAllNotificationSettings": {
+    "reason": "heuristic: resetAllNotificationSettings irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "resetAuthenticationEmailAddress": {
+    "reason": "heuristic: resetAuthenticationEmailAddress irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "resetInstalledBackgrounds": {
+    "reason": "heuristic: resetInstalledBackgrounds irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "resetNetworkStatistics": {
+    "reason": "heuristic: resetNetworkStatistics irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "resetPassword": {
+    "reason": "heuristic: resetPassword irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "reuseStarSubscription": {
+    "reason": "heuristic: reuseStarSubscription mutates remote or account state",
+    "verdict": "write"
+  },
+  "revokeChatInviteLink": {
+    "reason": "heuristic: revokeChatInviteLink irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "revokeGroupCallInviteLink": {
+    "reason": "heuristic: revokeGroupCallInviteLink irreversibly removes or revokes state",
+    "verdict": "destructive"
+  },
+  "saveApplicationLogEvent": {
+    "reason": "heuristic: saveApplicationLogEvent mutates remote or account state",
+    "verdict": "write"
+  },
+  "savePreparedInlineMessage": {
+    "reason": "heuristic: savePreparedInlineMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "savePreparedKeyboardButton": {
+    "reason": "heuristic: savePreparedKeyboardButton mutates remote or account state",
+    "verdict": "write"
+  },
+  "searchAffiliatePrograms": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchBackground": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchCallMessages": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchChatAffiliateProgram": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchChatMembers": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchChatMessages": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchChatRecentLocationMessages": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchChats": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchChatsOnServer": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchContacts": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchEmojis": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchFileDownloads": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchGiftsForResale": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchHashtags": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchInstalledStickerSets": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchMessages": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchOutgoingDocumentMessages": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchPublicChat": {
+    "reason": "pure lookup by username; no state change",
+    "verdict": "read"
+  },
+  "searchPublicChats": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchPublicMessagesByTag": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchPublicPosts": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchPublicStoriesByLocation": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchPublicStoriesByTag": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchPublicStoriesByVenue": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchQuote": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchRecentlyFoundChats": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchSavedMessages": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchSecretMessages": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchStickerSet": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchStickerSets": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchStickers": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchStringsByPrefix": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchTextCompositionStyle": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchUserByPhoneNumber": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchUserByToken": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "searchWebApp": {
+    "reason": "heuristic: search* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "sellGift": {
+    "reason": "heuristic: sellGift mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendAuthenticationFirebaseSms": {
+    "reason": "heuristic: sendAuthenticationFirebaseSms mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendBotStartMessage": {
+    "reason": "heuristic: sendBotStartMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendBusinessMessage": {
+    "reason": "heuristic: sendBusinessMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendBusinessMessageAlbum": {
+    "reason": "heuristic: sendBusinessMessageAlbum mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendCallDebugInformation": {
+    "reason": "heuristic: sendCallDebugInformation mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendCallLog": {
+    "reason": "heuristic: sendCallLog mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendCallRating": {
+    "reason": "heuristic: sendCallRating mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendCallSignalingData": {
+    "reason": "heuristic: sendCallSignalingData mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendChatAction": {
+    "reason": "heuristic: sendChatAction mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendCustomRequest": {
+    "reason": "heuristic: sendCustomRequest mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendEmailAddressVerificationCode": {
+    "reason": "heuristic: sendEmailAddressVerificationCode mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendEphemeralMessage": {
+    "reason": "heuristic: sendEphemeralMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendGift": {
+    "reason": "heuristic: sendGift mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendGiftPurchaseOffer": {
+    "reason": "heuristic: sendGiftPurchaseOffer mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendGroupCallMessage": {
+    "reason": "heuristic: sendGroupCallMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendInlineQueryResultMessage": {
+    "reason": "heuristic: sendInlineQueryResultMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendMessage": {
+    "reason": "heuristic: sendMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendMessageAlbum": {
+    "reason": "heuristic: sendMessageAlbum mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendMessageViewMetrics": {
+    "reason": "heuristic: sendMessageViewMetrics mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendPassportAuthorizationForm": {
+    "reason": "heuristic: sendPassportAuthorizationForm mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendPaymentForm": {
+    "reason": "heuristic: sendPaymentForm mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendPhoneNumberCode": {
+    "reason": "heuristic: sendPhoneNumberCode mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendPhoneNumberFirebaseSms": {
+    "reason": "heuristic: sendPhoneNumberFirebaseSms mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendQuickReplyShortcutMessages": {
+    "reason": "heuristic: sendQuickReplyShortcutMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendResoldGift": {
+    "reason": "heuristic: sendResoldGift mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendRichMessageDraft": {
+    "reason": "heuristic: sendRichMessageDraft mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendTextMessageDraft": {
+    "reason": "heuristic: sendTextMessageDraft mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendWebAppCustomRequest": {
+    "reason": "heuristic: sendWebAppCustomRequest mutates remote or account state",
+    "verdict": "write"
+  },
+  "sendWebAppData": {
+    "reason": "heuristic: sendWebAppData mutates remote or account state",
+    "verdict": "write"
+  },
+  "setAccentColor": {
+    "reason": "heuristic: setAccentColor mutates remote or account state",
+    "verdict": "write"
+  },
+  "setAccountTtl": {
+    "reason": "heuristic: setAccountTtl mutates remote or account state",
+    "verdict": "write"
+  },
+  "setAlarm": {
+    "reason": "heuristic: setAlarm mutates remote or account state",
+    "verdict": "write"
+  },
+  "setApplicationVerificationToken": {
+    "reason": "heuristic: setApplicationVerificationToken mutates remote or account state",
+    "verdict": "write"
+  },
+  "setArchiveChatListSettings": {
+    "reason": "heuristic: setArchiveChatListSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setAuthenticationEmailAddress": {
+    "reason": "advances the login state machine",
+    "verdict": "write"
+  },
+  "setAuthenticationPhoneNumber": {
+    "reason": "advances the login state machine",
+    "verdict": "write"
+  },
+  "setAuthenticationPremiumPurchaseTransaction": {
+    "reason": "heuristic: setAuthenticationPremiumPurchaseTransaction mutates remote or account state",
+    "verdict": "write"
+  },
+  "setAutoDownloadSettings": {
+    "reason": "heuristic: setAutoDownloadSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setAutosaveSettings": {
+    "reason": "heuristic: setAutosaveSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBio": {
+    "reason": "heuristic: setBio mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBirthdate": {
+    "reason": "heuristic: setBirthdate mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBotInfoDescription": {
+    "reason": "heuristic: setBotInfoDescription mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBotInfoShortDescription": {
+    "reason": "heuristic: setBotInfoShortDescription mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBotName": {
+    "reason": "heuristic: setBotName mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBotProfilePhoto": {
+    "reason": "heuristic: setBotProfilePhoto mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBotUpdatesStatus": {
+    "reason": "heuristic: setBotUpdatesStatus mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBusinessAccountBio": {
+    "reason": "heuristic: setBusinessAccountBio mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBusinessAccountGiftSettings": {
+    "reason": "heuristic: setBusinessAccountGiftSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBusinessAccountName": {
+    "reason": "heuristic: setBusinessAccountName mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBusinessAccountProfilePhoto": {
+    "reason": "heuristic: setBusinessAccountProfilePhoto mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBusinessAccountUsername": {
+    "reason": "heuristic: setBusinessAccountUsername mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBusinessAwayMessageSettings": {
+    "reason": "heuristic: setBusinessAwayMessageSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBusinessConnectedBot": {
+    "reason": "heuristic: setBusinessConnectedBot mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBusinessGreetingMessageSettings": {
+    "reason": "heuristic: setBusinessGreetingMessageSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBusinessLocation": {
+    "reason": "heuristic: setBusinessLocation mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBusinessMessageIsPinned": {
+    "reason": "heuristic: setBusinessMessageIsPinned mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBusinessOpeningHours": {
+    "reason": "heuristic: setBusinessOpeningHours mutates remote or account state",
+    "verdict": "write"
+  },
+  "setBusinessStartPage": {
+    "reason": "heuristic: setBusinessStartPage mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatAccentColor": {
+    "reason": "heuristic: setChatAccentColor mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatActiveStoriesList": {
+    "reason": "heuristic: setChatActiveStoriesList mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatAffiliateProgram": {
+    "reason": "heuristic: setChatAffiliateProgram mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatAvailableReactions": {
+    "reason": "heuristic: setChatAvailableReactions mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatBackground": {
+    "reason": "heuristic: setChatBackground mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatClientData": {
+    "reason": "heuristic: setChatClientData mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatDescription": {
+    "reason": "heuristic: setChatDescription mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatDirectMessagesGroup": {
+    "reason": "heuristic: setChatDirectMessagesGroup mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatDiscussionGroup": {
+    "reason": "heuristic: setChatDiscussionGroup mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatDraftMessage": {
+    "reason": "heuristic: setChatDraftMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatEmojiStatus": {
+    "reason": "heuristic: setChatEmojiStatus mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatLocation": {
+    "reason": "heuristic: setChatLocation mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatMemberStatus": {
+    "reason": "heuristic: setChatMemberStatus mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatMemberTag": {
+    "reason": "heuristic: setChatMemberTag mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatMessageAutoDeleteTime": {
+    "reason": "heuristic: setChatMessageAutoDeleteTime mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatMessageSender": {
+    "reason": "heuristic: setChatMessageSender mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatNotificationSettings": {
+    "reason": "heuristic: setChatNotificationSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatPaidMessageStarCount": {
+    "reason": "heuristic: setChatPaidMessageStarCount mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatPermissions": {
+    "reason": "heuristic: setChatPermissions mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatPhoto": {
+    "reason": "heuristic: setChatPhoto mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatPinnedStories": {
+    "reason": "heuristic: setChatPinnedStories mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatProfileAccentColor": {
+    "reason": "heuristic: setChatProfileAccentColor mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatSlowModeDelay": {
+    "reason": "heuristic: setChatSlowModeDelay mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatTheme": {
+    "reason": "heuristic: setChatTheme mutates remote or account state",
+    "verdict": "write"
+  },
+  "setChatTitle": {
+    "reason": "heuristic: setChatTitle mutates remote or account state",
+    "verdict": "write"
+  },
+  "setCloseFriends": {
+    "reason": "heuristic: setCloseFriends mutates remote or account state",
+    "verdict": "write"
+  },
+  "setCommands": {
+    "reason": "heuristic: setCommands mutates remote or account state",
+    "verdict": "write"
+  },
+  "setCommunityName": {
+    "reason": "heuristic: setCommunityName mutates remote or account state",
+    "verdict": "write"
+  },
+  "setCustomEmojiStickerSetThumbnail": {
+    "reason": "heuristic: setCustomEmojiStickerSetThumbnail mutates remote or account state",
+    "verdict": "write"
+  },
+  "setCustomLanguagePack": {
+    "reason": "heuristic: setCustomLanguagePack mutates remote or account state",
+    "verdict": "write"
+  },
+  "setCustomLanguagePackString": {
+    "reason": "heuristic: setCustomLanguagePackString mutates remote or account state",
+    "verdict": "write"
+  },
+  "setDatabaseEncryptionKey": {
+    "reason": "heuristic: setDatabaseEncryptionKey mutates remote or account state",
+    "verdict": "write"
+  },
+  "setDefaultBackground": {
+    "reason": "heuristic: setDefaultBackground mutates remote or account state",
+    "verdict": "write"
+  },
+  "setDefaultChannelAdministratorRights": {
+    "reason": "heuristic: setDefaultChannelAdministratorRights mutates remote or account state",
+    "verdict": "write"
+  },
+  "setDefaultGroupAdministratorRights": {
+    "reason": "heuristic: setDefaultGroupAdministratorRights mutates remote or account state",
+    "verdict": "write"
+  },
+  "setDefaultMessageAutoDeleteTime": {
+    "reason": "heuristic: setDefaultMessageAutoDeleteTime mutates remote or account state",
+    "verdict": "write"
+  },
+  "setDefaultReactionType": {
+    "reason": "heuristic: setDefaultReactionType mutates remote or account state",
+    "verdict": "write"
+  },
+  "setDirectMessagesChatTopicIsMarkedAsUnread": {
+    "reason": "heuristic: setDirectMessagesChatTopicIsMarkedAsUnread mutates remote or account state",
+    "verdict": "write"
+  },
+  "setEmojiStatus": {
+    "reason": "heuristic: setEmojiStatus mutates remote or account state",
+    "verdict": "write"
+  },
+  "setFileGenerationProgress": {
+    "reason": "heuristic: setFileGenerationProgress mutates remote or account state",
+    "verdict": "write"
+  },
+  "setForumTopicNotificationSettings": {
+    "reason": "heuristic: setForumTopicNotificationSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setGameScore": {
+    "reason": "heuristic: setGameScore mutates remote or account state",
+    "verdict": "write"
+  },
+  "setGiftCollectionName": {
+    "reason": "heuristic: setGiftCollectionName mutates remote or account state",
+    "verdict": "write"
+  },
+  "setGiftResalePrice": {
+    "reason": "heuristic: setGiftResalePrice mutates remote or account state",
+    "verdict": "write"
+  },
+  "setGiftSettings": {
+    "reason": "heuristic: setGiftSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setGroupCallPaidMessageStarCount": {
+    "reason": "heuristic: setGroupCallPaidMessageStarCount mutates remote or account state",
+    "verdict": "write"
+  },
+  "setGroupCallParticipantIsSpeaking": {
+    "reason": "heuristic: setGroupCallParticipantIsSpeaking mutates remote or account state",
+    "verdict": "write"
+  },
+  "setGroupCallParticipantVolumeLevel": {
+    "reason": "heuristic: setGroupCallParticipantVolumeLevel mutates remote or account state",
+    "verdict": "write"
+  },
+  "setInactiveSessionTtl": {
+    "reason": "heuristic: setInactiveSessionTtl mutates remote or account state",
+    "verdict": "write"
+  },
+  "setInlineGameScore": {
+    "reason": "heuristic: setInlineGameScore mutates remote or account state",
+    "verdict": "write"
+  },
+  "setLiveStoryMessageSender": {
+    "reason": "heuristic: setLiveStoryMessageSender mutates remote or account state",
+    "verdict": "write"
+  },
+  "setLogStream": {
+    "reason": "heuristic: setLogStream mutates remote or account state",
+    "verdict": "write"
+  },
+  "setLogTagVerbosityLevel": {
+    "reason": "heuristic: setLogTagVerbosityLevel mutates remote or account state",
+    "verdict": "write"
+  },
+  "setLogVerbosityLevel": {
+    "reason": "heuristic: setLogVerbosityLevel mutates remote or account state",
+    "verdict": "write"
+  },
+  "setLoginEmailAddress": {
+    "reason": "heuristic: setLoginEmailAddress mutates remote or account state",
+    "verdict": "write"
+  },
+  "setMainProfileTab": {
+    "reason": "heuristic: setMainProfileTab mutates remote or account state",
+    "verdict": "write"
+  },
+  "setManagedBotAccessSettings": {
+    "reason": "heuristic: setManagedBotAccessSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setMenuButton": {
+    "reason": "heuristic: setMenuButton mutates remote or account state",
+    "verdict": "write"
+  },
+  "setMessageFactCheck": {
+    "reason": "heuristic: setMessageFactCheck mutates remote or account state",
+    "verdict": "write"
+  },
+  "setMessageReactions": {
+    "reason": "heuristic: setMessageReactions mutates remote or account state",
+    "verdict": "write"
+  },
+  "setMessageSenderBlockList": {
+    "reason": "heuristic: setMessageSenderBlockList mutates remote or account state",
+    "verdict": "write"
+  },
+  "setMessageSenderBotVerification": {
+    "reason": "heuristic: setMessageSenderBotVerification mutates remote or account state",
+    "verdict": "write"
+  },
+  "setName": {
+    "reason": "heuristic: setName mutates remote or account state",
+    "verdict": "write"
+  },
+  "setNetworkType": {
+    "reason": "heuristic: setNetworkType mutates remote or account state",
+    "verdict": "write"
+  },
+  "setNewChatPrivacySettings": {
+    "reason": "heuristic: setNewChatPrivacySettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setOption": {
+    "reason": "heuristic: setOption mutates remote or account state",
+    "verdict": "write"
+  },
+  "setPaidMessageReactionType": {
+    "reason": "heuristic: setPaidMessageReactionType mutates remote or account state",
+    "verdict": "write"
+  },
+  "setPassportElement": {
+    "reason": "heuristic: setPassportElement mutates remote or account state",
+    "verdict": "write"
+  },
+  "setPassportElementErrors": {
+    "reason": "heuristic: setPassportElementErrors mutates remote or account state",
+    "verdict": "write"
+  },
+  "setPassword": {
+    "reason": "heuristic: setPassword mutates remote or account state",
+    "verdict": "write"
+  },
+  "setPersonalChat": {
+    "reason": "heuristic: setPersonalChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "setPinnedChats": {
+    "reason": "heuristic: setPinnedChats mutates remote or account state",
+    "verdict": "write"
+  },
+  "setPinnedForumTopics": {
+    "reason": "heuristic: setPinnedForumTopics mutates remote or account state",
+    "verdict": "write"
+  },
+  "setPinnedGifts": {
+    "reason": "heuristic: setPinnedGifts mutates remote or account state",
+    "verdict": "write"
+  },
+  "setPinnedSavedMessagesTopics": {
+    "reason": "heuristic: setPinnedSavedMessagesTopics mutates remote or account state",
+    "verdict": "write"
+  },
+  "setPollAnswer": {
+    "reason": "heuristic: setPollAnswer mutates remote or account state",
+    "verdict": "write"
+  },
+  "setProfileAccentColor": {
+    "reason": "heuristic: setProfileAccentColor mutates remote or account state",
+    "verdict": "write"
+  },
+  "setProfileAudioPosition": {
+    "reason": "heuristic: setProfileAudioPosition mutates remote or account state",
+    "verdict": "write"
+  },
+  "setProfilePhoto": {
+    "reason": "heuristic: setProfilePhoto mutates remote or account state",
+    "verdict": "write"
+  },
+  "setQuickReplyShortcutName": {
+    "reason": "heuristic: setQuickReplyShortcutName mutates remote or account state",
+    "verdict": "write"
+  },
+  "setReactionNotificationSettings": {
+    "reason": "heuristic: setReactionNotificationSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setReadDatePrivacySettings": {
+    "reason": "heuristic: setReadDatePrivacySettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setRecoveryEmailAddress": {
+    "reason": "heuristic: setRecoveryEmailAddress mutates remote or account state",
+    "verdict": "write"
+  },
+  "setSavedMessagesTagLabel": {
+    "reason": "heuristic: setSavedMessagesTagLabel mutates remote or account state",
+    "verdict": "write"
+  },
+  "setScopeNotificationSettings": {
+    "reason": "heuristic: setScopeNotificationSettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setStickerEmojis": {
+    "reason": "heuristic: setStickerEmojis mutates remote or account state",
+    "verdict": "write"
+  },
+  "setStickerKeywords": {
+    "reason": "heuristic: setStickerKeywords mutates remote or account state",
+    "verdict": "write"
+  },
+  "setStickerMaskPosition": {
+    "reason": "heuristic: setStickerMaskPosition mutates remote or account state",
+    "verdict": "write"
+  },
+  "setStickerPositionInSet": {
+    "reason": "heuristic: setStickerPositionInSet mutates remote or account state",
+    "verdict": "write"
+  },
+  "setStickerSetThumbnail": {
+    "reason": "heuristic: setStickerSetThumbnail mutates remote or account state",
+    "verdict": "write"
+  },
+  "setStickerSetTitle": {
+    "reason": "heuristic: setStickerSetTitle mutates remote or account state",
+    "verdict": "write"
+  },
+  "setStoryAlbumName": {
+    "reason": "heuristic: setStoryAlbumName mutates remote or account state",
+    "verdict": "write"
+  },
+  "setStoryPrivacySettings": {
+    "reason": "heuristic: setStoryPrivacySettings mutates remote or account state",
+    "verdict": "write"
+  },
+  "setStoryReaction": {
+    "reason": "heuristic: setStoryReaction mutates remote or account state",
+    "verdict": "write"
+  },
+  "setSupergroupCustomEmojiStickerSet": {
+    "reason": "heuristic: setSupergroupCustomEmojiStickerSet mutates remote or account state",
+    "verdict": "write"
+  },
+  "setSupergroupMainProfileTab": {
+    "reason": "heuristic: setSupergroupMainProfileTab mutates remote or account state",
+    "verdict": "write"
+  },
+  "setSupergroupStickerSet": {
+    "reason": "heuristic: setSupergroupStickerSet mutates remote or account state",
+    "verdict": "write"
+  },
+  "setSupergroupUnrestrictBoostCount": {
+    "reason": "heuristic: setSupergroupUnrestrictBoostCount mutates remote or account state",
+    "verdict": "write"
+  },
+  "setSupergroupUsername": {
+    "reason": "heuristic: setSupergroupUsername mutates remote or account state",
+    "verdict": "write"
+  },
+  "setTdlibParameters": {
+    "reason": "configures the TDLib instance",
+    "verdict": "write"
+  },
+  "setUpgradedGiftColors": {
+    "reason": "heuristic: setUpgradedGiftColors mutates remote or account state",
+    "verdict": "write"
+  },
+  "setUserEmojiStatus": {
+    "reason": "heuristic: setUserEmojiStatus mutates remote or account state",
+    "verdict": "write"
+  },
+  "setUserNote": {
+    "reason": "heuristic: setUserNote mutates remote or account state",
+    "verdict": "write"
+  },
+  "setUserPersonalProfilePhoto": {
+    "reason": "heuristic: setUserPersonalProfilePhoto mutates remote or account state",
+    "verdict": "write"
+  },
+  "setUserPrivacySettingRules": {
+    "reason": "heuristic: setUserPrivacySettingRules mutates remote or account state",
+    "verdict": "write"
+  },
+  "setUserSupportInfo": {
+    "reason": "heuristic: setUserSupportInfo mutates remote or account state",
+    "verdict": "write"
+  },
+  "setUsername": {
+    "reason": "heuristic: setUsername mutates remote or account state",
+    "verdict": "write"
+  },
+  "setVideoChatDefaultParticipant": {
+    "reason": "heuristic: setVideoChatDefaultParticipant mutates remote or account state",
+    "verdict": "write"
+  },
+  "setVideoChatTitle": {
+    "reason": "heuristic: setVideoChatTitle mutates remote or account state",
+    "verdict": "write"
+  },
+  "shareChatWithBot": {
+    "reason": "heuristic: shareChatWithBot mutates remote or account state",
+    "verdict": "write"
+  },
+  "sharePhoneNumber": {
+    "reason": "heuristic: sharePhoneNumber mutates remote or account state",
+    "verdict": "write"
+  },
+  "shareUsersWithBot": {
+    "reason": "heuristic: shareUsersWithBot mutates remote or account state",
+    "verdict": "write"
+  },
+  "startGroupCallRecording": {
+    "reason": "heuristic: startGroupCallRecording mutates remote or account state",
+    "verdict": "write"
+  },
+  "startGroupCallScreenSharing": {
+    "reason": "heuristic: startGroupCallScreenSharing mutates remote or account state",
+    "verdict": "write"
+  },
+  "startLiveStory": {
+    "reason": "heuristic: startLiveStory mutates remote or account state",
+    "verdict": "write"
+  },
+  "startScheduledVideoChat": {
+    "reason": "heuristic: startScheduledVideoChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "stopBusinessPoll": {
+    "reason": "heuristic: stopBusinessPoll mutates remote or account state",
+    "verdict": "write"
+  },
+  "stopPendingMessage": {
+    "reason": "heuristic: stopPendingMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "stopPoll": {
+    "reason": "heuristic: stopPoll mutates remote or account state",
+    "verdict": "write"
+  },
+  "suggestUserBirthdate": {
+    "reason": "heuristic: suggestUserBirthdate mutates remote or account state",
+    "verdict": "write"
+  },
+  "suggestUserProfilePhoto": {
+    "reason": "heuristic: suggestUserProfilePhoto mutates remote or account state",
+    "verdict": "write"
+  },
+  "summarizeMessage": {
+    "reason": "heuristic: summarizeMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "synchronizeLanguagePack": {
+    "reason": "heuristic: synchronizeLanguagePack mutates remote or account state",
+    "verdict": "write"
+  },
+  "terminateAllOtherSessions": {
+    "reason": "kills all other active sessions",
+    "verdict": "destructive"
+  },
+  "terminateSession": {
+    "reason": "kills an active session",
+    "verdict": "destructive"
+  },
+  "testCallBytes": {
+    "reason": "heuristic: test* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "testCallEmpty": {
+    "reason": "heuristic: test* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "testCallString": {
+    "reason": "heuristic: test* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "testCallVectorInt": {
+    "reason": "heuristic: test* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "testCallVectorIntObject": {
+    "reason": "heuristic: test* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "testCallVectorString": {
+    "reason": "heuristic: test* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "testCallVectorStringObject": {
+    "reason": "heuristic: test* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "testGetDifference": {
+    "reason": "heuristic: test* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "testNetwork": {
+    "reason": "connectivity probe; no state change",
+    "verdict": "read"
+  },
+  "testProxy": {
+    "reason": "connectivity probe; no state change",
+    "verdict": "read"
+  },
+  "testReturnError": {
+    "reason": "heuristic: test* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "testSquareInt": {
+    "reason": "heuristic: test* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "testUseUpdate": {
+    "reason": "heuristic: test* lookup without remote mutation",
+    "verdict": "read"
+  },
+  "toggleAllDownloadsArePaused": {
+    "reason": "heuristic: toggleAllDownloadsArePaused mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleBotCanManageEmojiStatus": {
+    "reason": "heuristic: toggleBotCanManageEmojiStatus mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleBotIsAddedToAttachmentMenu": {
+    "reason": "heuristic: toggleBotIsAddedToAttachmentMenu mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleBotUsernameIsActive": {
+    "reason": "heuristic: toggleBotUsernameIsActive mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleBusinessConnectedBotChatIsPaused": {
+    "reason": "heuristic: toggleBusinessConnectedBotChatIsPaused mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleChatDefaultDisableNotification": {
+    "reason": "heuristic: toggleChatDefaultDisableNotification mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleChatFolderTags": {
+    "reason": "heuristic: toggleChatFolderTags mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleChatGiftNotifications": {
+    "reason": "heuristic: toggleChatGiftNotifications mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleChatHasProtectedContent": {
+    "reason": "heuristic: toggleChatHasProtectedContent mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleChatIsMarkedAsUnread": {
+    "reason": "heuristic: toggleChatIsMarkedAsUnread mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleChatIsPinned": {
+    "reason": "heuristic: toggleChatIsPinned mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleChatIsTranslatable": {
+    "reason": "heuristic: toggleChatIsTranslatable mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleChatViewAsTopics": {
+    "reason": "heuristic: toggleChatViewAsTopics mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleDirectMessagesChatTopicCanSendUnpaidMessages": {
+    "reason": "heuristic: toggleDirectMessagesChatTopicCanSendUnpaidMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleDownloadIsPaused": {
+    "reason": "heuristic: toggleDownloadIsPaused mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleForumTopicIsClosed": {
+    "reason": "heuristic: toggleForumTopicIsClosed mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleForumTopicIsPinned": {
+    "reason": "heuristic: toggleForumTopicIsPinned mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleGeneralForumTopicIsHidden": {
+    "reason": "heuristic: toggleGeneralForumTopicIsHidden mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleGiftIsSaved": {
+    "reason": "heuristic: toggleGiftIsSaved mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleGroupCallAreMessagesAllowed": {
+    "reason": "heuristic: toggleGroupCallAreMessagesAllowed mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleGroupCallIsMyVideoEnabled": {
+    "reason": "heuristic: toggleGroupCallIsMyVideoEnabled mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleGroupCallIsMyVideoPaused": {
+    "reason": "heuristic: toggleGroupCallIsMyVideoPaused mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleGroupCallParticipantIsHandRaised": {
+    "reason": "heuristic: toggleGroupCallParticipantIsHandRaised mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleGroupCallParticipantIsMuted": {
+    "reason": "heuristic: toggleGroupCallParticipantIsMuted mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleGroupCallScreenSharingIsPaused": {
+    "reason": "heuristic: toggleGroupCallScreenSharingIsPaused mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleHasSponsoredMessagesEnabled": {
+    "reason": "heuristic: toggleHasSponsoredMessagesEnabled mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSavedMessagesTopicIsPinned": {
+    "reason": "heuristic: toggleSavedMessagesTopicIsPinned mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSessionCanAcceptCalls": {
+    "reason": "heuristic: toggleSessionCanAcceptCalls mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSessionCanAcceptSecretChats": {
+    "reason": "heuristic: toggleSessionCanAcceptSecretChats mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleStoryIsPostedToChatPage": {
+    "reason": "heuristic: toggleStoryIsPostedToChatPage mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSupergroupCanHaveSponsoredMessages": {
+    "reason": "heuristic: toggleSupergroupCanHaveSponsoredMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSupergroupHasAggressiveAntiSpamEnabled": {
+    "reason": "heuristic: toggleSupergroupHasAggressiveAntiSpamEnabled mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSupergroupHasAutomaticTranslation": {
+    "reason": "heuristic: toggleSupergroupHasAutomaticTranslation mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSupergroupHasHiddenMembers": {
+    "reason": "heuristic: toggleSupergroupHasHiddenMembers mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSupergroupIsAllHistoryAvailable": {
+    "reason": "heuristic: toggleSupergroupIsAllHistoryAvailable mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSupergroupIsBroadcastGroup": {
+    "reason": "heuristic: toggleSupergroupIsBroadcastGroup mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSupergroupIsForum": {
+    "reason": "heuristic: toggleSupergroupIsForum mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSupergroupJoinByRequest": {
+    "reason": "heuristic: toggleSupergroupJoinByRequest mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSupergroupJoinToSendMessages": {
+    "reason": "heuristic: toggleSupergroupJoinToSendMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSupergroupSignMessages": {
+    "reason": "heuristic: toggleSupergroupSignMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleSupergroupUsernameIsActive": {
+    "reason": "heuristic: toggleSupergroupUsernameIsActive mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleUsernameIsActive": {
+    "reason": "heuristic: toggleUsernameIsActive mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleVideoChatEnabledStartNotification": {
+    "reason": "heuristic: toggleVideoChatEnabledStartNotification mutates remote or account state",
+    "verdict": "write"
+  },
+  "toggleVideoChatMuteNewParticipants": {
+    "reason": "heuristic: toggleVideoChatMuteNewParticipants mutates remote or account state",
+    "verdict": "write"
+  },
+  "transferBusinessAccountStars": {
+    "reason": "heuristic: transferBusinessAccountStars mutates remote or account state",
+    "verdict": "write"
+  },
+  "transferChatOwnership": {
+    "reason": "heuristic: transferChatOwnership mutates remote or account state",
+    "verdict": "write"
+  },
+  "transferGift": {
+    "reason": "heuristic: transferGift mutates remote or account state",
+    "verdict": "write"
+  },
+  "translateMessageRichMessage": {
+    "reason": "heuristic: translateMessageRichMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "translateMessageText": {
+    "reason": "heuristic: translateMessageText mutates remote or account state",
+    "verdict": "write"
+  },
+  "translateRichMessage": {
+    "reason": "heuristic: translateRichMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "translateText": {
+    "reason": "heuristic: translateText mutates remote or account state",
+    "verdict": "write"
+  },
+  "unpinAllChatMessages": {
+    "reason": "heuristic: unpinAllChatMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "unpinAllDirectMessagesChatTopicMessages": {
+    "reason": "heuristic: unpinAllDirectMessagesChatTopicMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "unpinAllForumTopicMessages": {
+    "reason": "heuristic: unpinAllForumTopicMessages mutates remote or account state",
+    "verdict": "write"
+  },
+  "unpinChatMessage": {
+    "reason": "heuristic: unpinChatMessage mutates remote or account state",
+    "verdict": "write"
+  },
+  "upgradeBasicGroupChatToSupergroupChat": {
+    "reason": "heuristic: upgradeBasicGroupChatToSupergroupChat mutates remote or account state",
+    "verdict": "write"
+  },
+  "upgradeGift": {
+    "reason": "heuristic: upgradeGift mutates remote or account state",
+    "verdict": "write"
+  },
+  "uploadStickerFile": {
+    "reason": "heuristic: uploadStickerFile mutates remote or account state",
+    "verdict": "write"
+  },
+  "validateOrderInfo": {
+    "reason": "heuristic: validateOrderInfo mutates remote or account state",
+    "verdict": "write"
+  },
+  "viewMessages": {
+    "reason": "marks messages read; local/read-receipt state only",
+    "verdict": "read"
+  },
+  "viewPremiumFeature": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "viewSponsoredChat": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "viewTrendingStickerSets": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "viewVideoMessageAdvertisement": {
+    "reason": "local or read-receipt state only; no remote mutation",
+    "verdict": "read"
+  },
+  "writeGeneratedFilePart": {
+    "reason": "heuristic: writeGeneratedFilePart mutates remote or account state",
+    "verdict": "write"
+  }
+}
