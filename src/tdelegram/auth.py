@@ -56,7 +56,14 @@ class ConsoleCredentialProvider:
         self._prompt_fn = prompt_fn
 
     def _resolve(
-        self, account: str, env: str, prompt: str, *, secret: bool, allow_empty: bool = False
+        self,
+        account: str,
+        env: str,
+        prompt: str,
+        *,
+        secret: bool,
+        allow_empty: bool = False,
+        ephemeral: bool = False,
     ) -> str:
         return self._creds.resolve_secret(
             account=account,
@@ -66,6 +73,7 @@ class ConsoleCredentialProvider:
             secret=secret,
             allow_empty=allow_empty,
             prompt_fn=self._prompt_fn,
+            ephemeral=ephemeral,
         )
 
     def get_api_id(self) -> int:
@@ -102,7 +110,13 @@ class ConsoleCredentialProvider:
         return value
 
     def get_code(self) -> str:
-        value = self._resolve("code", "TELEGRAM_CODE", "Telegram verification code: ", secret=False)
+        value = self._resolve(
+            "code",
+            "TELEGRAM_CODE",
+            "Telegram verification code: ",
+            secret=False,
+            ephemeral=True,
+        )
         if not value:
             raise RuntimeError("Telegram verification code cannot be empty.")
         return value
@@ -119,7 +133,11 @@ class ConsoleCredentialProvider:
 
     def get_email_code(self) -> str:
         return self._resolve(
-            "email_code", "TELEGRAM_EMAIL_CODE", "Telegram email verification code: ", secret=False
+            "email_code",
+            "TELEGRAM_EMAIL_CODE",
+            "Telegram email verification code: ",
+            secret=False,
+            ephemeral=True,
         )
 
 

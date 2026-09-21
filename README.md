@@ -39,7 +39,7 @@ tdelegram chat history --chat @durov --limit 5
 tdelegram msg send --chat me --text "hi"        # previews
 tdelegram msg send --chat me --text "hi" --yes  # performs
 tdelegram updates follow &
-tdelegram msg send --chat me --text "**hi**" --parse-mode markdown --yes
+tdelegram msg send --chat me --text "*hi*" --parse-mode markdown --yes  # MarkdownV2
 ```
 
 Library:

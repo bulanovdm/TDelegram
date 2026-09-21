@@ -58,14 +58,27 @@ def test_parse_entities_via_execute() -> None:
     assert "**" not in formatted["text"]
 
 
-def test_render_entities_roundtrip() -> None:
+def test_render_entities_uses_markdown_v2() -> None:
+    """parse_entities asks TDLib for MarkdownV2, so the renderer must match it.
+
+    This previously asserted `**hello**`, which V2 parses as plain text with
+    no entity at all -- the renderer's output could not be read back.
+    """
     from tdelegram.entities import render_entities
 
-    formatted = {
-        "text": "hello",
-        "entities": [{"offset": 0, "length": 5, "type": {"@type": "textEntityTypeBold"}}],
-    }
-    assert render_entities(formatted, "markdown") == "**hello**"
+    def rendered(etype: str, mode: str = "markdown") -> str:
+        return render_entities(
+            {"text": "hello", "entities": [{"offset": 0, "length": 5, "type": {"@type": etype}}]},
+            mode,
+        )
+
+    assert rendered("textEntityTypeBold") == "*hello*"
+    assert rendered("textEntityTypeItalic") == "_hello_"
+    assert rendered("textEntityTypeUnderline") == "__hello__"
+    assert rendered("textEntityTypeStrikethrough") == "~hello~"
+    assert rendered("textEntityTypeCode") == "`hello`"
+    assert rendered("textEntityTypeBold", "html") == "<b>hello</b>"
+    assert rendered("textEntityTypeUnderline", "html") == "<u>hello</u>"
 
 
 def test_parse_date_relative_and_iso() -> None:

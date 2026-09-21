@@ -125,8 +125,11 @@ class FakeTransport:
 
 
 def _strip_markup(text: str, parse_mode: str) -> str:
+    """Approximate TDLib's MarkdownV2 stripping. Entities are not simulated."""
     if "markdown" in parse_mode.lower():
-        return text.replace("**", "").replace("__", "").replace("`", "")
+        for marker in ("```", "__", "*", "_", "~", "`"):
+            text = text.replace(marker, "")
+        return text
     if "html" in parse_mode.lower():
         import re
 

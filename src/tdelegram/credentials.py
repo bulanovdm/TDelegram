@@ -183,20 +183,28 @@ def resolve_secret(
     allow_empty: bool = False,
     prompt_fn: PromptFn | None = None,
     save: bool = True,
+    ephemeral: bool = False,
 ) -> str:
-    """Resolve one secret through the full precedence chain."""
+    """Resolve one secret through the full precedence chain.
+
+    `ephemeral` marks a single-use secret such as a login code: it is never
+    read from or written to persistent storage. Storing one is worse than
+    useless -- the saved value is reused on the next login, the user is never
+    prompted, and the handshake retries an expired code until it times out.
+    """
     if explicit is not None and (explicit != "" or allow_empty):
         return explicit
     env_value = os.environ.get(env_name)
     if env_value is not None and (env_value != "" or allow_empty):
         return env_value
-    stored = os_store_get(SERVICE, account)
-    if stored is not None and (stored != "" or allow_empty):
-        return stored
-    if base_dir is not None:
-        file_value = file_get(base_dir, account)
-        if file_value is not None and (file_value != "" or allow_empty):
-            return file_value
+    if not ephemeral:
+        stored = os_store_get(SERVICE, account)
+        if stored is not None and (stored != "" or allow_empty):
+            return stored
+        if base_dir is not None:
+            file_value = file_get(base_dir, account)
+            if file_value is not None and (file_value != "" or allow_empty):
+                return file_value
     fn = prompt_fn or default_prompt
     try:
         value = fn(prompt_text or f"{account}: ", secret).strip()
@@ -204,7 +212,7 @@ def resolve_secret(
         raise RuntimeError(f"Value for {account} is required.") from exc
     if not value and not allow_empty:
         raise RuntimeError(f"Value for {account} cannot be empty.")
-    if save and value:
+    if save and value and not ephemeral:
         if not os_store_set(SERVICE, account, value) and base_dir is not None:
             try:
                 file_set(base_dir, account, value)

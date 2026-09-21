@@ -54,6 +54,19 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
 - Contract tests pin every reviewed verdict and assert that a list of
   side-effecting methods is never classified `read`.
 
+### Fixed (found by the new tests)
+
+- One-time login codes were written to the OS keystore and then read back on
+  every later login, so the second login submitted an expired code, never
+  prompted, and the handshake retried it until timing out. `resolve_secret`
+  now takes `ephemeral`, and login/email codes are never persisted or read
+  from storage. They still honour their env var for automation.
+- `render_entities` emitted `**bold**` while `parse_entities` asks TDLib for
+  MarkdownV2, where bold is `*bold*` and `**bold**` yields plain text with no
+  entity at all. Rendered markup could not be read back, and the README
+  documented the syntax that silently drops formatting. Both corrected, and
+  the renderer now covers underline and strikethrough.
+
 ### Changed
 - `errors.PermissionError` and `errors.TimeoutError` are now
   `TelegramPermissionError` and `TelegramTimeoutError`; the old names shadowed
