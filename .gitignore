@@ -228,3 +228,6 @@ secrets/
 *.binlog
 td.binlog
 db.sqlite
+
+# Packaged skill bundles are build artifacts
+skills/*.skill
