@@ -56,9 +56,12 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
 
       - name: Export the digest
+        # The filename is the bare hex: upload-artifact rejects a colon, so the
+        # "sha256:" prefix cannot stay. The manifest job puts it back.
         run: |
           mkdir -p /tmp/digests
-          touch "/tmp/digests/${{ steps.build.outputs.digest }}"
+          digest='${{ steps.build.outputs.digest }}'
+          touch "/tmp/digests/${digest#sha256:}"
 
       - uses: actions/upload-artifact@v4
         with:
