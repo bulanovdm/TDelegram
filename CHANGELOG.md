@@ -105,6 +105,12 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   user had named their directories. The flag now names the profile directory,
   always.
 
+- Thirteen CLI commands passed `--chat` straight into `chat_id`, so a username
+  produced `Can't parse as an integer string` and only numeric ids worked.
+  `msg link`, `msg edit`, `msg delete`, `msg forward`, `msg react`, `msg poll`,
+  `chat join`, `chat leave`, `admin ban`, `admin promote`, `draft set` and
+  `story list` now resolve the reference first, like `msg send` always did.
+
 ### Changed
 - `errors.PermissionError` and `errors.TimeoutError` are now
   `TelegramPermissionError` and `TelegramTimeoutError`; the old names shadowed

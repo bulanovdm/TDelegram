@@ -222,6 +222,30 @@ def _resolve(client: Any, ref: str) -> int:
 
 
 
+def _run_with_chats(
+    method: str, params: dict[str, Any], chat_fields: dict[str, str]
+) -> dict[str, Any]:
+    """Resolve chat references, then run the call through the gate.
+
+    These commands used to pass `--chat` straight into `chat_id`, which only
+    worked for a numeric id: TDLib answers a username with "Can't parse as an
+    integer string". Resolution and the call share one client so the profile
+    lock is taken once.
+    """
+    client, lock = _client_and_lock()
+    try:
+        resolved = dict(params)
+        for field, ref in chat_fields.items():
+            resolved[field] = _resolve(client, ref)
+        return run_call(_ctx(), method, resolved, client=client)
+    finally:
+        try:
+            client.close()
+        finally:
+            if lock is not None:
+                lock.release()
+
+
 @chat_app.command(
     "create",
     # Telegram chat ids for groups and channels are negative, and a
@@ -242,22 +266,8 @@ def chat_create(title: str = typer.Argument(...)) -> None:
 )
 @handle_errors
 def chat_join(chat: str = typer.Argument(...)) -> None:
-    from tdelegram.api import chats
-
-    client, lock = _client_and_lock()
-    try:
-        emit(chats.join(client, chat, allow_write=_ctx().yes), fmt=_ctx().fmt, out=_ctx().output)
-    except Exception:
-        # Fall back to gate-aware run_call for preview semantics.
-        result = run_call(_ctx(), "joinChat", {"chat_id": chat})
-        emit(result, fmt=_ctx().fmt, out=_ctx().output)
-    finally:
-        try:
-            client.close()
-        except Exception:
-            pass
-        if lock is not None:
-            lock.release()
+    result = _run_with_chats("joinChat", {}, {"chat_id": chat})
+    emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 
 @chat_app.command(
@@ -268,7 +278,7 @@ def chat_join(chat: str = typer.Argument(...)) -> None:
 )
 @handle_errors
 def chat_leave(chat: str = typer.Argument(...)) -> None:
-    result = run_call(_ctx(), "leaveChat", {"chat_id": chat})
+    result = _run_with_chats("leaveChat", {}, {"chat_id": chat})
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 
@@ -345,10 +355,8 @@ def msg_edit(
     message_id: int = typer.Option(..., "--id"),
     text: str = typer.Option(..., "--text"),
 ) -> None:
-    result = run_call(
-        _ctx(),
-        "editMessageText",
-        {"chat_id": chat, "message_id": message_id, "text": text},
+    result = _run_with_chats(
+        "editMessageText", {"message_id": message_id, "text": text}, {"chat_id": chat}
     )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
@@ -359,10 +367,8 @@ def msg_delete(
     chat: str = typer.Option(..., "--chat"),
     message_id: int = typer.Option(..., "--id"),
 ) -> None:
-    result = run_call(
-        _ctx(),
-        "deleteMessages",
-        {"chat_id": chat, "message_ids": [message_id]},
+    result = _run_with_chats(
+        "deleteMessages", {"message_ids": [message_id]}, {"chat_id": chat}
     )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
@@ -374,10 +380,10 @@ def msg_forward(
     to_chat: str = typer.Option(..., "--to"),
     message_id: int = typer.Option(..., "--id"),
 ) -> None:
-    result = run_call(
-        _ctx(),
+    result = _run_with_chats(
         "forwardMessages",
-        {"from_chat_id": from_chat, "chat_id": to_chat, "message_ids": [message_id]},
+        {"message_ids": [message_id]},
+        {"from_chat_id": from_chat, "chat_id": to_chat},
     )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
@@ -389,10 +395,8 @@ def msg_react(
     message_id: int = typer.Option(..., "--id"),
     emoji: str = typer.Option("👍", "--emoji"),
 ) -> None:
-    result = run_call(
-        _ctx(),
-        "addMessageReaction",
-        {"chat_id": chat, "message_id": message_id, "emoji": emoji},
+    result = _run_with_chats(
+        "addMessageReaction", {"message_id": message_id, "emoji": emoji}, {"chat_id": chat}
     )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
@@ -403,7 +407,7 @@ def msg_link(
     chat: str = typer.Option(..., "--chat"), message_id: int = typer.Option(..., "--id")
 ) -> None:
     emit(
-        run_call(_ctx(), "getMessageLink", {"chat_id": chat, "message_id": message_id}),
+        _run_with_chats("getMessageLink", {"message_id": message_id}, {"chat_id": chat}),
         fmt=_ctx().fmt,
         out=_ctx().output,
     )
@@ -433,10 +437,8 @@ def msg_poll(
     message_id: int = typer.Option(..., "--id"),
     option: int = typer.Option(..., "--option"),
 ) -> None:
-    result = run_call(
-        _ctx(),
-        "setPollAnswer",
-        {"chat_id": chat, "message_id": message_id, "option_ids": [option]},
+    result = _run_with_chats(
+        "setPollAnswer", {"message_id": message_id, "option_ids": [option]}, {"chat_id": chat}
     )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
@@ -524,9 +526,7 @@ app.add_typer(admin_app, name="admin")
 def admin_ban(
     chat: str = typer.Option(..., "--chat"), user: int = typer.Option(..., "--user")
 ) -> None:
-    result = run_call(
-        _ctx(), "banChatMember", {"chat_id": chat, "user_id": user}
-    )
+    result = _run_with_chats("banChatMember", {"user_id": user}, {"chat_id": chat})
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 
@@ -535,9 +535,7 @@ def admin_ban(
 def admin_promote(
     chat: str = typer.Option(..., "--chat"), user: int = typer.Option(..., "--user")
 ) -> None:
-    result = run_call(
-        _ctx(), "setChatMemberStatus", {"chat_id": chat, "user_id": user}
-    )
+    result = _run_with_chats("setChatMemberStatus", {"user_id": user}, {"chat_id": chat})
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 
@@ -585,7 +583,7 @@ app.add_typer(draft_app, name="draft")
 def draft_set(
     chat: str = typer.Option(..., "--chat"), text: str = typer.Option(..., "--text")
 ) -> None:
-    result = run_call(_ctx(), "setChatDraftMessage", {"chat_id": chat, "text": text})
+    result = _run_with_chats("setChatDraftMessage", {"text": text}, {"chat_id": chat})
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 
@@ -631,7 +629,9 @@ app.add_typer(story_app, name="story")
 @handle_errors
 def story_list(chat: str = typer.Argument(...)) -> None:
     emit(
-        run_call(_ctx(), "getChatArchivedStories", {"chat_id": chat}),
+        _run_with_chats(
+            "getChatArchivedStories", {"from_story_id": 0, "limit": 20}, {"chat_id": chat}
+        ),
         fmt=_ctx().fmt,
         out=_ctx().output,
     )

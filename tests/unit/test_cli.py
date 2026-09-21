@@ -532,3 +532,42 @@ def test_base_dir_defaults_to_the_home(monkeypatch: pytest.MonkeyPatch, tmp_path
 
     monkeypatch.setenv("TDELEGRAM_HOME", str(tmp_path / "home"))
     assert base_dir(Ctx()) == tmp_path / "home"
+
+
+# Commands that take a chat reference and must resolve it before calling.
+# These passed `--chat` straight into `chat_id`, so TDLib answered a username
+# with "Can't parse as an integer string" and only numeric ids worked.
+CHAT_REF_COMMANDS = [
+    ("getMessageLink", ["msg", "link", "--chat", "somechat", "--id", "5"]),
+    ("getChatArchivedStories", ["story", "list", "somechat"]),
+    ("joinChat", ["--yes", "chat", "join", "somechat"]),
+    ("leaveChat", ["--yes", "chat", "leave", "somechat"]),
+    ("editMessageText", ["--yes", "msg", "edit", "--chat", "somechat", "--id", "5", "--text", "x"]),
+    ("deleteMessages", ["--yes", "msg", "delete", "--chat", "somechat", "--id", "5"]),
+    ("addMessageReaction", ["--yes", "msg", "react", "--chat", "somechat", "--id", "5"]),
+    ("setPollAnswer", ["--yes", "msg", "poll", "--chat", "somechat", "--id", "5", "--option", "0"]),
+    ("banChatMember", ["--yes", "admin", "ban", "--chat", "somechat", "--user", "2"]),
+    ("setChatMemberStatus", ["--yes", "admin", "promote", "--chat", "somechat", "--user", "2"]),
+    ("setChatDraftMessage", ["--yes", "draft", "set", "--chat", "somechat", "--text", "x"]),
+    ("forwardMessages", ["--yes", "msg", "forward", "--from", "somechat", "--to", "somechat",
+                         "--id", "5"]),
+]
+
+
+@pytest.mark.parametrize("method,argv", CHAT_REF_COMMANDS, ids=[m for m, _ in CHAT_REF_COMMANDS])
+def test_chat_references_are_resolved_before_the_call(
+    cli: FakeTransport, method: str, argv: list[str]
+) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": -100123})
+    cli.add_simple_response(method, {"@type": "ok"})
+    result = runner.invoke(cli_main.app, argv)
+    assert result.exit_code == 0, f"{' '.join(argv)} failed"
+
+    sent = _sent(cli)
+    assert "searchPublicChat" in sent, "the username was never resolved"
+    call = next(req for _, req in cli.sent if req.get("@type") == method)
+    for field in ("chat_id", "from_chat_id"):
+        if field in call:
+            assert isinstance(call[field], int), (
+                f"{method} got {field}={call[field]!r}; TDLib needs an integer"
+            )
