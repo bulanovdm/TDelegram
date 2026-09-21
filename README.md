@@ -56,6 +56,13 @@ with TelegramClient(transport) as client:
         print(chat["title"])
 ```
 
+## Using it from an agent
+
+`skills/tdelegram/` is an agent skill covering the CLI, the gate and the
+discipline it implies, reading recipes, the Python API, troubleshooting and
+installation from scratch. Point a coding agent at `skills/tdelegram/SKILL.md`,
+or install the packaged bundle.
+
 ## Safety
 
 Mutating calls preview and exit; `--yes` performs them. Destructive calls

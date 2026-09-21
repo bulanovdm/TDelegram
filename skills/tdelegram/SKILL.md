@@ -11,7 +11,8 @@ description: >-
   drafts, folders, stories or media; or runs any `tdelegram` command — even when
   they never name the tool. Use it BEFORE running any tdelegram command you are
   unsure of, because the account is live and `--yes` performs real, frequently
-  irreversible actions that other people can see.
+  irreversible actions that other people can see. Covers installing TDelegram
+  from scratch too, for a machine where `tdelegram` is not yet available.
 ---
 
 # TDelegram
@@ -27,8 +28,16 @@ Two ways in, and you will almost always want the first:
 | `tdelegram` CLI | JSON Lines on stdout, diagnostics on stderr. Built to be piped into `jq`. |
 | `tdelegram` Python package | `TelegramClient` plus domain modules, for writing code against it. See `references/library.md`. |
 
-Check it is installed with `tdelegram version`. If that fails, the tool is not
-available and you should say so rather than improvising with another library.
+Check it is installed with `tdelegram version`. If that fails, TDelegram is not
+set up on this machine — follow `references/setup.md` rather than improvising
+with another Telegram library.
+
+The short version: `libtdjson` is a native dependency installed separately
+(`brew install tdlib`, or built from source on Linux), then
+`pip install "git+https://github.com/bulanovdm/TDelegram"`. Two of the steps are
+not yours to do — the `api_id`/`api_hash` come from a web form behind a Telegram
+login, and the login code arrives on the user's phone and expires in minutes.
+Install what you can, then hand over with the exact commands.
 
 ## Start every session by checking the session
 
@@ -39,7 +48,7 @@ tdelegram auth status
 
 `authorized: true` means every read below will work. If it is false, `needs`
 names what is missing — `"api_id and api_hash"`, `"a phone number"`, `"the login
-code"`.
+code"` — and `references/setup.md` maps each one onto the step that supplies it.
 
 A login code arrives on the user's phone and expires. **You cannot complete a
 login unattended.** If `auth status` is not authorized, stop and ask the user to
@@ -242,6 +251,8 @@ you — which means handing it back to the user.
 
 ## Reference files
 
+- `references/setup.md` — installing TDLib and the package, getting API
+  credentials, the first login, and which steps only a human can do
 - `references/commands.md` — every command, its options, and its gate verdict
 - `references/recipes.md` — worked read-only tasks: finding a person's posts,
   quoting verbatim, forum topics, live updates, large histories
