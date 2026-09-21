@@ -248,20 +248,20 @@
     "verdict": "read"
   },
   "cancelDownloadFile": {
-    "reason": "heuristic: can* lookup without remote mutation",
+    "reason": "stops a local download; no remote effect",
     "verdict": "read"
   },
   "cancelPasswordReset": {
-    "reason": "heuristic: can* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "aborts a pending password reset on the server",
+    "verdict": "write"
   },
   "cancelPreliminaryUploadFile": {
-    "reason": "heuristic: can* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "aborts an upload already in flight",
+    "verdict": "write"
   },
   "cancelRecoveryEmailAddressVerification": {
-    "reason": "heuristic: can* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "aborts a pending verification",
+    "verdict": "write"
   },
   "changeImportedContacts": {
     "reason": "heuristic: changeImportedContacts mutates remote or account state",
@@ -276,8 +276,8 @@
     "verdict": "write"
   },
   "checkAuthenticationBotToken": {
-    "reason": "heuristic: check* validation without mutation",
-    "verdict": "read"
+    "reason": "advances the login state machine",
+    "verdict": "write"
   },
   "checkAuthenticationCode": {
     "reason": "advances the login state machine",
@@ -288,24 +288,24 @@
     "verdict": "write"
   },
   "checkAuthenticationPasskey": {
-    "reason": "heuristic: check* validation without mutation",
-    "verdict": "read"
+    "reason": "advances the login state machine",
+    "verdict": "write"
   },
   "checkAuthenticationPassword": {
     "reason": "advances the login state machine",
     "verdict": "write"
   },
   "checkAuthenticationPasswordRecoveryCode": {
-    "reason": "heuristic: check* validation without mutation",
+    "reason": "validates without recovering",
     "verdict": "read"
   },
   "checkAuthenticationPremiumPurchase": {
-    "reason": "heuristic: check* validation without mutation",
-    "verdict": "read"
+    "reason": "advances the login state machine",
+    "verdict": "write"
   },
   "checkAuthenticationWebToken": {
-    "reason": "heuristic: check* validation without mutation",
-    "verdict": "read"
+    "reason": "advances the login state machine",
+    "verdict": "write"
   },
   "checkBotUsername": {
     "reason": "heuristic: check* validation without mutation",
@@ -328,27 +328,27 @@
     "verdict": "read"
   },
   "checkEmailAddressVerificationCode": {
-    "reason": "heuristic: check* validation without mutation",
-    "verdict": "read"
+    "reason": "completes email verification",
+    "verdict": "write"
   },
   "checkLoginEmailAddressCode": {
-    "reason": "heuristic: check* validation without mutation",
-    "verdict": "read"
+    "reason": "completes login email verification",
+    "verdict": "write"
   },
   "checkOauthRequestMatchCode": {
-    "reason": "heuristic: check* validation without mutation",
-    "verdict": "read"
+    "reason": "advances an OAuth authorization",
+    "verdict": "write"
   },
   "checkPasswordRecoveryCode": {
-    "reason": "heuristic: check* validation without mutation",
+    "reason": "validates a recovery code without using it",
     "verdict": "read"
   },
   "checkPhoneNumberCode": {
-    "reason": "heuristic: check* validation without mutation",
-    "verdict": "read"
+    "reason": "completes the request the code was sent for",
+    "verdict": "write"
   },
   "checkPremiumGiftCode": {
-    "reason": "heuristic: check* validation without mutation",
+    "reason": "reads gift code info; applying it is separate",
     "verdict": "read"
   },
   "checkQuickReplyShortcutName": {
@@ -356,8 +356,8 @@
     "verdict": "read"
   },
   "checkRecoveryEmailAddressCode": {
-    "reason": "heuristic: check* validation without mutation",
-    "verdict": "read"
+    "reason": "completes recovery email verification",
+    "verdict": "write"
   },
   "checkStickerSetName": {
     "reason": "heuristic: checkSticker* lookup without remote mutation",
@@ -1016,7 +1016,7 @@
     "verdict": "read"
   },
   "getAllPassportElements": {
-    "reason": "heuristic: get* lookup without remote mutation",
+    "reason": "reads the user's own stored documents",
     "verdict": "read"
   },
   "getAllStickerEmojis": {
@@ -1148,8 +1148,8 @@
     "verdict": "read"
   },
   "getCallbackQueryAnswer": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "presses a bot's inline button; the bot sees it and acts",
+    "verdict": "write"
   },
   "getCallbackQueryMessage": {
     "reason": "heuristic: get* lookup without remote mutation",
@@ -1300,12 +1300,12 @@
     "verdict": "read"
   },
   "getChatRevenueTransactions": {
-    "reason": "heuristic: get* lookup without remote mutation",
+    "reason": "reads revenue history",
     "verdict": "read"
   },
   "getChatRevenueWithdrawalUrl": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "initiates a revenue withdrawal",
+    "verdict": "write"
   },
   "getChatScheduledMessages": {
     "reason": "heuristic: get* lookup without remote mutation",
@@ -1480,11 +1480,11 @@
     "verdict": "read"
   },
   "getExternalLink": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "hands the account identity to an external site",
+    "verdict": "write"
   },
   "getExternalLinkInfo": {
-    "reason": "heuristic: get* lookup without remote mutation",
+    "reason": "reports whether a link needs confirmation",
     "verdict": "read"
   },
   "getFavoriteStickers": {
@@ -1568,8 +1568,8 @@
     "verdict": "read"
   },
   "getGramWithdrawalUrl": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "initiates a currency withdrawal",
+    "verdict": "write"
   },
   "getGreetingStickers": {
     "reason": "heuristic: get* lookup without remote mutation",
@@ -1600,8 +1600,8 @@
     "verdict": "read"
   },
   "getGuardBotWebAppUrl": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "opens a bot web app as the user",
+    "verdict": "write"
   },
   "getImportedContactCount": {
     "reason": "heuristic: get* lookup without remote mutation",
@@ -1616,8 +1616,8 @@
     "verdict": "read"
   },
   "getInlineQueryResults": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "sends an inline query to a bot, which is notified",
+    "verdict": "write"
   },
   "getInstalledBackgrounds": {
     "reason": "heuristic: get* lookup without remote mutation",
@@ -1708,16 +1708,16 @@
     "verdict": "read"
   },
   "getLoginUrl": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "authorizes the user on a third-party website",
+    "verdict": "write"
   },
   "getLoginUrlInfo": {
-    "reason": "heuristic: get* lookup without remote mutation",
+    "reason": "reports whether a login URL needs confirmation",
     "verdict": "read"
   },
   "getMainWebApp": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "opens a bot's main web app as the user",
+    "verdict": "write"
   },
   "getManagedBotAccessSettings": {
     "reason": "heuristic: get* lookup without remote mutation",
@@ -1852,15 +1852,15 @@
     "verdict": "read"
   },
   "getPassportAuthorizationForm": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "begins sharing identity documents with a service",
+    "verdict": "write"
   },
   "getPassportAuthorizationFormAvailableElements": {
     "reason": "heuristic: get* lookup without remote mutation",
     "verdict": "read"
   },
   "getPassportElement": {
-    "reason": "heuristic: get* lookup without remote mutation",
+    "reason": "reads one of the user's own stored documents",
     "verdict": "read"
   },
   "getPasswordState": {
@@ -1868,11 +1868,11 @@
     "verdict": "read"
   },
   "getPaymentForm": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "opens a payment session with the provider",
+    "verdict": "write"
   },
   "getPaymentReceipt": {
-    "reason": "heuristic: get* lookup without remote mutation",
+    "reason": "reads a receipt for a completed payment",
     "verdict": "read"
   },
   "getPersonalChatHistory": {
@@ -2056,8 +2056,8 @@
     "verdict": "read"
   },
   "getStarAdAccountUrl": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "opens an authenticated ad-platform session",
+    "verdict": "write"
   },
   "getStarGiftPaymentOptions": {
     "reason": "heuristic: get* lookup without remote mutation",
@@ -2080,12 +2080,12 @@
     "verdict": "read"
   },
   "getStarTransactions": {
-    "reason": "heuristic: get* lookup without remote mutation",
+    "reason": "reads transaction history",
     "verdict": "read"
   },
   "getStarWithdrawalUrl": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "initiates a Telegram Stars withdrawal",
+    "verdict": "write"
   },
   "getStatisticalGraph": {
     "reason": "heuristic: get* lookup without remote mutation",
@@ -2216,7 +2216,7 @@
     "verdict": "read"
   },
   "getTonTransactions": {
-    "reason": "heuristic: get* lookup without remote mutation",
+    "reason": "reads transaction history",
     "verdict": "read"
   },
   "getTopChats": {
@@ -2244,8 +2244,8 @@
     "verdict": "read"
   },
   "getUpgradedGiftWithdrawalUrl": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "initiates withdrawal of an upgraded gift",
+    "verdict": "write"
   },
   "getUpgradedGiftsPromotionalAnimation": {
     "reason": "heuristic: get* lookup without remote mutation",
@@ -2300,16 +2300,16 @@
     "verdict": "read"
   },
   "getWebAppLinkUrl": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "opens a bot web app as the user; the bot is notified",
+    "verdict": "write"
   },
   "getWebAppPlaceholder": {
     "reason": "heuristic: get* lookup without remote mutation",
     "verdict": "read"
   },
   "getWebAppUrl": {
-    "reason": "heuristic: get* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "opens a bot web app as the user; the bot is notified",
+    "verdict": "write"
   },
   "getWebPageInstantView": {
     "reason": "heuristic: get* lookup without remote mutation",
@@ -2464,8 +2464,8 @@
     "verdict": "read"
   },
   "openWebApp": {
-    "reason": "local or read-receipt state only; no remote mutation",
-    "verdict": "read"
+    "reason": "starts a bot web-app session; the bot is notified",
+    "verdict": "write"
   },
   "optimizeStorage": {
     "reason": "heuristic: optimizeStorage mutates remote or account state",

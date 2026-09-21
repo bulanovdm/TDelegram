@@ -67,7 +67,7 @@ def auth_login() -> None:
 @auth_app.command("logout")
 @handle_errors
 def auth_logout() -> None:
-    run_call(_ctx(), "logOut", {}, is_destructive=True)
+    run_call(_ctx(), "logOut", {})
     emit({"ok": True}, fmt=_ctx().fmt, out=_ctx().output)
 
 
@@ -215,7 +215,7 @@ def _resolve(client: Any, ref: str) -> int:
 @chat_app.command("create")
 @handle_errors
 def chat_create(title: str = typer.Argument(...)) -> None:
-    result = run_call(_ctx(), "createNewSupergroupChat", {"title": title}, is_write=True)
+    result = run_call(_ctx(), "createNewSupergroupChat", {"title": title})
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 
@@ -229,7 +229,7 @@ def chat_join(chat: str = typer.Argument(...)) -> None:
         emit(chats.join(client, chat, allow_write=_ctx().yes), fmt=_ctx().fmt, out=_ctx().output)
     except Exception:
         # Fall back to gate-aware run_call for preview semantics.
-        result = run_call(_ctx(), "joinChat", {"chat_id": chat}, is_write=True)
+        result = run_call(_ctx(), "joinChat", {"chat_id": chat})
         emit(result, fmt=_ctx().fmt, out=_ctx().output)
     finally:
         try:
@@ -243,7 +243,7 @@ def chat_join(chat: str = typer.Argument(...)) -> None:
 @chat_app.command("leave")
 @handle_errors
 def chat_leave(chat: str = typer.Argument(...)) -> None:
-    result = run_call(_ctx(), "leaveChat", {"chat_id": chat}, is_write=True)
+    result = run_call(_ctx(), "leaveChat", {"chat_id": chat})
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 
@@ -319,7 +319,6 @@ def msg_edit(
         _ctx(),
         "editMessageText",
         {"chat_id": chat, "message_id": message_id, "text": text},
-        is_write=True,
     )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
@@ -334,7 +333,6 @@ def msg_delete(
         _ctx(),
         "deleteMessages",
         {"chat_id": chat, "message_ids": [message_id]},
-        is_destructive=True,
     )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
@@ -350,7 +348,6 @@ def msg_forward(
         _ctx(),
         "forwardMessages",
         {"from_chat_id": from_chat, "chat_id": to_chat, "message_ids": [message_id]},
-        is_write=True,
     )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
@@ -366,7 +363,6 @@ def msg_react(
         _ctx(),
         "addMessageReaction",
         {"chat_id": chat, "message_id": message_id, "emoji": emoji},
-        is_write=True,
     )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
@@ -411,7 +407,6 @@ def msg_poll(
         _ctx(),
         "setPollAnswer",
         {"chat_id": chat, "message_id": message_id, "option_ids": [option]},
-        is_write=True,
     )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
@@ -490,7 +485,7 @@ def admin_ban(
     chat: str = typer.Option(..., "--chat"), user: int = typer.Option(..., "--user")
 ) -> None:
     result = run_call(
-        _ctx(), "banChatMember", {"chat_id": chat, "user_id": user}, is_destructive=True
+        _ctx(), "banChatMember", {"chat_id": chat, "user_id": user}
     )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
@@ -501,7 +496,7 @@ def admin_promote(
     chat: str = typer.Option(..., "--chat"), user: int = typer.Option(..., "--user")
 ) -> None:
     result = run_call(
-        _ctx(), "setChatMemberStatus", {"chat_id": chat, "user_id": user}, is_write=True
+        _ctx(), "setChatMemberStatus", {"chat_id": chat, "user_id": user}
     )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
@@ -545,7 +540,7 @@ app.add_typer(draft_app, name="draft")
 def draft_set(
     chat: str = typer.Option(..., "--chat"), text: str = typer.Option(..., "--text")
 ) -> None:
-    result = run_call(_ctx(), "setChatDraftMessage", {"chat_id": chat, "text": text}, is_write=True)
+    result = run_call(_ctx(), "setChatDraftMessage", {"chat_id": chat, "text": text})
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 
@@ -557,7 +552,7 @@ app.add_typer(bot_app, name="bot")
 @bot_app.command("callback")
 @handle_errors
 def bot_callback(query_id: int = typer.Argument(...)) -> None:
-    result = run_call(_ctx(), "answerCallbackQuery", {"callback_query_id": query_id}, is_write=True)
+    result = run_call(_ctx(), "answerCallbackQuery", {"callback_query_id": query_id})
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 
@@ -594,7 +589,7 @@ app.add_typer(secret_app, name="secret")
 @secret_app.command("create")
 @handle_errors
 def secret_create(user: int = typer.Argument(...)) -> None:
-    result = run_call(_ctx(), "createNewSecretChat", {"user_id": user}, is_write=True)
+    result = run_call(_ctx(), "createNewSecretChat", {"user_id": user})
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 
@@ -648,8 +643,7 @@ def raw_call(request: str = typer.Option(..., "--request", help="Raw TDLib JSON 
     except RuntimeError as exc:
         warn(str(exc))
         raise SystemExit(2) from None
-    is_write = verdict == "write"
-    is_destructive = verdict == "destructive"
+    mutating = verdict in ("write", "destructive")
     if not _ctx().yes:
         warn(
             json.dumps(
@@ -661,10 +655,10 @@ def raw_call(request: str = typer.Option(..., "--request", help="Raw TDLib JSON 
                 indent=2,
             )
         )
-        if is_write or is_destructive:
+        if mutating:
             warn("Preview only: re-run with --yes to perform.")
             raise SystemExit(2) from None
-    result = run_call(_ctx(), method, params, is_write=is_write, is_destructive=is_destructive)
+    result = run_call(_ctx(), method, params, )
     emit(result, fmt=_ctx().fmt, out=_ctx().output)
 
 

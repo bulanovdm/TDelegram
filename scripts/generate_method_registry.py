@@ -63,6 +63,57 @@ OVERRIDES: dict[str, tuple[str, str]] = {
     "testProxy": ("read", "connectivity probe; no state change"),
     "getProxies": ("read", "read-only proxy list fetch"),
     "testNetwork": ("read", "connectivity probe; no state change"),
+    # --- Audited reads: a prefix said "read", the semantics say otherwise. ---
+    # A wrong write costs an extra --yes. A wrong read means no gate at all,
+    # so these are the classifications that actually matter.
+    #
+    # Third parties act on these.
+    "getCallbackQueryAnswer": ("write", "presses a bot's inline button; the bot sees it and acts"),
+    "getInlineQueryResults": ("write", "sends an inline query to a bot, which is notified"),
+    "openWebApp": ("write", "starts a bot web-app session; the bot is notified"),
+    # These hand the account's identity to something outside Telegram.
+    "getLoginUrl": ("write", "authorizes the user on a third-party website"),
+    "getExternalLink": ("write", "hands the account identity to an external site"),
+    "getPassportAuthorizationForm": ("write", "begins sharing identity documents with a service"),
+    "getWebAppUrl": ("write", "opens a bot web app as the user; the bot is notified"),
+    "getWebAppLinkUrl": ("write", "opens a bot web app as the user; the bot is notified"),
+    "getMainWebApp": ("write", "opens a bot's main web app as the user"),
+    "getGuardBotWebAppUrl": ("write", "opens a bot web app as the user"),
+    # Money leaves, or an authenticated financial session opens.
+    "getPaymentForm": ("write", "opens a payment session with the provider"),
+    "getChatRevenueWithdrawalUrl": ("write", "initiates a revenue withdrawal"),
+    "getStarWithdrawalUrl": ("write", "initiates a Telegram Stars withdrawal"),
+    "getGramWithdrawalUrl": ("write", "initiates a currency withdrawal"),
+    "getUpgradedGiftWithdrawalUrl": ("write", "initiates withdrawal of an upgraded gift"),
+    "getStarAdAccountUrl": ("write", "opens an authenticated ad-platform session"),
+    # check* that completes a flow rather than merely validating.
+    "checkAuthenticationBotToken": ("write", "advances the login state machine"),
+    "checkAuthenticationPasskey": ("write", "advances the login state machine"),
+    "checkAuthenticationWebToken": ("write", "advances the login state machine"),
+    "checkAuthenticationPremiumPurchase": ("write", "advances the login state machine"),
+    "checkEmailAddressVerificationCode": ("write", "completes email verification"),
+    "checkLoginEmailAddressCode": ("write", "completes login email verification"),
+    "checkOauthRequestMatchCode": ("write", "advances an OAuth authorization"),
+    "checkPhoneNumberCode": ("write", "completes the request the code was sent for"),
+    "checkRecoveryEmailAddressCode": ("write", "completes recovery email verification"),
+    # cancel* aborts a remote operation. Reviewed as reads where purely local.
+    "cancelDownloadFile": ("read", "stops a local download; no remote effect"),
+    "cancelPasswordReset": ("write", "aborts a pending password reset on the server"),
+    "cancelRecoveryEmailAddressVerification": ("write", "aborts a pending verification"),
+    "cancelPreliminaryUploadFile": ("write", "aborts an upload already in flight"),
+    # Reviewed and deliberately left as reads, so a later prefix change cannot
+    # silently flip them without this file changing too.
+    "getLoginUrlInfo": ("read", "reports whether a login URL needs confirmation"),
+    "getExternalLinkInfo": ("read", "reports whether a link needs confirmation"),
+    "getPaymentReceipt": ("read", "reads a receipt for a completed payment"),
+    "getStarTransactions": ("read", "reads transaction history"),
+    "getTonTransactions": ("read", "reads transaction history"),
+    "getChatRevenueTransactions": ("read", "reads revenue history"),
+    "getAllPassportElements": ("read", "reads the user's own stored documents"),
+    "getPassportElement": ("read", "reads one of the user's own stored documents"),
+    "checkPasswordRecoveryCode": ("read", "validates a recovery code without using it"),
+    "checkAuthenticationPasswordRecoveryCode": ("read", "validates without recovering"),
+    "checkPremiumGiftCode": ("read", "reads gift code info; applying it is separate"),
 }
 
 READ_PREFIXES = (
@@ -98,7 +149,11 @@ def classify(name: str) -> tuple[str, str]:
             return ("destructive", "shuts down the TDLib client instance")
         return ("destructive", f"heuristic: {name} irreversibly removes or revokes state")
     for prefix in READ_PREFIXES:
-        if name.startswith(prefix):
+        # Require a word boundary: without this "can" matches "cancelPasswordReset"
+        # and a remote abort is classified as a capability probe.
+        if name.startswith(prefix) and (
+            len(name) == len(prefix) or name[len(prefix)].isupper()
+        ):
             if prefix in {"load", "view", "open", "download"}:
                 return ("read", "local or read-receipt state only; no remote mutation")
             return ("read", f"heuristic: {prefix}* lookup without remote mutation")

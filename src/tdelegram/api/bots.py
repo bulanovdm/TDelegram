@@ -26,11 +26,18 @@ def start_bot(
 
 
 def inline_results(
-    client: TelegramClient, bot_user_id: int, query: str, *, offset: str = ""
+    client: TelegramClient,
+    bot_user_id: int,
+    query: str,
+    *,
+    offset: str = "",
+    allow_write: bool = False,
 ) -> dict[str, Any]:
+    """Send an inline query to a bot. The bot is notified, so this is a write."""
     return client.call(
         "getInlineQueryResults",
         {"bot_user_id": bot_user_id, "chat_id": 0, "query": query, "offset": offset},
+        allow_write=allow_write,
     )
 
 

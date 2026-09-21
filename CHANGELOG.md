@@ -30,6 +30,30 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
 - `run_auth()` raised the builtin `TimeoutError`, which
   `tdelegram.errors.TimeoutError` did not catch.
 
+### Security
+
+- Audited the registry's `read` verdicts. Only 3.1% of the 1022 classifications
+  had ever been reviewed by a human; the rest came from prefix heuristics, and a
+  wrong `read` means the gate silently does not apply. 28 methods moved from
+  `read` to `write`: bot interactions the bot acts on (`getCallbackQueryAnswer`,
+  `getInlineQueryResults`, `openWebApp`), identity handoffs to third parties
+  (`getLoginUrl`, `getExternalLink`, `getPassportAuthorizationForm`, the
+  `*WebApp*Url` family), money operations (`getPaymentForm`, the `*WithdrawalUrl`
+  family), auth flows that complete rather than validate (`checkPhoneNumberCode`
+  and friends), and `cancel*` aborts. No verdict was loosened.
+- Fixed a classifier defect: the `can` read-prefix matched every `cancel*`
+  method, so `cancelPasswordReset` and `cancelRecoveryEmailAddressVerification`
+  were classified as capability probes. Read prefixes now require a word
+  boundary.
+- **The CLI gate no longer depends on per-command annotations.** `run_call()`
+  computed `allow_write = ctx.yes or not (is_write or is_destructive)`, so any
+  command whose call site omitted the hint was granted write permission
+  regardless of the registry. `tdelegram bot inline` reached a third-party bot
+  unconfirmed because of it. The hints are gone; only `--yes` grants permission
+  and the registry alone decides.
+- Contract tests pin every reviewed verdict and assert that a list of
+  side-effecting methods is never classified `read`.
+
 ### Changed
 - `errors.PermissionError` and `errors.TimeoutError` are now
   `TelegramPermissionError` and `TelegramTimeoutError`; the old names shadowed

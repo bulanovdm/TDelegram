@@ -765,7 +765,8 @@ def test_api_bots_proxies_updates_files() -> None:
     )
     try:
         assert bots.start_bot(client, "2", "1", allow_write=True)["@type"] == "ok"
-        assert bots.inline_results(client, 2, "q")["@type"] == "inlineQueryResults"
+        inline = bots.inline_results(client, 2, "q", allow_write=True)
+        assert inline["@type"] == "inlineQueryResults"
         assert bots.send_inline_result(client, "1", "r1", allow_write=True)["@type"] == "ok"
         assert bots.answer_callback(client, 9, allow_write=True)["@type"] == "ok"
         assert bots.answer_inline(client, 9, [], allow_write=True)["@type"] == "ok"

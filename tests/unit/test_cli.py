@@ -330,6 +330,7 @@ MUTATING_COMMANDS = [
     ("setChatDraftMessage", ["draft", "set", "--chat", "somechat", "--text", "hi"]),
     ("createNewSecretChat", ["secret", "create", "2"]),
     ("answerCallbackQuery", ["bot", "callback", "9"]),
+    ("getInlineQueryResults", ["bot", "inline", "--bot", "1", "--query", "x"]),
     ("logOut", ["auth", "logout"]),
 ]
 
@@ -343,3 +344,31 @@ def test_mutating_command_previews_without_yes(
     result = runner.invoke(cli_main.app, argv)
     assert result.exit_code == 2, f"{' '.join(argv)} should preview and exit 2"
     assert method not in _sent(cli), f"{method} reached TDLib without --yes"
+
+
+def test_gate_does_not_depend_on_the_call_site(cli: FakeTransport) -> None:
+    """run_call must consult the registry, not a per-command annotation.
+
+    `bot inline` reached TDLib unconfirmed because its call site declared no
+    "this is a write" hint, and run_call granted permission whenever the hint
+    was absent. The registry is the only thing that may decide.
+    """
+    from tdelegram.cli.context import run_call
+
+    with pytest.raises(SystemExit) as exc:
+        run_call(cli_main.Ctx(), "sendMessage", {"chat_id": 1})
+    assert exc.value.code == 2
+    assert "sendMessage" not in _sent(cli)
+
+
+def test_gate_opens_only_with_yes(cli: FakeTransport) -> None:
+    cli.add_simple_response("sendMessage", {"@type": "message", "id": 1})
+    ctx = cli_main.Ctx()
+    ctx.yes = True
+    assert run_call_ok(ctx)
+
+
+def run_call_ok(ctx: Any) -> bool:
+    from tdelegram.cli.context import run_call
+
+    return run_call(ctx, "sendMessage", {"chat_id": 1})["@type"] == "message"

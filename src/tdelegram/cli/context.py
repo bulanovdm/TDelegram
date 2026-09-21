@@ -138,11 +138,15 @@ def run_call(
     method: str,
     params: dict[str, Any],
     *,
-    is_write: bool = False,
-    is_destructive: bool = False,
     client: TelegramClient | None = None,
     login: bool = True,
 ) -> dict[str, Any]:
+    """Call a method through the gate. Only --yes grants permission.
+
+    There is deliberately no per-call-site "this is a write" flag: the
+    registry decides, so forgetting to annotate a command cannot open a
+    hole in the gate.
+    """
     own = client is None
     lock: SessionLock | None = None
     if own:
@@ -150,15 +154,12 @@ def run_call(
         assert client is not None
     try:
         assert client is not None
-        allow_write = ctx.yes or not (is_write or is_destructive)
-        allow_destructive = ctx.yes
-        # Library gate is authoritative; pass flags through.
         try:
             return client.call(
                 method,
                 params,
-                allow_write=allow_write or ctx.yes,
-                allow_destructive=allow_destructive,
+                allow_write=ctx.yes,
+                allow_destructive=ctx.yes,
             )
         except (WriteConfirmationRequired, DestructiveConfirmationRequired) as exc:
             preview = {"preview": exc.preview, "verdict": exc.verdict, "method": method}

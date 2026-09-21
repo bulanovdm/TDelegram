@@ -69,3 +69,59 @@ def test_every_entry_is_well_formed() -> None:
     for method, entry in registry.items():
         assert entry.get("verdict") in ("read", "write", "destructive"), method
         assert entry.get("reason"), f"{method} has a verdict but no recorded reason"
+
+
+# Methods whose TDLib semantics reach a third party, move money, hand over the
+# account's identity, or complete an auth flow. A prefix heuristic classified
+# every one of these as a harmless read at some point, which meant no gate at
+# all. If a future change flips one back, that is a safety regression and this
+# test is the tripwire.
+MUST_BE_GATED = [
+    "getCallbackQueryAnswer",
+    "getInlineQueryResults",
+    "openWebApp",
+    "getWebAppUrl",
+    "getWebAppLinkUrl",
+    "getMainWebApp",
+    "getLoginUrl",
+    "getExternalLink",
+    "getPassportAuthorizationForm",
+    "getPaymentForm",
+    "getChatRevenueWithdrawalUrl",
+    "getStarWithdrawalUrl",
+    "getGramWithdrawalUrl",
+    "getUpgradedGiftWithdrawalUrl",
+    "checkAuthenticationBotToken",
+    "checkPhoneNumberCode",
+    "checkEmailAddressVerificationCode",
+    "checkRecoveryEmailAddressCode",
+    "cancelPasswordReset",
+    "cancelRecoveryEmailAddressVerification",
+]
+
+
+def test_side_effecting_methods_are_never_read() -> None:
+    registry = _registry()
+    ungated = [m for m in MUST_BE_GATED if registry.get(m, {}).get("verdict") == "read"]
+    assert not ungated, f"these have remote side effects but would run without --yes: {ungated}"
+
+
+def test_reviewed_verdicts_are_pinned() -> None:
+    """A recorded human judgment must survive any change to the heuristics."""
+    from generate_method_registry import OVERRIDES
+
+    registry = _registry()
+    drifted = [
+        f"{m}: reviewed as {verdict}, registry says {registry[m]['verdict']}"
+        for m, (verdict, _reason) in OVERRIDES.items()
+        if m in registry and registry[m]["verdict"] != verdict
+    ]
+    assert not drifted, drifted
+
+
+def test_read_prefix_requires_a_word_boundary() -> None:
+    """Regression: the `can` prefix used to swallow every `cancel*` method."""
+    from generate_method_registry import classify
+
+    assert classify("cancelPasswordReset")[0] != "read"
+    assert classify("canPostStory")[0] == "read", "genuine can* probes stay reads"
