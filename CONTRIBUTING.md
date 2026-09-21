@@ -15,3 +15,4 @@ By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
   The contract test fails CI on unclassified functions — classify, don't default.
 - Mutating behavior needs a test proving the gate (preview without `--yes`).
 - Never put session data, an `api_hash`, or real message content in a test or a diff.
+- Cutting a release: see [RELEASING.md](RELEASING.md). Tags publish; `main` does not.

@@ -1,0 +1,61 @@
+name: release
+
+# Publishes to PyPI when a version tag is pushed:
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# Authentication is PyPI Trusted Publishing (OIDC). There is no API token
+# anywhere: no repository secret to leak, rotate, or scope wrongly. The
+# one-time setup is on PyPI, not here -- see RELEASING.md.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  # Never publish something the suite has not passed on every supported
+  # interpreter. A tag is not a reason to skip the gate.
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fail if the tag disagrees with the package version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(python -c 'import tomllib,pathlib;print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')"
+          if [ "$tag" != "$pkg" ]; then
+            echo "tag $tag != pyproject version $pkg" >&2
+            exit 1
+          fi
+
+      - run: pip install build twine
+      - run: python -m build
+      - run: python -m twine check dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # the OIDC token that stands in for an API token
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
