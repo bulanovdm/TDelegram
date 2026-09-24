@@ -292,7 +292,8 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
 - `watch`: new messages as records, filtered by chat, any of several words,
   a regular expression or a sender, bounded by `--for` or `--count`. The chats
   it watches are opened for the duration, because TDLib receives every update
-  of a supergroup or channel only while it is open; that marks nothing read. `updates
+  of a supergroup or channel only while it is open; that marks nothing read.
+  Each is closed again afterwards, even when a later one fails to open. `updates
   follow` only ever offered the raw stream filtered by update type.
 - `--format text`: one plain line per message, in reading order — time,
   sender, chat, text, and media described in words, transcripts included — for

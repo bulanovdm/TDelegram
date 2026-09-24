@@ -61,11 +61,14 @@ def watch_messages(
     names = SenderNames(client)
     titles: dict[int, str | None] = {}
     deadline = None if timeout is None else time.monotonic() + timeout
-    opened = sorted(chat_ids or ())
-    for watched in opened:
-        client.call("openChat", {"chat_id": watched})
+    opened: list[int] = []
     matched = 0
     try:
+        # Opened inside the try and recorded only once open, so if one fails
+        # to open, the ones opened before it are still closed.
+        for watched in sorted(chat_ids or ()):
+            client.call("openChat", {"chat_id": watched})
+            opened.append(watched)
         while deadline is None or time.monotonic() < deadline:
             event = client.next_update(timeout=0.5)
             if event is None or event.get("@type") != "updateNewMessage":
