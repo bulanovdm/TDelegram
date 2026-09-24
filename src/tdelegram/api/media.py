@@ -87,8 +87,10 @@ def upload(
     *,
     caption: str = "",
     wait: bool = False,
+    allow_write: bool = False,
 ) -> dict[str, Any]:
-    pending = _send_file(client, resolve_id(client, chat_ref), path, caption=caption)
+    chat_id = resolve_id(client, chat_ref)
+    pending = _send_file(client, chat_id, path, caption=caption, allow_write=allow_write)
     if not wait:
         return {
             "status": "pending",
@@ -96,7 +98,7 @@ def upload(
             "note": "delivery not confirmed; pass wait=True",
         }
     mid = (pending.get("message") or pending).get("id", 0)
-    return wait_for_send(client, int(mid or 0), resolve_id(client, chat_ref))
+    return wait_for_send(client, int(mid or 0), chat_id)
 
 
 def send_photo(

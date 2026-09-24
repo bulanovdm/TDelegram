@@ -476,12 +476,17 @@ def media_upload(
 
     client, lock = _client_and_lock()
     try:
-        emit(media_api.upload(client, chat, path), fmt=_ctx().fmt, out=_ctx().output)
+        emit(
+            media_api.upload(client, chat, path, allow_write=_ctx().yes),
+            fmt=_ctx().fmt,
+            out=_ctx().output,
+        )
     except Exception as exc:
         from tdelegram.errors import ConfirmationRequired as _CR
 
         if isinstance(exc, _CR):
-            warn(json.dumps({"preview": exc.preview}, indent=2))
+            warn(json.dumps({"preview": exc.preview, "verdict": exc.verdict}, indent=2))
+            warn("Preview only: re-run with --yes to perform.")
             raise SystemExit(2) from None
         raise
     finally:

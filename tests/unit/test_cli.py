@@ -334,6 +334,8 @@ MUTATING_COMMANDS = [
     ("setChatMemberStatus", ["admin", "promote", "--chat", "somechat", "--user", "2"]),
     ("setChatDraftMessage", ["draft", "set", "--chat", "somechat", "--text", "hi"]),
     ("createNewSecretChat", ["secret", "create", "2"]),
+    # Sent the file without --yes: send_file granted itself allow_write=True.
+    ("sendMessage", ["media", "upload", "--chat", "somechat", "--path", "/tmp/cv.pdf"]),
     ("answerCallbackQuery", ["bot", "callback", "9"]),
     ("getInlineQueryResults", ["bot", "inline", "--bot", "1", "--query", "x"]),
     ("logOut", ["auth", "logout"]),

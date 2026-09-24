@@ -568,9 +568,12 @@ def test_api_messages() -> None:
 
 
 def test_api_media_users_misc() -> None:
+    import pytest
+
     from tdelegram.api import contacts, users
     from tdelegram.api import media as media_api
     from tdelegram.api import search as search_api
+    from tdelegram.errors import WriteConfirmationRequired
 
     client, _ = _client_with(
         getChat={"@type": "chat", "id": 1},
@@ -606,7 +609,9 @@ def test_api_media_users_misc() -> None:
         assert media_api.send_video(client, "1", "/tmp/x.mp4", allow_write=True)["id"] == 6
         assert media_api.send_voice(client, "1", "/tmp/x.ogg", allow_write=True)["id"] == 6
         assert media_api.send_sticker(client, "1", 9, allow_write=True)["id"] == 6
-        assert media_api.upload(client, "1", "/tmp/x.jpg")["status"] == "pending"
+        with pytest.raises(WriteConfirmationRequired):
+            media_api.upload(client, "1", "/tmp/x.jpg")
+        assert media_api.upload(client, "1", "/tmp/x.jpg", allow_write=True)["status"] == "pending"
         assert users.get_user(client, 2)["user_id"] == 2
         assert users.me(client)["user_id"] == 1
         assert users.full_info(client, 2)["@type"] == "userFullInfo"
@@ -735,8 +740,11 @@ def test_api_admin_account_topics_reactions() -> None:
 
 
 def test_api_bots_proxies_updates_files() -> None:
+    import pytest
+
     from tdelegram.api import bots, proxies, secret, stories
     from tdelegram.api import updates as updates_api
+    from tdelegram.errors import WriteConfirmationRequired
     from tdelegram.files import download, send_file, wait_for_send
 
     client, transport = _client_with(
@@ -790,7 +798,9 @@ def test_api_bots_proxies_updates_files() -> None:
         assert proxies.disable_proxy(client, allow_write=True)["@type"] == "ok"
         assert proxies.ping_proxy(client, 1)["@type"] == "seconds"
         assert download(client, 1)["id"] == 1
-        assert send_file(client, 1, "/tmp/x.pdf")["@type"] == "message"
+        with pytest.raises(WriteConfirmationRequired):
+            send_file(client, 1, "/tmp/x.pdf")
+        assert send_file(client, 1, "/tmp/x.pdf", allow_write=True)["@type"] == "message"
         # wait_for_send with a queued success update
         transport.add_update(
             {

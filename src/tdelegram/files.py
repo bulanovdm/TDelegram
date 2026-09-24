@@ -16,12 +16,16 @@ def download(
     timeout: float = 300.0,
     wait_for_completion: bool = True,
 ) -> dict[str, Any]:
-    """Download via downloadFile(synchronous=true). Returns the final file object."""
+    """Download via downloadFile(synchronous=true). Returns the final file object.
+
+    No `allow_write` is passed: downloadFile is a read in the registry, and the
+    registry is what decides. Granting permission here would silently survive a
+    reclassification.
+    """
     result = client.call(
         "downloadFile",
         {"file_id": file_id, "priority": 1, "offset": 0, "limit": 0, "synchronous": True},
         timeout=timeout,
-        allow_write=True,
     )
     # Synchronous mode already blocks; optionally confirm local path exists.
     if wait_for_completion:
@@ -43,8 +47,14 @@ def send_file(
     *,
     caption: str = "",
     timeout: float = 60.0,
+    allow_write: bool = False,
 ) -> dict[str, Any]:
-    """Upload a file as a document. Returns the pending message (delivery unconfirmed)."""
+    """Upload a file as a document. Returns the pending message (delivery unconfirmed).
+
+    This used to pass allow_write=True itself, so `media upload` sent the file
+    to whatever chat it was pointed at without --yes: the one mutating command
+    the gate did not cover.
+    """
     local_path = str(Path(path).expanduser())
     content = {
         "@type": "inputMessageDocument",
@@ -55,7 +65,7 @@ def send_file(
         "sendMessage",
         {"chat_id": chat_id, "input_message_content": content},
         timeout=timeout,
-        allow_write=True,
+        allow_write=allow_write,
     )
 
 
