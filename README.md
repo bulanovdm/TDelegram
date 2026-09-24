@@ -34,7 +34,8 @@ alias tdelegram='docker run --rm -i -v "$HOME/.tdelegram:/session" \
   ghcr.io/bulanovdm/tdelegram'
 ```
 
-`auth login` is the exception — it prompts, so run that one with `-it`.
+`auth login` and destructive commands are the exceptions — they prompt, so run
+those with `-it`.
 
 ### Native
 
@@ -87,9 +88,10 @@ or install the packaged bundle.
 
 Mutating calls preview and exit; `--yes` performs them. Destructive calls
 (`deleteChatHistory`, `banChatMember`, `logOut`, `deleteAccount`,
-`terminateAllOtherSessions`, …) need `--yes`, plus a typed confirmation on an
-interactive TTY. The gate lives in `TelegramClient.call()` — including the raw
-`call` escape hatch. See `src/tdelegram/methods.json` for all 1022 verdicts.
+`terminateAllOtherSessions`, …) need `--yes` *and* the method name typed at an
+interactive terminal, so they never run from a script, a pipe or an agent's
+shell. The gate lives in `TelegramClient.call()` — including the raw `call`
+escape hatch. See `src/tdelegram/methods.json` for all 1022 verdicts.
 
 ## Layout
 

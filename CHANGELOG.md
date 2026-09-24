@@ -69,6 +69,13 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   gate is per method, not per payload, so the general setter now takes the
   verdict of the worst thing it can express. The cost is a typed confirmation
   for an ordinary promotion, which is the right side to err on.
+- **Destructive calls need `--yes` and the typed method name, not either one.**
+  Every document described the typed confirmation as a second layer, but
+  `run_call()` treated it as an alternative: `--yes` alone performed any
+  destructive call from a script, a pipe or an agent's shell, and at a terminal
+  typing the name performed one without `--yes`. Now `--yes` gets a destructive
+  call as far as the prompt, the prompt goes to stderr instead of the JSONL
+  stream on stdout, and with no terminal to type at the command exits 2.
 - Contract tests pin every reviewed verdict, assert that side-effecting methods
   are never `read`, that irreversible ones are never merely `write`, and that a
   general setter never undercuts the specific method it can stand in for.

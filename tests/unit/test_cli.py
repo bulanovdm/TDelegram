@@ -366,6 +366,76 @@ def test_gate_does_not_depend_on_the_call_site(cli: FakeTransport) -> None:
     assert "sendMessage" not in _sent(cli)
 
 
+DELETE = ["msg", "delete", "--chat", "somechat", "--id", "5"]
+
+
+def _scripted_delete(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("deleteMessages", {"@type": "ok"})
+
+
+def test_destructive_needs_more_than_yes_without_a_terminal(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: --yes alone performed every destructive call.
+
+    The docs, the skill and the changelog all describe the typed method name
+    as a second layer on top of --yes. It was an alternative instead, so a
+    script or an agent holding --yes deleted messages with nobody asked.
+    """
+    _scripted_delete(cli)
+    monkeypatch.setattr(cli_context, "interactive", lambda: False)
+    result = runner.invoke(cli_main.app, ["--yes", *DELETE])
+    assert result.exit_code == 2
+    assert "deleteMessages" not in _sent(cli), "a destructive call ran on --yes alone"
+    assert "interactive terminal" in result.stderr
+
+
+def test_destructive_runs_once_its_name_is_typed(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _scripted_delete(cli)
+    monkeypatch.setattr(cli_context, "interactive", lambda: True)
+    result = runner.invoke(cli_main.app, ["--yes", *DELETE], input="deleteMessages\n")
+    assert result.exit_code == 0
+    assert "deleteMessages" in _sent(cli)
+    # The prompt is a diagnostic, so it must stay out of the data stream.
+    assert "Type deleteMessages" in result.stderr
+    assert "Type deleteMessages" not in result.stdout
+
+
+def test_destructive_refuses_a_mistyped_name(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _scripted_delete(cli)
+    monkeypatch.setattr(cli_context, "interactive", lambda: True)
+    result = runner.invoke(cli_main.app, ["--yes", *DELETE], input="deleteMessage\n")
+    assert result.exit_code == 2
+    assert "deleteMessages" not in _sent(cli)
+
+
+def test_typing_the_name_is_not_a_substitute_for_yes(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: at a terminal, typing the name performed without --yes."""
+    _scripted_delete(cli)
+    monkeypatch.setattr(cli_context, "interactive", lambda: True)
+    result = runner.invoke(cli_main.app, DELETE, input="deleteMessages\n")
+    assert result.exit_code == 2
+    assert "deleteMessages" not in _sent(cli)
+    assert "Type deleteMessages" not in result.stderr, "no --yes means no prompt at all"
+
+
+def test_raw_call_holds_destructive_to_the_same_rule(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cli_context, "interactive", lambda: False)
+    request = json.dumps({"@type": "deleteChatHistory", "chat_id": 1})
+    result = runner.invoke(cli_main.app, ["--yes", "call", "--request", request])
+    assert result.exit_code == 2
+    assert "deleteChatHistory" not in _sent(cli)
+
+
 def test_gate_opens_only_with_yes(cli: FakeTransport) -> None:
     cli.add_simple_response("sendMessage", {"@type": "message", "id": 1})
     ctx = cli_main.Ctx()
@@ -561,11 +631,14 @@ CHAT_REF_COMMANDS = [
 
 @pytest.mark.parametrize("method,argv", CHAT_REF_COMMANDS, ids=[m for m, _ in CHAT_REF_COMMANDS])
 def test_chat_references_are_resolved_before_the_call(
-    cli: FakeTransport, method: str, argv: list[str]
+    cli: FakeTransport, method: str, argv: list[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": -100123})
     cli.add_simple_response(method, {"@type": "ok"})
-    result = runner.invoke(cli_main.app, argv)
+    # Destructive commands also want their method name typed at a terminal;
+    # writes never read it.
+    monkeypatch.setattr(cli_context, "interactive", lambda: True)
+    result = runner.invoke(cli_main.app, argv, input=f"{method}\n")
     assert result.exit_code == 0, f"{' '.join(argv)} failed"
 
     sent = _sent(cli)

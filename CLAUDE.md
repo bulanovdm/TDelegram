@@ -134,7 +134,10 @@ out-of-window item finishes its page, then ends the walk), and a cursor-didn't-a
 
 - Data goes to stdout as JSONL; diagnostics, previews, and warnings go to stderr (`cli/output.py`).
 - Mutating commands preview and exit 2; `--yes` performs. Destructive ones additionally
-  require typing the method name on an interactive TTY (`cli/context.run_call`).
+  require typing the method name on an interactive TTY (`cli/context.confirm_destructive`):
+  `--yes` *and* the typed name, never either alone. With no terminal they exit 2, so a
+  script or an agent cannot complete one. Tests fake the terminal by patching
+  `cli_context.interactive` and passing `input=` to the runner.
 - Command bodies are thin: parse options, call an `api/` function, `emit`/`emit_many`.
   Wrap each with `@handle_errors`, which turns `TelegramError` into an error envelope and
   a non-zero exit.

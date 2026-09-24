@@ -73,6 +73,8 @@ Two container-specific wrinkles:
 
 - **`auth login` needs `-it`**, not `-i`. It prompts. The alias above uses `-i`
   because that is right for every other command; run the login by hand once.
+  Destructive commands prompt too — for the method name, after `--yes` — so a
+  human runs those with `-it` as well. Under `-i` alone they refuse, by design.
 - **stdout stays clean** with `-i`; `-t` allocates a TTY and can interleave
   stderr into it, which breaks JSON parsing. Keep `-t` for the login only.
 

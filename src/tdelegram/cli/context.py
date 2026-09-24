@@ -136,6 +136,35 @@ def report_auth_state(ctx: Ctx) -> dict[str, Any]:
                 lock.release()
 
 
+def interactive() -> bool:
+    """Whether a human is at a terminal to answer a prompt."""
+    return sys.stdin.isatty()
+
+
+def confirm_destructive(method: str) -> bool:
+    """Ask for the method name to be typed. Only a terminal can answer.
+
+    That is the point of the second layer: `--yes` can be added by a script,
+    a shell alias or an agent, so it is not evidence that a person looked. A
+    destructive call therefore never runs from a pipe, a cron job or an agent's
+    shell, only from a terminal where someone typed its name.
+    """
+    if not interactive():
+        warn(
+            f"{method} is destructive: after --yes it also needs its name typed at an "
+            "interactive terminal, so it cannot run from a script, a pipe or an agent. "
+            "Nothing was done."
+        )
+        return False
+    # The prompt goes to stderr with everything else that is not data. input()
+    # would print it on stdout, into the JSONL stream a caller may be parsing.
+    warn(f"Type {method} to confirm, or anything else to cancel:")
+    if sys.stdin.readline().strip() != method:
+        warn("Not confirmed. Nothing was done.")
+        return False
+    return True
+
+
 def run_call(
     ctx: Ctx,
     method: str,
@@ -149,6 +178,12 @@ def run_call(
     There is deliberately no per-call-site "this is a write" flag: the
     registry decides, so forgetting to annotate a command cannot open a
     hole in the gate.
+
+    A `write` needs --yes. A `destructive` needs --yes *and* its method name
+    typed at a terminal. The typed name used to be an alternative to --yes
+    rather than an addition: --yes alone performed any destructive call, and a
+    terminal without --yes could perform one by typing, so neither layer was
+    actually required.
     """
     own = client is None
     lock: SessionLock | None = None
@@ -158,24 +193,15 @@ def run_call(
     try:
         assert client is not None
         try:
-            return client.call(
-                method,
-                params,
-                allow_write=ctx.yes,
-                allow_destructive=ctx.yes,
-            )
+            return client.call(method, params, allow_write=ctx.yes, allow_destructive=False)
         except (WriteConfirmationRequired, DestructiveConfirmationRequired) as exc:
             preview = {"preview": exc.preview, "verdict": exc.verdict, "method": method}
             warn(json.dumps({"confirmation_required": preview}, indent=2))
-            if (
-                isinstance(exc, DestructiveConfirmationRequired)
-                and sys.stdin.isatty()
-                and not ctx.yes
-            ):
-                answer = input("Type the method name to confirm destructive action: ").strip()
-                if answer == method:
-                    return client.call(method, params, allow_write=True, allow_destructive=True)
-            warn("Preview only: re-run with --yes to perform.")
+            if not ctx.yes:
+                warn("Preview only: re-run with --yes to perform.")
+                raise SystemExit(2) from None
+            if isinstance(exc, DestructiveConfirmationRequired) and confirm_destructive(method):
+                return client.call(method, params, allow_write=True, allow_destructive=True)
             raise SystemExit(2) from None
     finally:
         if own and client is not None:
