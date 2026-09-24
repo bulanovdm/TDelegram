@@ -134,11 +134,16 @@ together.
 
 ## Watch for new messages
 
-`updates follow` streams until interrupted. Always bound it, or you will hang.
+`watch` streams new messages as records. Always bound it — `--for`, `--count`
+or `head` — or it runs until killed.
 
 ```bash
-tdelegram updates follow --types updateNewMessage 2>/dev/null | head -20
+tdelegram watch --chat cyprusithr --contains kubernetes --for 1h 2>/dev/null \
+  | jq -r '[.date, .sender_name, (.text | split("\n")[0])] | @tsv'
 ```
+
+`--contains` matches when any of its words appear; `--match` takes a regular
+expression. The raw stream is still there as `updates follow --types ...`.
 
 Filter by `@type` rather than reading everything — an idle account still emits a
 steady trickle of `updateUserStatus` and friends.

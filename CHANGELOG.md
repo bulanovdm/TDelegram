@@ -272,6 +272,9 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   Telegram will not delete rather than stalling on it. The official apps have
   no way to do this, and the scripts that do have neither a preview nor a
   confirmation.
+- `watch`: new messages as records, filtered by chat, any of several words,
+  a regular expression or a sender, bounded by `--for` or `--count`. `updates
+  follow` only ever offered the raw stream filtered by update type.
 - `FakeTransport` answers `close` with `authorizationStateClosed` as TDLib does,
   so `close()` no longer waits out a second per client and the suite runs in
   a quarter of the time.

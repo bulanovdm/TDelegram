@@ -836,6 +836,49 @@ def updates_follow(types: str = typer.Option("", help="Comma-separated @type fil
         _emit_many(updates_api.follow_filtered(client, wanted))
 
 
+@app.command("watch")
+@handle_errors
+def watch(
+    chats: list[str] = typer.Option([], "--chat", help="Only these chats; repeat"),
+    contains: list[str] = typer.Option([], "--contains", help="Any of these words; repeat"),
+    match: str | None = typer.Option(None, "--match", help="A regular expression"),
+    sender: int | None = typer.Option(None, "--sender", help="Only this user"),
+    include_outgoing: bool = typer.Option(False, "--include-outgoing"),
+    duration: str | None = typer.Option(None, "--for", help="Stop after 90s, 30m, 2h..."),
+    count: int | None = typer.Option(None, "--count", help="Stop after this many matches"),
+) -> None:
+    """Stream new messages that match, as records -- an alert feed. Read-only.
+
+    `--count 1` waits for the next matching message and exits, e.g. a reply.
+    """
+    import re as _re
+
+    from tdelegram.api import chats as chats_api
+    from tdelegram.api import updates as updates_api
+    from tdelegram.dates import parse_duration
+
+    seconds = parse_duration(duration) if duration else None
+    if match:
+        try:
+            _re.compile(match)
+        except _re.error as exc:
+            raise ValueError(f"Invalid --match pattern: {exc}") from None
+    with session(_ctx()) as client:
+        wanted = {chats_api.resolve_id(client, ref) for ref in chats} or None
+        _emit_many(
+            updates_api.watch_messages(
+                client,
+                chat_ids=wanted,
+                terms=list(contains),
+                pattern=match,
+                sender_id=sender,
+                include_outgoing=include_outgoing,
+                timeout=seconds,
+                count=count,
+            )
+        )
+
+
 # -- raw call (escape hatch, same gate) ----------------------------------
 @app.command("call")
 @handle_errors

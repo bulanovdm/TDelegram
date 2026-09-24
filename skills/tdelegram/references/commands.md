@@ -160,12 +160,22 @@ third-party bot, which can act on it.
 
 | Command | Gate | Notes |
 |---|---|---|
+| `watch` | read | `--chat` (repeatable), `--contains` (repeatable; any matches), `--match REGEX`, `--sender`, `--include-outgoing`, `--for 30m`, `--count N` |
 | `updates follow` | read | `--types` comma-separated `@type` filter; streams until interrupted |
 | `call --request '<json>'` | per method | raw TDLib JSON through the same gate, checked against the schema first |
 | `describe <name>` | — | a function's parameters and verdict, an object's fields, or a type's objects |
 | `version` | — | prints the package version |
 
-`updates follow` runs until killed. Give it a bounded window or a filter rather
+`watch` is the one to reach for: new messages as the same records `chat history`
+emits, filtered by chat, words, pattern or sender. `--count 1` waits for the next
+match and exits, which is how to wait for a reply:
+
+```bash
+tdelegram watch --chat jobsboard --contains hiring --contains vacancy --for 8h
+tdelegram watch --chat @somebot --count 1 --for 2m     # the bot's answer
+```
+
+`updates follow` is the raw TDLib stream, and runs until killed. Give it a bounded window or a filter rather
 than leaving it streaming:
 
 ```bash

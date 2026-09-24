@@ -29,8 +29,19 @@ def parse_date(value: str | None, *, end_of_day: bool = False) -> int | None:
     return int(parsed.timestamp())
 
 
-_AHEAD_RE = re.compile(r"\+?(\d+(?:\.\d+)?)([mhdw])", re.IGNORECASE)
 _UNIT_SECONDS = {"m": 60, "h": 3600, "d": 86400, "w": 604800}
+_DURATION_RE = re.compile(r"(\d+(?:\.\d+)?)([smhdw])", re.IGNORECASE)
+
+
+def parse_duration(value: str) -> float:
+    """Seconds in a span like `90s`, `30m`, `2h`, `1d`."""
+    match = _DURATION_RE.fullmatch(value.strip())
+    if not match:
+        raise ValueError(f"Invalid duration {value!r}; use 90s, 30m, 2h or 1d.")
+    return float(match.group(1)) * {"s": 1, **_UNIT_SECONDS}[match.group(2).lower()]
+
+
+_AHEAD_RE = re.compile(r"\+?(\d+(?:\.\d+)?)([mhdw])", re.IGNORECASE)
 
 
 def parse_future(value: str) -> int:

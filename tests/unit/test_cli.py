@@ -1320,3 +1320,48 @@ def test_delete_mine_with_nothing_to_delete_asks_nothing(cli: FakeTransport) -> 
     assert result.exit_code == 0
     assert _lines(result)[0]["deleted"] == 0
     assert "Type deleteMessages" not in result.stderr
+
+
+# --- watch: an alert feed of new messages --------------------------------
+
+
+def _arrives(cli: FakeTransport, chat_id: int, mid: int, text: str, **extra: Any) -> None:
+    message = {**_message_in(chat_id, mid, text), **extra}
+    cli.add_update({"@type": "updateNewMessage", "message": message})
+
+
+def test_watch_streams_matching_messages_as_records(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5, "title": "Jobs"})
+    cli.add_response(
+        lambda r: r.get("@type") == "getChat",
+        lambda r: {"@type": "chat", "id": r["chat_id"], "title": f"chat {r['chat_id']}"},
+    )
+    _arrives(cli, 6, 1, "Hiring a Rust developer")  # another chat
+    _arrives(cli, 5, 2, "lunch?")  # no keyword
+    _arrives(cli, 5, 3, "We are HIRING: Python", is_outgoing=True)  # our own
+    _arrives(cli, 5, 4, "Vacancy: senior Python engineer")
+    _arrives(cli, 5, 5, "hiring again")
+    argv = ["watch", "--chat", "jobs", "--contains", "hiring", "--contains", "vacancy"]
+    result = runner.invoke(cli_main.app, [*argv, "--count", "2"])
+    assert result.exit_code == 0
+    records = _lines(result)
+    assert [r["text"] for r in records] == ["Vacancy: senior Python engineer", "hiring again"]
+    assert records[0]["chat_title"] == "chat 5" and records[0]["message_id"] == 4
+
+
+def test_watch_takes_a_regular_expression(cli: FakeTransport) -> None:
+    _arrives(cli, 5, 1, "code 1234")
+    _arrives(cli, 5, 2, "your code is 98765")
+    result = runner.invoke(cli_main.app, ["watch", "--match", r"\b\d{5}\b", "--count", "1"])
+    assert [r["text"] for r in _lines(result)] == ["your code is 98765"]
+
+
+def test_watch_stops_when_its_time_is_up(cli: FakeTransport) -> None:
+    result = runner.invoke(cli_main.app, ["watch", "--for", "1s"])
+    assert result.exit_code == 0 and _lines(result) == []
+
+
+def test_watch_rejects_a_broken_pattern_up_front(cli: FakeTransport) -> None:
+    result = runner.invoke(cli_main.app, ["watch", "--match", "([unclosed"])
+    assert result.exit_code == 1
+    assert cli.sent == []
