@@ -26,7 +26,9 @@ UpdateHandler = Callable[[dict[str, Any]], None]
 # State TDLib only ever pushes, never returns from a request. The chat folder
 # list, for one, arrives as an update around login and has no getter, so the
 # latest of each is kept for `latest_update()` to read after the fact.
-REMEMBERED_UPDATES = frozenset({"updateChatFolders", "updateConnectionState"})
+REMEMBERED_UPDATES = frozenset(
+    {"updateChatFolders", "updateConnectionState", "updateSpeechRecognitionTrial"}
+)
 
 
 class Subscription:

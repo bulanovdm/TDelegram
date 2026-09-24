@@ -282,6 +282,14 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
 - `watch`: new messages as records, filtered by chat, any of several words,
   a regular expression or a sender, bounded by `--for` or `--count`. `updates
   follow` only ever offered the raw stream filtered by update type.
+- `--format text`: one plain line per message, in reading order — time,
+  sender, chat, text, and media described in words, transcripts included — for
+  a person or a screen reader, which would otherwise read JSON punctuation
+  aloud. Chats render as a title and an unread count.
+- `msg transcribe`: the words of a voice or video message. A transcript anyone
+  already asked for is kept on the message and returned free, without `--yes`;
+  otherwise it is a write, because Telegram counts it against the account's
+  quota, and the record says how many free ones are left.
 - `FakeTransport` answers `close` with `authorizationStateClosed` as TDLib does,
   so `close()` no longer waits out a second per client and the suite runs in
   a quarter of the time.

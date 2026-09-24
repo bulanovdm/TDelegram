@@ -146,3 +146,57 @@ def send_sticker(
         },
         allow_write=allow_write,
     )
+
+
+def transcribe(
+    client: TelegramClient,
+    chat_ref: str,
+    message_id: int,
+    *,
+    allow_write: bool = False,
+    timeout: float = 60.0,
+) -> dict[str, Any]:
+    """The words of a voice or video message.
+
+    A transcript anyone has already asked for is kept on the message and comes
+    back free. Otherwise recognizeSpeech is a write: Telegram counts it against
+    the account's quota -- a few a week without Premium -- and the text arrives
+    later, as an update, which this waits for.
+    """
+    import time
+
+    from tdelegram.api.messages import get
+    from tdelegram.errors import TelegramError, TelegramTimeoutError
+
+    chat_id = resolve_id(client, chat_ref)
+    media = get(client, str(chat_id), message_id).get("media") or {}
+    if media.get("kind") not in ("voice_note", "video_note"):
+        raise ValueError(f"Message {message_id} is not a voice or video message.")
+    found = {"chat_id": chat_id, "message_id": message_id}
+    if media.get("transcript") is not None:
+        return {**found, "transcript": media["transcript"], "cached": True}
+    client.call(
+        "recognizeSpeech", {"chat_id": chat_id, "message_id": message_id}, allow_write=allow_write
+    )
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        event = client.next_update(timeout=0.5)
+        if not event or event.get("@type") != "updateMessageContent":
+            continue
+        if event.get("chat_id") != chat_id or event.get("message_id") != message_id:
+            continue
+        content = event.get("new_content") or {}
+        holder = content.get("voice_note") or content.get("video_note") or {}
+        result = holder.get("speech_recognition_result") or {}
+        if result.get("@type") == "speechRecognitionResultText":
+            trial = client.latest_update("updateSpeechRecognitionTrial") or {}
+            left = trial.get("left_count")
+            return {**found, "transcript": result.get("text"), "cached": False, "free_left": left}
+        if result.get("@type") == "speechRecognitionResultError":
+            error = result.get("error") or {}
+            raise TelegramError(
+                int(error.get("code") or 400),
+                str(error.get("message") or "speech recognition failed"),
+                "recognizeSpeech",
+            )
+    raise TelegramTimeoutError(f"No transcript arrived within {timeout:g}s.")

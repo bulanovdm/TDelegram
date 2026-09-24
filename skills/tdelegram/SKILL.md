@@ -136,8 +136,9 @@ Exit codes carry meaning, so check them instead of grepping output:
 | 2 | previewed and refused — nothing happened, `--yes` was absent or the request was malformed |
 
 `--format` takes `jsonl` (default, one object per line), `json` (a single array,
-convenient for `jq` over a whole result) or `table` (human reading only — never
-parse it). `--output FILE` appends there instead of stdout.
+convenient for `jq` over a whole result), `table`, or `text` — one plain line
+per message in reading order (time, sender, chat, text, media in words), for a
+person or a screen reader. Never parse `table` or `text`. `--output FILE` appends there instead of stdout.
 
 Global flags go **before** the subcommand — `tdelegram --output f.jsonl chat
 history --chat x`, not the other way round, which fails with "No such option".
@@ -236,7 +237,7 @@ Full options, and the gate verdict for each command, are in
 auth      login logout status          account   info sessions
 inbox     (unread messages, marks nothing read)
 chat      list info resolve history search export create join leave members
-msg       send get edit delete delete-mine forward react link search poll
+msg       send get edit delete delete-mine forward react link search transcribe poll
 media     download upload              contact   list
 user      info                         admin     ban promote
 topic     list                         folder    list        draft set

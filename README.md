@@ -63,6 +63,7 @@ tdelegram msg send --chat me --text "hi"        # previews
 tdelegram --yes msg send --chat me --text "hi"  # performs
 tdelegram --yes msg send --chat me --text "*hi*" --parse-mode markdown  # MarkdownV2
 tdelegram watch --chat me --for 1m              # new messages as they arrive
+tdelegram --format text inbox                   # plain lines, for a screen reader
 ```
 
 Where Telegram is blocked, store a proxy before logging in — every `proxy`

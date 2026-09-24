@@ -27,7 +27,7 @@ Placed before the subcommand: `tdelegram --format json chat list`.
 |---|---|
 | `--profile NAME` | profile under `~/.tdelegram/` (default `default`) |
 | `--session-dir PATH` | use this directory as the profile directory |
-| `--format jsonl\|json\|table` | `jsonl` default; `table` is for humans, never parse it |
+| `--format jsonl\|json\|table\|text` | `jsonl` default; `text` is plain lines for reading or a screen reader; never parse `table` or `text` |
 | `--output FILE` | append to a file instead of stdout |
 | `--yes` | perform mutating operations rather than previewing |
 | `--verbose` | extra diagnostics on stderr (library path, profile dir) |
@@ -94,9 +94,17 @@ mention the account.
 | `msg edit` | write | `--chat`, `--id`, `--text`, `--parse-mode` |
 | `msg forward` | write | `--from`, `--to`, `--id` (repeatable) |
 | `msg react` | write | `--chat`, `--id`, `--emoji` |
+| `msg transcribe` | write | `--chat`, `--id`, `--timeout` — free when already transcribed |
 | `msg poll` | write | `--chat`, `--id`, `--option` (repeatable) — votes in a poll |
 | `msg delete` | **destructive** | `--chat`, `--id` (repeatable), `--only-for-me` — deletes for everyone by default |
 | `msg delete-mine` | **destructive** | `--chat`, `--since`, `--until`, `--limit` — your own messages, for everyone |
+
+`msg transcribe` returns the words of a voice or video message. Once anyone has
+transcribed one, Telegram keeps the text on the message, and it comes back
+without `--yes` and without cost — it also shows up in every record as
+`media.transcript`. Otherwise it is a write, because Telegram counts it against
+the account's quota (a few a week without Premium); the record says how many
+free ones are left.
 
 `msg delete-mine` finds the account's own messages in a chat with a server-side
 search, prints a plan — how many, and the dates of the newest and oldest — and

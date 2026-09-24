@@ -19,7 +19,7 @@ from tdelegram.cli.context import (
     setup_session,
     show_preview,
 )
-from tdelegram.cli.output import emit, emit_many, warn
+from tdelegram.cli.output import FORMATS, emit, emit_many, warn
 
 GLOBAL_FLAGS = frozenset(
     {"--yes", "--profile", "--session-dir", "--format", "--output", "--verbose", "--no-retry"}
@@ -65,14 +65,16 @@ REF_ARGS = {"ignore_unknown_options": True}
 def _global(
     profile: str = typer.Option("default", "--profile", help="Profile name under ~/.tdelegram/"),
     session_dir: str = typer.Option("", "--session-dir", help="Session directory override"),
-    fmt: str = typer.Option("jsonl", "--format", help="Output format: jsonl|json|table"),
+    fmt: str = typer.Option(
+        "jsonl", "--format", help="jsonl|json|table|text (text: plain lines, for reading aloud)"
+    ),
     output: str | None = typer.Option(None, "--output", help="Write output to file"),
     yes: bool = typer.Option(False, "--yes", help="Perform mutating operations"),
     verbose: bool = typer.Option(False, "--verbose", help="Verbose diagnostics on stderr"),
     no_retry: bool = typer.Option(False, "--no-retry", help="Disable FloodWait auto-retry"),
 ) -> None:
-    if fmt not in ("jsonl", "json", "table"):
-        raise typer.BadParameter("--format must be jsonl|json|table")
+    if fmt not in FORMATS:
+        raise typer.BadParameter(f"--format must be {'|'.join(FORMATS)}")
     _state.profile = profile
     _state.session_dir = session_dir
     _state.fmt = fmt
@@ -529,6 +531,31 @@ def msg_search(
     with session(_ctx()) as client:
         _emit_many(
             search_api.iter_global_search(client, query, maximum=limit, since=since, until=until)
+        )
+
+
+@msg_app.command("transcribe")
+@handle_errors
+def msg_transcribe(
+    chat: str = typer.Option(..., "--chat"),
+    message_id: int = typer.Option(..., "--id"),
+    timeout: float = typer.Option(60.0, "--timeout", help="Seconds to wait for the text"),
+) -> None:
+    """The words of a voice or video message.
+
+    Free when someone already transcribed it; otherwise a write, because
+    Telegram counts it against the account's quota.
+    """
+    from tdelegram.api import media as media_api
+
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: media_api.transcribe(
+                    client, chat, message_id, allow_write=w, timeout=timeout
+                ),
+            )
         )
 
 

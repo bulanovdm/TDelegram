@@ -1394,3 +1394,135 @@ def test_a_message_reading_yes_grants_nothing(cli: FakeTransport) -> None:
     assert result.exit_code == 2
     assert "sendMessage" not in _sent(cli)
     assert '"text": "--yes"' in result.stderr
+
+
+# --- --format text: plain lines, in reading order ------------------------
+
+
+def test_text_format_reads_a_message_as_one_plain_line() -> None:
+    from tdelegram.cli.output import as_text
+
+    record = {
+        "message_id": 4,
+        "content_type": "messageVoiceNote",
+        "date": "2026-09-24T14:02:11+00:00",
+        "sender_name": "Ada",
+        "chat_title": "Friends",
+        "text": "",
+        "media": {"kind": "voice_note", "duration": 14, "transcript": "running late"},
+    }
+    assert as_text(record) == (
+        '2026-09-24 14:02, Ada in Friends: [voice message, 14 seconds] transcript: "running late"'
+    )
+
+
+def test_text_format_keeps_each_message_on_a_line_of_its_own() -> None:
+    from tdelegram.cli.output import as_text
+
+    record = {
+        "message_id": 5,
+        "content_type": "messageText",
+        "date": "2026-09-24T14:03:00+00:00",
+        "is_outgoing": True,
+        "text": "first line\nsecond line",
+    }
+    assert as_text(record) == "2026-09-24 14:03, you: first line\n    second line"
+
+
+def test_text_format_for_chats_and_everything_else() -> None:
+    from tdelegram.cli.output import as_text
+
+    chat = {"chat_id": -1, "title": "News", "username": "news", "unread_count": 3}
+    assert as_text(chat) == "News (@news), 3 unread"
+    assert as_text({"proxy_id": 1, "server": "h", "comment": None}) == "proxy_id: 1; server: h"
+
+
+def test_text_format_through_the_cli(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_response(
+        lambda r: r.get("@type") == "getChatHistory",
+        lambda r: {
+            "@type": "messages",
+            "messages": [_message_in(5, 1, "hello")] if r["from_message_id"] == 0 else [],
+        },
+    )
+    cli.add_simple_response("getUser", {"@type": "user", "id": 7, "first_name": "Sam"})
+    result = runner.invoke(cli_main.app, ["--format", "text", "chat", "history", "--chat", "x"])
+    assert result.exit_code == 0
+    assert result.stdout.strip().endswith(", Sam: hello")
+
+
+# --- transcripts of voice messages ---------------------------------------
+
+
+def _voice(transcript: str | None = None) -> dict[str, Any]:
+    note: dict[str, Any] = {"duration": 9, "voice": {"@type": "file", "id": 3}}
+    if transcript is not None:
+        note["speech_recognition_result"] = {
+            "@type": "speechRecognitionResultText",
+            "text": transcript,
+        }
+    return {"@type": "message", "id": 8, "chat_id": 5,
+            "content": {"@type": "messageVoiceNote", "voice_note": note}}
+
+
+TRANSCRIBE = ["msg", "transcribe", "--chat", "somechat", "--id", "8"]
+
+
+def test_a_transcript_already_made_is_free(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getMessage", _voice("see you at eight"))
+    result = runner.invoke(cli_main.app, TRANSCRIBE)
+    assert result.exit_code == 0, "reading a kept transcript spends nothing, so needs no --yes"
+    assert _lines(result)[0]["transcript"] == "see you at eight"
+    assert "recognizeSpeech" not in _sent(cli)
+
+
+def test_transcribing_spends_quota_so_it_needs_yes(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getMessage", _voice())
+    result = runner.invoke(cli_main.app, TRANSCRIBE)
+    assert result.exit_code == 2
+    assert "recognizeSpeech" not in _sent(cli)
+
+
+def test_transcribe_waits_for_the_text_to_arrive(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getMessage", _voice())
+
+    def _recognize(request: dict[str, Any]) -> dict[str, Any]:
+        cli.add_update({"@type": "updateSpeechRecognitionTrial", "left_count": 1})
+        for partial in ("speechRecognitionResultPending", "speechRecognitionResultText"):
+            cli.add_update(
+                {
+                    "@type": "updateMessageContent",
+                    "chat_id": 5,
+                    "message_id": 8,
+                    "new_content": {
+                        "@type": "messageVoiceNote",
+                        "voice_note": {
+                            "speech_recognition_result": {"@type": partial, "text": "on my way"}
+                        },
+                    },
+                }
+            )
+        return {"@type": "ok"}
+
+    cli.add_response(lambda r: r.get("@type") == "recognizeSpeech", _recognize)
+    result = runner.invoke(cli_main.app, ["--yes", *TRANSCRIBE])
+    assert result.exit_code == 0
+    record = _lines(result)[0]
+    assert record["transcript"] == "on my way" and record["cached"] is False
+    assert record["free_left"] == 1
+
+
+def test_transcribe_refuses_what_is_not_speech(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getMessage", _message_in(5, 8, "just text"))
+    result = runner.invoke(cli_main.app, ["--yes", *TRANSCRIBE])
+    assert result.exit_code == 1
+    assert "recognizeSpeech" not in _sent(cli)

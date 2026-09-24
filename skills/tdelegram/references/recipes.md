@@ -14,6 +14,7 @@ without asking anyone.
 - [Watch for new messages](#watch-for-new-messages)
 - [Download a file](#download-a-file)
 - [Back up a chat](#back-up-a-chat)
+- [Reading aloud, and voice messages](#reading-aloud-and-voice-messages)
 - [Shaping output for a report](#shaping-output-for-a-report)
 
 ## Triage an inbox
@@ -179,6 +180,26 @@ Ctrl-C, or `--limit 2000` per run — costs nothing: the next run resumes. Media
 chat protects from saving are skipped with a note in the record, not
 downloaded. Under Docker, `--out` must be inside a mounted directory (`/work`
 in the alias), or the export stays in the container.
+
+## Reading aloud, and voice messages
+
+`--format text` turns records into plain lines — time, sender, chat, then the
+text, with media described in words — which a screen reader takes in order
+without reading out JSON punctuation:
+
+```bash
+tdelegram --format text inbox
+# 2026-09-24 14:02, Ada in Friends: dinner?
+# 2026-09-24 14:05, Ada in Friends: [voice message, 14 seconds] transcript: "running late"
+```
+
+A voice message someone has already transcribed carries its transcript in the
+record. For one that has not been, `msg transcribe` asks Telegram — a write,
+since it spends the account's quota:
+
+```bash
+tdelegram --yes msg transcribe --chat someone --id 8812
+```
 
 ## Shaping output for a report
 
