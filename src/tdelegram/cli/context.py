@@ -228,7 +228,8 @@ def perform(ctx: Ctx, action: Callable[[bool, bool], T]) -> T:
     the command exits 2. With --yes, writes run and a destructive call stops
     once more for its method name at a terminal; confirmed, the action runs
     again with both permissions. Whatever it read before the gated call is
-    simply read again.
+    simply read again -- which is why an action must make its destructive call
+    before any write: a write made first would be made twice.
 
     A `write` needs --yes. A `destructive` needs --yes *and* its typed name.
     The name used to be an alternative to --yes rather than an addition, so

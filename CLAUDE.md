@@ -161,8 +161,10 @@ out-of-window item finishes its page, then ends the walk), and a cursor-didn't-a
   Wrap each with `@handle_errors`, which turns `TelegramError` into an error envelope and
   a non-zero exit. Open the client with `with session(ctx) as client:`, and run anything
   mutating as `perform(ctx, lambda w, d: api.fn(client, ..., allow_write=w, allow_destructive=d))`
-  so the preview, `--yes` and the typed confirmation apply. Do not build TDLib requests in
-  a command body: that is where most of the wrong parameter names lived.
+  so the preview, `--yes` and the typed confirmation apply. `perform` re-runs the action
+  once a destructive call is confirmed, so an action must make its destructive call before
+  any write, or the write happens twice. Do not build TDLib requests in a command body:
+  that is where most of the wrong parameter names lived.
 - Global options live on the Typer callback and are stashed in a module-level `Ctx`.
   They are read only before the command. Keep it that way: hoisting `--yes` from
   anywhere on the line would let a message text of `--yes` grant permission. `_Root`
