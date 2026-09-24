@@ -192,6 +192,11 @@ flattened into the text, so formatting and URLs survive.
 happened — do not present a message timestamp as a job's posting date, an event
 date, or a deadline.
 
+For "what did I miss", start with `tdelegram inbox`: unread messages across
+chats, and it marks nothing read, so reading on the user's behalf sends no read
+receipts. To answer something, prefer `draft set` over `msg send` — a draft sits
+in the user's own input box, visible only to them, and they send it themselves.
+
 Worked examples for finding a person's posts, quoting verbatim, following live
 updates and paging large histories are in `references/recipes.md`.
 
@@ -229,6 +234,7 @@ Full options, and the gate verdict for each command, are in
 
 ```
 auth      login logout status          account   info sessions
+inbox     (unread messages, marks nothing read)
 chat      list info resolve history search create join leave members
 msg       send get edit delete forward react link search poll
 media     download upload              contact   list

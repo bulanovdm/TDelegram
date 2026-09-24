@@ -47,7 +47,7 @@ Placed before the subcommand: `tdelegram --format json chat list`.
 
 | Command | Gate | Options |
 |---|---|---|
-| `chat list` | read | `--scope main\|archive\|all`, `--limit` |
+| `chat list` | read | `--scope main\|archive\|all`, `--limit`, `--unread` |
 | `chat info <chat>` | read | normalized record (title, type, `is_forum`, counts) |
 | `chat resolve <chat>` | read | the raw TDLib chat object |
 | `chat history` | read | `--chat`, `--limit`, `--since`, `--until`, `--sender`, `--topic`, `--contains` |
@@ -62,6 +62,18 @@ groups and channels), or `me` / `self` / `saved` for Saved Messages.
 
 `--since` / `--until` accept `7d`, `24h`, `2w`, or ISO-8601 (`2026-09-01`,
 `2026-09-01T12:00:00Z`).
+
+## inbox
+
+| Command | Gate | Options |
+|---|---|---|
+| `inbox` | read | `--chats` (20), `--per-chat` (20), `--scope`, `--include-muted` |
+
+Unread incoming messages across chats, oldest first within each chat, each
+record carrying `chat_title` and the chat's `chat_unread_count`. It marks
+nothing read — it never opens a chat or views a message — so no sender sees a
+read receipt. Muted chats are skipped unless `--include-muted`, except when they
+mention the account.
 
 ## msg
 

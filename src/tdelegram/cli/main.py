@@ -120,11 +120,12 @@ app.add_typer(chat_app, name="chat")
 def chat_list(
     scope: str = typer.Option("main", help="main|archive|all"),
     limit: int | None = typer.Option(None, help="Max chats"),
+    unread: bool = typer.Option(False, "--unread", help="Only chats with unread messages"),
 ) -> None:
     from tdelegram.api import chats
 
     with session(_ctx()) as client:
-        _emit_many(chats.iter_list(client, scope=scope, maximum=limit))
+        _emit_many(chats.iter_list(client, scope=scope, maximum=limit, unread_only=unread))
 
 
 @chat_app.command("info", context_settings=REF_ARGS)
@@ -229,6 +230,32 @@ def chat_members(chat: str = typer.Argument(...), limit: int = typer.Option(100)
 
     with session(_ctx()) as client:
         _emit(chats.members(client, chat, limit=limit))
+
+
+@app.command("inbox")
+@handle_errors
+def inbox(
+    chats: int = typer.Option(20, "--chats", help="At most this many unread chats"),
+    per_chat: int = typer.Option(
+        20, "--per-chat", help="At most this many messages from each; the newest are kept"
+    ),
+    scope: str = typer.Option("main", "--scope", help="main|archive|all"),
+    include_muted: bool = typer.Option(
+        False, "--include-muted", help="Muted chats too (they appear anyway if they mention you)"
+    ),
+) -> None:
+    """Unread messages across chats, oldest first within each. Marks nothing read.
+
+    For "what did I miss": nothing here tells a sender their message was seen.
+    """
+    from tdelegram.api import inbox as inbox_api
+
+    with session(_ctx()) as client:
+        _emit_many(
+            inbox_api.iter_unread(
+                client, scope=scope, chats=chats, per_chat=per_chat, include_muted=include_muted
+            )
+        )
 
 
 # -- msg ----------------------------------------------------------------

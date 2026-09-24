@@ -56,6 +56,7 @@ the first login, are in
 ```bash
 tdelegram auth login
 tdelegram chat list
+tdelegram inbox                                  # unread messages; marks nothing read
 tdelegram chat history --chat @durov --limit 5
 tdelegram msg send --chat me --text "hi"        # previews
 tdelegram msg send --chat me --text "hi" --yes  # performs

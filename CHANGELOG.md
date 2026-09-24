@@ -255,3 +255,8 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   `proxy enable`, `proxy disable`, `proxy remove`. Where Telegram is blocked a
   login cannot get through without one, and until now only `proxy list`
   existed — behind a full login. `proxy list` leaves secrets and passwords out.
+- `inbox`: unread incoming messages across chats, oldest first within each,
+  capped per chat with the newest kept. It only reads history — no `openChat`,
+  no `viewMessages` — so triaging an inbox sends no read receipts. Muted chats
+  are left out unless they mention the account. `chat list --unread` lists the
+  chats themselves.

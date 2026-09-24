@@ -5,6 +5,7 @@ without asking anyone.
 
 ## Contents
 
+- [Triage an inbox](#triage-an-inbox)
 - [Narrow before you read](#narrow-before-you-read)
 - [Everything one person posted](#everything-one-person-posted)
 - [Quote a message verbatim](#quote-a-message-verbatim)
@@ -13,6 +14,29 @@ without asking anyone.
 - [Watch for new messages](#watch-for-new-messages)
 - [Download a file](#download-a-file)
 - [Shaping output for a report](#shaping-output-for-a-report)
+
+## Triage an inbox
+
+```bash
+tdelegram chat list --unread --limit 30 2>/dev/null \
+  | jq -r '[.unread_count, .unread_mention_count, .title] | @tsv'
+tdelegram inbox --chats 10 --per-chat 15 2>/dev/null \
+  | jq -r '[.chat_title, .sender_name, (.text | split("\n")[0])] | @tsv'
+```
+
+`inbox` marks nothing read, so senders see no read receipt until the user
+actually opens the chat. `--per-chat` keeps the newest messages; each record's
+`chat_unread_count` says how many there were in all, so a summary can say what
+it skipped.
+
+When a message calls for an answer, write it as a draft rather than sending it.
+A draft is visible only to the account itself, in that chat's input box on
+every device, so the user reads it and presses send:
+
+```bash
+tdelegram draft set --chat someone --text "Yes, 8 works."          # previews
+tdelegram --yes draft set --chat someone --text "Yes, 8 works."    # after approval
+```
 
 ## Narrow before you read
 

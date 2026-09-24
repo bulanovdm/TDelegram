@@ -1115,3 +1115,101 @@ def test_proxy_commands_say_what_the_profile_needs(
     result = runner.invoke(cli_main.app, ["proxy", "list"])
     assert result.exit_code == 1
     assert "TELEGRAM_API_ID" in _lines(result)[0]["error"]["message"]
+
+
+# --- inbox: what the account has not read, without reading it ------------
+
+
+def _message_in(chat_id: int, mid: int, text: str, *, outgoing: bool = False) -> dict[str, Any]:
+    return {
+        "@type": "message",
+        "id": mid,
+        "chat_id": chat_id,
+        "date": 1_700_000_000 + mid,
+        "is_outgoing": outgoing,
+        "sender_id": {"@type": "messageSenderUser", "user_id": 7},
+        "content": {"@type": "messageText", "text": {"@type": "formattedText", "text": text}},
+    }
+
+
+def _script_inbox(cli: FakeTransport) -> None:
+    unmuted = {"use_default_mute_for": False, "mute_for": 0}
+    chats = {
+        10: {"title": "Friends", "unread_count": 3, "last_read_inbox_message_id": 100,
+             "type": {"@type": "chatTypePrivate", "user_id": 7},
+             "notification_settings": unmuted},
+        11: {"title": "Read up", "unread_count": 0, "type": {"@type": "chatTypePrivate"}},
+        12: {"title": "Muted noise", "unread_count": 5, "last_read_inbox_message_id": 1,
+             "type": {"@type": "chatTypeBasicGroup", "basic_group_id": 12},
+             "notification_settings": {"use_default_mute_for": False, "mute_for": 999_999}},
+        13: {"title": "Muted channel that mentions you", "unread_count": 2,
+             "unread_mention_count": 1, "last_read_inbox_message_id": 49,
+             "type": {"@type": "chatTypeSupergroup", "supergroup_id": 13, "is_channel": True},
+             "notification_settings": {"use_default_mute_for": True}},
+    }
+    histories = {
+        10: [_message_in(10, 104, "see you at 8"), _message_in(10, 103, "mine", outgoing=True),
+             _message_in(10, 102, "dinner?"), _message_in(10, 101, "hey"),
+             _message_in(10, 100, "already read")],
+        12: [_message_in(12, 9, "spam")],
+        13: [_message_in(13, 51, "@you look"), _message_in(13, 50, "update"),
+             _message_in(13, 49, "old")],
+    }
+    cli.add_simple_response("getChats", {"@type": "chats", "chat_ids": list(chats)})
+    cli.add_response(
+        lambda r: r.get("@type") == "getChat",
+        lambda r: {"@type": "chat", "id": r["chat_id"], **chats[r["chat_id"]]},
+    )
+    cli.add_response(
+        lambda r: r.get("@type") == "getChatHistory",
+        lambda r: {
+            "@type": "messages",
+            "messages": histories.get(r["chat_id"], []) if r["from_message_id"] == 0 else [],
+        },
+    )
+    cli.add_simple_response(
+        "getScopeNotificationSettings", {"@type": "scopeNotificationSettings", "mute_for": 3600}
+    )
+    cli.add_simple_response("getUser", {"@type": "user", "id": 7, "first_name": "Sam"})
+
+
+def test_inbox_lists_unread_messages_oldest_first(cli: FakeTransport) -> None:
+    _script_inbox(cli)
+    result = runner.invoke(cli_main.app, ["inbox"])
+    assert result.exit_code == 0
+    got = [(r["chat_title"], r["text"]) for r in _lines(result)]
+    assert got == [
+        ("Friends", "hey"),
+        ("Friends", "dinner?"),
+        ("Friends", "see you at 8"),
+        ("Muted channel that mentions you", "update"),
+        ("Muted channel that mentions you", "@you look"),
+    ], "outgoing, already-read and muted-without-mention messages stay out"
+    assert _lines(result)[0]["sender_name"] == "Sam"
+
+
+def test_inbox_never_marks_anything_read(cli: FakeTransport) -> None:
+    """Senders see read receipts. A digest must not send any."""
+    _script_inbox(cli)
+    runner.invoke(cli_main.app, ["inbox", "--include-muted"])
+    marking = {"openChat", "viewMessages", "readAllChatMentions", "readAllChatReactions"}
+    assert not marking & set(_sent(cli))
+
+
+def test_inbox_keeps_the_newest_when_capped(cli: FakeTransport) -> None:
+    _script_inbox(cli)
+    result = runner.invoke(cli_main.app, ["inbox", "--per-chat", "2", "--chats", "1"])
+    assert [r["text"] for r in _lines(result)] == ["dinner?", "see you at 8"]
+    assert _lines(result)[0]["chat_unread_count"] == 3, "so a digest can say what it left out"
+
+
+def test_inbox_can_include_muted_chats(cli: FakeTransport) -> None:
+    _script_inbox(cli)
+    result = runner.invoke(cli_main.app, ["inbox", "--include-muted"])
+    assert "spam" in [r["text"] for r in _lines(result)]
+
+
+def test_chat_list_can_show_only_unread_chats(cli: FakeTransport) -> None:
+    _script_inbox(cli)
+    result = runner.invoke(cli_main.app, ["chat", "list", "--unread", "--limit", "2"])
+    assert [r["title"] for r in _lines(result)] == ["Friends", "Muted noise"]

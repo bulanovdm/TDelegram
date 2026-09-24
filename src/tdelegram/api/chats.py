@@ -11,7 +11,7 @@ from tdelegram.errors import TelegramError
 from tdelegram.paging import paginate
 
 
-def _chat_list_object(scope: str) -> dict[str, str]:
+def chat_list_object(scope: str) -> dict[str, str]:
     if scope == "archive":
         return {"@type": "chatListArchive"}
     return {"@type": "chatListMain"}
@@ -79,21 +79,28 @@ def info(client: TelegramClient, chat_ref: str, *, include_raw: bool = False) ->
 
 
 def iter_list(
-    client: TelegramClient, *, scope: str = "main", maximum: int | None = None
+    client: TelegramClient,
+    *,
+    scope: str = "main",
+    maximum: int | None = None,
+    unread_only: bool = False,
 ) -> Iterator[dict[str, Any]]:
     scopes = ("main", "archive") if scope == "all" else (scope,)
     seen: set[int] = set()
     yielded = 0
-    request_limit = 1000 if maximum is None else max(1, min(int(maximum), 1000))
+    # Filtering to unread chats means reading past the ones that are not.
+    request_limit = 1000 if maximum is None or unread_only else max(1, min(int(maximum), 1000))
     for current in scopes:
         result = client.call(
-            "getChats", {"chat_list": _chat_list_object(current), "limit": request_limit}
+            "getChats", {"chat_list": chat_list_object(current), "limit": request_limit}
         )
         for chat_id in result.get("chat_ids", []):
             if not isinstance(chat_id, int) or chat_id in seen:
                 continue
             seen.add(chat_id)
             chat = client.call("getChat", {"chat_id": chat_id})
+            if unread_only and not (chat.get("unread_count") or chat.get("is_marked_as_unread")):
+                continue
             record = normalize.chat_record(chat, detail=detail_of(client, chat))
             record["chat_list"] = current
             yield record
@@ -165,7 +172,7 @@ def archive(
         "addChatToList",
         {
             "chat_id": resolve_id(client, chat_ref),
-            "chat_list": _chat_list_object("archive" if archived else "main"),
+            "chat_list": chat_list_object("archive" if archived else "main"),
         },
         allow_write=allow_write,
     )
@@ -177,7 +184,7 @@ def set_pinned(
     return client.call(
         "toggleChatIsPinned",
         {
-            "chat_list": _chat_list_object("main"),
+            "chat_list": chat_list_object("main"),
             "chat_id": resolve_id(client, chat_ref),
             "is_pinned": pinned,
         },
