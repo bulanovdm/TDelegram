@@ -63,6 +63,14 @@ tdelegram updates follow &
 tdelegram msg send --chat me --text "*hi*" --parse-mode markdown --yes  # MarkdownV2
 ```
 
+Where Telegram is blocked, store a proxy before logging in — every `proxy`
+command works without a session:
+
+```bash
+tdelegram --yes proxy add 'https://t.me/proxy?server=...&port=443&secret=...'
+tdelegram proxy ping 1 && tdelegram auth login
+```
+
 Library:
 
 ```python

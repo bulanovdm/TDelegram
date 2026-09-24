@@ -110,10 +110,19 @@ method takes the verdict of the worst thing it can express.
 | Command | Gate | Notes |
 |---|---|---|
 | `story list <chat>` | read | archived stories |
-| `proxy list` | read | |
+| `proxy list` | read | stored proxies, without secrets or passwords |
+| `proxy add <link>` | write | `tg://proxy`, `t.me/proxy`, `tg://socks`, `socks5://`, `http://`; `--comment`, `--no-enable` |
+| `proxy enable <id>` / `proxy disable` | write | switch proxy, or connect directly |
+| `proxy remove <id>` | **destructive** | |
+| `proxy ping [<id>]` | read | seconds to Telegram through the proxy, or directly |
+| `proxy check <id>` | read | fails if the proxy cannot reach Telegram |
 | `bot callback <query_id>` | write | answers a callback query |
 | `bot inline` | write | `--bot`, `--query` — the bot is notified of the query |
 | `secret create <user>` | write | new secret chat |
+
+Every `proxy` command works before login — a blocked network needs the proxy
+before a login can get through. They need only `TELEGRAM_API_ID` and
+`TELEGRAM_API_HASH`.
 
 `bot inline` looks like a read and is not: sending an inline query notifies a
 third-party bot, which can act on it.

@@ -92,6 +92,31 @@ def list_proxies(client: TelegramClient) -> dict[str, Any]:
     return client.call("getProxies", {})
 
 
+def proxy_record(added: dict[str, Any]) -> dict[str, Any]:
+    """A stored proxy, flat. Secrets and passwords stay out of it.
+
+    A listing ends up in terminals, logs and bug reports; an MTProto secret or
+    a SOCKS password there hands the proxy to whoever reads it.
+    """
+    from tdelegram.normalize import iso_date
+
+    proxy = added.get("proxy") or {}
+    kind = (proxy.get("type") or {}).get("@type", "")
+    credentials = proxy.get("type") or {}
+    return {
+        "proxy_id": added.get("id"),
+        "server": proxy.get("server"),
+        "port": proxy.get("port"),
+        "type": kind.removeprefix("proxyType").lower() or None,
+        "has_credentials": bool(
+            credentials.get("secret") or credentials.get("username") or credentials.get("password")
+        ),
+        "is_enabled": bool(added.get("is_enabled")),
+        "last_used": iso_date(added.get("last_used_date")),
+        "comment": added.get("comment") or None,
+    }
+
+
 def _add(
     client: TelegramClient,
     proxy: dict[str, Any],

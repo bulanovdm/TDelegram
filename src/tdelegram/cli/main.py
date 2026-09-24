@@ -9,7 +9,15 @@ from typing import Any
 import typer
 
 from tdelegram import safety
-from tdelegram.cli.context import Ctx, handle_errors, perform, run_call, session, show_preview
+from tdelegram.cli.context import (
+    Ctx,
+    handle_errors,
+    perform,
+    run_call,
+    session,
+    setup_session,
+    show_preview,
+)
 from tdelegram.cli.output import emit, emit_many, warn
 
 app = typer.Typer(no_args_is_help=True, help="TDelegram: a TDLib-backed Telegram client")
@@ -611,14 +619,107 @@ def secret_create(user: int = typer.Argument(...)) -> None:
         _emit(perform(_ctx(), lambda w, d: secret.create_secret(client, user, allow_write=w)))
 
 
-proxy_app = typer.Typer(no_args_is_help=True)
+proxy_app = typer.Typer(
+    no_args_is_help=True,
+    help="Reach Telegram through a proxy. Works before login, which is when a blocked "
+    "network needs it: add one, then run `auth login`.",
+)
 app.add_typer(proxy_app, name="proxy")
 
 
 @proxy_app.command("list")
 @handle_errors
 def proxy_list() -> None:
-    _emit(run_call(_ctx(), "getProxies", {}))
+    """Stored proxies; secrets and passwords are left out."""
+    from tdelegram.api import proxies
+
+    with setup_session(_ctx()) as client:
+        _emit_many(proxies.proxy_record(p) for p in proxies.list_proxies(client).get("proxies", []))
+
+
+@proxy_app.command("add")
+@handle_errors
+def proxy_add(
+    link: str = typer.Argument(
+        ..., help="tg://proxy?..., t.me/proxy?..., tg://socks?..., socks5://host:port, http://..."
+    ),
+    comment: str = typer.Option("", "--comment"),
+    enable: bool = typer.Option(True, "--enable/--no-enable", help="Switch to it now"),
+) -> None:
+    """Store a proxy from a shared link, and by default switch to it."""
+    from tdelegram.api import proxies
+
+    proxies.parse_proxy_link(link)  # a bad link fails before anything is opened
+    with setup_session(_ctx()) as client:
+        added = perform(
+            _ctx(),
+            lambda w, d: proxies.add_proxy_link(
+                client, link, enable=enable, comment=comment, allow_write=w
+            ),
+        )
+        _emit(proxies.proxy_record(added))
+
+
+@proxy_app.command("enable")
+@handle_errors
+def proxy_enable(proxy_id: int = typer.Argument(...)) -> None:
+    from tdelegram.api import proxies
+
+    with setup_session(_ctx()) as client:
+        _emit(perform(_ctx(), lambda w, d: proxies.enable_proxy(client, proxy_id, allow_write=w)))
+
+
+@proxy_app.command("disable")
+@handle_errors
+def proxy_disable() -> None:
+    """Connect directly again."""
+    from tdelegram.api import proxies
+
+    with setup_session(_ctx()) as client:
+        _emit(perform(_ctx(), lambda w, d: proxies.disable_proxy(client, allow_write=w)))
+
+
+@proxy_app.command("remove")
+@handle_errors
+def proxy_remove(proxy_id: int = typer.Argument(...)) -> None:
+    from tdelegram.api import proxies
+
+    with setup_session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: proxies.remove_proxy(
+                    client, proxy_id, allow_write=w, allow_destructive=d
+                ),
+            )
+        )
+
+
+@proxy_app.command("ping")
+@handle_errors
+def proxy_ping(
+    proxy_id: int | None = typer.Argument(None, help="Omit to ping Telegram directly"),
+) -> None:
+    """Seconds to reach Telegram through a stored proxy, or directly."""
+    from tdelegram.api import proxies
+
+    with setup_session(_ctx()) as client:
+        seconds = proxies.ping_proxy(client, proxy_id).get("seconds")
+        _emit({"proxy_id": proxy_id, "seconds": seconds})
+
+
+@proxy_app.command("check")
+@handle_errors
+def proxy_check(
+    proxy_id: int = typer.Argument(...),
+    timeout: float = typer.Option(10.0, "--timeout", help="Seconds to wait"),
+) -> None:
+    """Whether a stored proxy can reach Telegram at all; fails if it cannot."""
+    from tdelegram.api import proxies
+
+    with setup_session(_ctx()) as client:
+        proxies.check_proxy(client, proxy_id, timeout=timeout)
+        _emit({"proxy_id": proxy_id, "ok": True})
 
 
 # -- updates ------------------------------------------------------------

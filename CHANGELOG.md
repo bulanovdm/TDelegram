@@ -247,3 +247,11 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
 - Removed the unreachable `cli/commands/` package.
 - Ship `py.typed`.
 - Added `CODE_OF_CONDUCT.md`, issue and pull request templates.
+
+### Added
+- Proxy commands that work before login: `proxy add <link>` takes a proxy in
+  any form one is shared in (`tg://proxy`, `t.me/proxy`, `tg://socks`,
+  `socks5://`, `http://`) and switches to it, then `proxy ping`, `proxy check`,
+  `proxy enable`, `proxy disable`, `proxy remove`. Where Telegram is blocked a
+  login cannot get through without one, and until now only `proxy list`
+  existed — behind a full login. `proxy list` leaves secrets and passwords out.

@@ -113,30 +113,45 @@ def ensure_login(client: TelegramClient, ctx: Ctx) -> None:
     )
 
 
+def open_profile(ctx: Ctx, client: TelegramClient) -> dict[str, Any]:
+    """Clear the handshake steps stored secrets can clear, and report the state.
+
+    Never prompts. Afterwards TDLib has its parameters and the profile's
+    database is open, whether or not the account is logged in.
+    """
+    profile_dir: Path = getattr(client, "_profile_dir", base_dir(ctx) / "profiles" / ctx.profile)
+    provider = NonInteractiveCredentialProvider(base_dir=getattr(client, "_base_dir", None))
+    return current_state(
+        client,
+        provider,
+        database_directory=str(profile_dir / "tdlib"),
+        files_directory=str(profile_dir / "files"),
+    )
+
+
 def report_auth_state(ctx: Ctx) -> dict[str, Any]:
     """Answer "am I logged in?" using stored secrets only, never a prompt."""
-    client, lock = make_client(ctx, login=False)
-    try:
-        profile_dir: Path = getattr(
-            client, "_profile_dir", base_dir(ctx) / "profiles" / ctx.profile
-        )
-        provider = NonInteractiveCredentialProvider(
-            base_dir=getattr(client, "_base_dir", None)
-        )
-        state = current_state(
-            client,
-            provider,
-            database_directory=str(profile_dir / "tdlib"),
-            files_directory=str(profile_dir / "files"),
-        )
+    with session(ctx, login=False) as client:
+        state = open_profile(ctx, client)
         state["profile"] = ctx.profile
         return state
-    finally:
-        try:
-            client.close()
-        finally:
-            if lock is not None:
-                lock.release()
+
+
+@contextmanager
+def setup_session(ctx: Ctx) -> Iterator[TelegramClient]:
+    """A client with its profile open, logged in or not.
+
+    For what TDLib accepts before authorization -- proxies above all, which
+    someone behind a block needs before a login can reach Telegram at all.
+    """
+    with session(ctx, login=False) as client:
+        state = open_profile(ctx, client)
+        if state.get("@type") == "authorizationStateWaitTdlibParameters":
+            raise RuntimeError(
+                f"Could not open the profile: it needs {state.get('needs')}. "
+                "Export TELEGRAM_API_ID and TELEGRAM_API_HASH, then retry."
+            )
+        yield client
 
 
 def interactive() -> bool:

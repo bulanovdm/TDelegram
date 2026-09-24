@@ -336,6 +336,10 @@ MUTATING_COMMANDS = [
     ("createNewSecretChat", ["secret", "create", "2"]),
     # Sent the file without --yes: send_file granted itself allow_write=True.
     ("sendMessage", ["media", "upload", "--chat", "somechat", "--path", "/tmp/cv.pdf"]),
+    ("addProxy", ["proxy", "add", "socks5://127.0.0.1:9050"]),
+    ("enableProxy", ["proxy", "enable", "1"]),
+    ("disableProxy", ["proxy", "disable"]),
+    ("removeProxy", ["proxy", "remove", "1"]),
     ("answerCallbackQuery", ["bot", "callback", "9"]),
     ("getInlineQueryResults", ["bot", "inline", "--bot", "1", "--query", "x"]),
     ("logOut", ["auth", "logout"]),
@@ -1000,3 +1004,114 @@ def test_history_names_each_sender_once(cli: FakeTransport) -> None:
     assert result.exit_code == 0
     assert [r["sender_name"] for r in _lines(result)] == ["Ada", "Ada", "Newsroom"]
     assert _sent(cli).count("getUser") == 1
+
+
+# --- proxies, which have to work before there is a login -----------------
+
+SECRET = "ee1603010200010001fc030386e24c3add6e2e616b616d61692e636f6d"
+PROXY_LINK = f"https://t.me/proxy?server=proxy.example.org&port=443&secret={SECRET}"
+
+
+def _stored(cli: FakeTransport, *, enabled: bool = True) -> None:
+    cli.add_simple_response(
+        "getProxies",
+        {
+            "@type": "addedProxies",
+            "proxies": [
+                {
+                    "@type": "addedProxy",
+                    "id": 1,
+                    "is_enabled": enabled,
+                    "last_used_date": 1_700_000_000,
+                    "proxy": {
+                        "@type": "proxy",
+                        "server": "proxy.example.org",
+                        "port": 443,
+                        "type": {"@type": "proxyTypeMtproto", "secret": SECRET},
+                    },
+                }
+            ],
+        },
+    )
+
+
+def test_a_proxy_can_be_added_before_logging_in(cli: FakeTransport) -> None:
+    """Behind a block, the proxy has to exist before a login can reach Telegram."""
+    cli._rules.clear()
+    cli.add_simple_response(
+        "getAuthorizationState", {"@type": "authorizationStateWaitPhoneNumber"}
+    )
+    cli.add_response(
+        lambda r: r.get("@type") == "addProxy",
+        lambda r: {"@type": "addedProxy", "id": 1, "is_enabled": True, "proxy": r["proxy"]},
+    )
+    result = runner.invoke(cli_main.app, ["--yes", "proxy", "add", PROXY_LINK])
+    assert result.exit_code == 0
+    sent = _sent(cli)
+    assert "setAuthenticationPhoneNumber" not in sent, "adding a proxy must not start a login"
+    call = _request(cli, "addProxy")
+    assert call["enable"] is True
+    assert call["proxy"]["type"] == {"@type": "proxyTypeMtproto", "secret": SECRET}
+    record = _lines(result)[0]
+    assert record["proxy_id"] == 1 and record["type"] == "mtproto"
+    assert SECRET not in result.stdout, "the secret must not be echoed"
+
+
+def test_proxy_add_previews_the_parsed_proxy_without_yes(cli: FakeTransport) -> None:
+    result = runner.invoke(cli_main.app, ["proxy", "add", "socks5://127.0.0.1:9050"])
+    assert result.exit_code == 2
+    assert "addProxy" not in _sent(cli)
+    assert "127.0.0.1" in result.stderr
+
+
+def test_proxy_add_refuses_a_link_that_is_not_a_proxy(cli: FakeTransport) -> None:
+    result = runner.invoke(cli_main.app, ["--yes", "proxy", "add", "tg://resolve?domain=x"])
+    assert result.exit_code == 1
+    assert cli.sent == [], "a bad link must fail before the profile is opened"
+
+
+def test_proxy_list_leaves_secrets_out(cli: FakeTransport) -> None:
+    _stored(cli)
+    result = runner.invoke(cli_main.app, ["proxy", "list"])
+    assert result.exit_code == 0
+    record = _lines(result)[0]
+    assert record["proxy_id"] == 1 and record["is_enabled"] is True
+    assert record["has_credentials"] is True
+    assert SECRET not in result.stdout
+
+
+def test_proxy_ping_looks_the_proxy_up_by_id(cli: FakeTransport) -> None:
+    _stored(cli)
+    cli.add_simple_response("pingProxy", {"@type": "seconds", "seconds": 0.21})
+    result = runner.invoke(cli_main.app, ["proxy", "ping", "1"])
+    assert result.exit_code == 0
+    assert _lines(result)[0] == {"proxy_id": 1, "seconds": 0.21}
+    assert _request(cli, "pingProxy")["proxy"]["server"] == "proxy.example.org"
+    cli.sent.clear()
+    direct = runner.invoke(cli_main.app, ["proxy", "ping"])
+    assert direct.exit_code == 0 and _request(cli, "pingProxy")["proxy"] is None
+
+
+def test_proxy_check_reports_a_proxy_that_cannot_connect(cli: FakeTransport) -> None:
+    _stored(cli)
+    cli.add_simple_response("testProxy", {"@type": "error", "code": 400, "message": "timeout"})
+    result = runner.invoke(cli_main.app, ["proxy", "check", "1"])
+    assert result.exit_code == 1
+    assert _lines(result)[0]["error"]["method"] == "testProxy"
+
+
+def test_proxy_commands_say_what_the_profile_needs(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import tdelegram.credentials as creds
+
+    for var in ("TELEGRAM_API_ID", "TELEGRAM_API_HASH"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setattr(creds, "os_store_get", lambda service, account: None)
+    cli._rules.clear()
+    cli.add_simple_response(
+        "getAuthorizationState", {"@type": "authorizationStateWaitTdlibParameters"}
+    )
+    result = runner.invoke(cli_main.app, ["proxy", "list"])
+    assert result.exit_code == 1
+    assert "TELEGRAM_API_ID" in _lines(result)[0]["error"]["message"]

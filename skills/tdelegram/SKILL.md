@@ -235,7 +235,8 @@ media     download upload              contact   list
 user      info                         admin     ban promote
 topic     list                         folder    list        draft set
 bot       callback inline              story     list        secret create
-proxy     list                         updates   follow
+proxy     list add enable disable remove ping check
+updates   follow
 call      --request '<raw TDLib JSON>' describe <method|object|type>  version
 ```
 

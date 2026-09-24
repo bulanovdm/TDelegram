@@ -26,6 +26,7 @@ do step 1, then hand over with the exact commands. Do not loop retrying a login
 - [Native install](#native-install)
 - [Get API credentials](#get-api-credentials-human-only)
 - [Log in](#log-in-human-only)
+- [Where Telegram is blocked](#where-telegram-is-blocked)
 - [Verify](#verify)
 - [Where secrets live](#where-secrets-live)
 
@@ -158,6 +159,25 @@ to an existing Telegram session, then the 2FA password if the account has one.
 The session is stored under `~/.tdelegram/profiles/default/` and reused after.
 
 An agent cannot complete this. Ask the person to run it and say when it is done.
+
+## Where Telegram is blocked
+
+A login cannot reach Telegram through a blocked network, so store a proxy first.
+Every `proxy` command works before login; it needs only the API credentials.
+
+```bash
+tdelegram --yes proxy add 'https://t.me/proxy?server=...&port=443&secret=...'  # MTProto
+tdelegram --yes proxy add 'socks5://127.0.0.1:9050'                            # e.g. Tor
+tdelegram proxy ping 1        # seconds to Telegram through proxy 1
+tdelegram auth login          # now goes through the proxy
+```
+
+`proxy add` takes the forms proxies are shared in — `tg://proxy`, `t.me/proxy`,
+`tg://socks`, `t.me/socks`, `socks5://` and `http://` URLs — and switches to the
+proxy at once (`--no-enable` to only store it). It is kept in the profile, so
+every later command uses it. `proxy list` shows what is stored, without secrets;
+`proxy check <id>` fails fast on a dead proxy; `proxy enable <id>` switches;
+`proxy disable` connects directly again.
 
 ## Verify
 
