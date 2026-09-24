@@ -1623,3 +1623,43 @@ def test_contact_list_emits_people_not_ids(cli: FakeTransport) -> None:
     )
     result = runner.invoke(cli_main.app, ["contact", "list"])
     assert [(r["user_id"], r["first_name"]) for r in _lines(result)] == [(1, "P1"), (2, "P2")]
+
+
+def test_inbox_resolves_default_mute_settings_per_scope(cli: FakeTransport) -> None:
+    """A chat on "use the default" is muted when its scope's default mutes it."""
+    defaults = {
+        "notificationSettingsScopePrivateChats": 0,
+        "notificationSettingsScopeGroupChats": 0,
+        "notificationSettingsScopeChannelChats": 86400,
+    }
+    chats = {
+        20: {"title": "A person", "type": {"@type": "chatTypePrivate", "user_id": 7}},
+        21: {"title": "A group", "type": {"@type": "chatTypeSupergroup", "is_channel": False}},
+        22: {"title": "A channel", "type": {"@type": "chatTypeSupergroup", "is_channel": True}},
+        23: {"title": "Another channel", "type": {"@type": "chatTypeSupergroup",
+                                                   "is_channel": True}},
+    }
+    for chat in chats.values():
+        chat.update(unread_count=1, last_read_inbox_message_id=0,
+                    notification_settings={"use_default_mute_for": True})
+    cli.add_simple_response("getChats", {"@type": "chats", "chat_ids": list(chats)})
+    cli.add_response(
+        lambda r: r.get("@type") == "getChat",
+        lambda r: {"@type": "chat", "id": r["chat_id"], **chats[r["chat_id"]]},
+    )
+    cli.add_response(
+        lambda r: r.get("@type") == "getScopeNotificationSettings",
+        lambda r: {"@type": "scopeNotificationSettings",
+                   "mute_for": defaults[r["scope"]["@type"]]},
+    )
+    cli.add_response(
+        lambda r: r.get("@type") == "getChatHistory",
+        lambda r: {"@type": "messages",
+                   "messages": [_message_in(r["chat_id"], 1, "hi")]
+                   if r["from_message_id"] == 0 else []},
+    )
+    result = runner.invoke(cli_main.app, ["inbox"])
+    assert [r["chat_title"] for r in _lines(result)] == ["A person", "A group"]
+    scopes = [req["scope"]["@type"] for _, req in cli.sent
+              if req.get("@type") == "getScopeNotificationSettings"]
+    assert sorted(scopes) == sorted(defaults), "each scope's default is fetched once"
