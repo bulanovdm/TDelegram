@@ -290,6 +290,14 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   already asked for is kept on the message and returned free, without `--yes`;
   otherwise it is a write, because Telegram counts it against the account's
   quota, and the record says how many free ones are left.
+- `bot press --chat --id --button LABEL` presses an inline button under a bot's
+  message, by the label its record lists in `buttons`, and returns the bot's
+  answer; a link button comes back unpressed. It replaces `bot callback`, which
+  called `answerCallbackQuery` — a method only a bot account can use, so the
+  command could never work from the user account TDelegram drives.
+- `user info` and `secret create` take `@username` and `me` as well as an id,
+  and `contact list` emits a user record per contact instead of TDLib's bare
+  list of ids.
 - `FakeTransport` answers `close` with `authorizationStateClosed` as TDLib does,
   so `close()` no longer waits out a second per client and the suite runs in
   a quarter of the time.

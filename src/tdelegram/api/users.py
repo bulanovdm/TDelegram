@@ -52,6 +52,21 @@ def get_user(client: TelegramClient, user_id: int) -> dict[str, Any]:
     return normalize.user_record(client.call("getUser", {"user_id": user_id}))
 
 
+def resolve_user_id(client: TelegramClient, user_ref: str) -> int:
+    """A user id from a numeric id, `@username`, or `me`."""
+    from tdelegram.api.chats import resolve
+
+    value = user_ref.strip()
+    if value.lstrip("-").isdigit():
+        return int(value)
+    chat = resolve(client, value)
+    user_id = (chat.get("type") or {}).get("user_id")
+    if not isinstance(user_id, int):
+        raise ValueError(f"{user_ref!r} is not a user: it names a group or a channel.")
+    return user_id
+
+
+
 def me(client: TelegramClient) -> dict[str, Any]:
     return normalize.user_record(client.call("getMe", {}))
 

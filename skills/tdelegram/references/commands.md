@@ -125,8 +125,8 @@ stripped and no formatting, silently. Use `html` if you want `<b>`/`<i>`.
 |---|---|---|
 | `media download <file_id>` | read | writes to local disk only, which is why it is a read |
 | `media upload` | write | `--chat`, `--path`, `--caption` — sends a file as a document |
-| `contact list` | read | |
-| `user info <user_id>` | read | numeric id, not a username |
+| `contact list` | read | one user record per contact |
+| `user info <user>` | read | a user id, `@username`, or `me` |
 
 ## admin, topic, folder, draft
 
@@ -153,9 +153,9 @@ method takes the verdict of the worst thing it can express.
 | `proxy remove <id>` | **destructive** | |
 | `proxy ping [<id>]` | read | seconds to Telegram through the proxy, or directly |
 | `proxy check <id>` | read | fails if the proxy cannot reach Telegram |
-| `bot callback <query_id>` | write | answers a callback query |
+| `bot press` | write | `--chat`, `--id`, `--button LABEL` — presses an inline button; a link button is returned unpressed |
 | `bot inline` | write | `--bot`, `--query` — the bot is notified of the query |
-| `secret create <user>` | write | new secret chat |
+| `secret create <user>` | write | new secret chat; a user id, `@username`, or `me` |
 
 Every `proxy` command works before login — a blocked network needs the proxy
 before a login can get through. They need only `TELEGRAM_API_ID` and

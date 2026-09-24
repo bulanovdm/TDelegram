@@ -621,7 +621,10 @@ app.add_typer(contact_app, name="contact")
 @contact_app.command("list")
 @handle_errors
 def contact_list() -> None:
-    _emit(run_call(_ctx(), "getContacts", {}))
+    from tdelegram.api import contacts
+
+    with session(_ctx()) as client:
+        _emit_many(contacts.iter_contacts(client))
 
 
 user_app = typer.Typer(no_args_is_help=True)
@@ -630,8 +633,11 @@ app.add_typer(user_app, name="user")
 
 @user_app.command("info", context_settings=REF_ARGS)
 @handle_errors
-def user_info(user_id: int = typer.Argument(...)) -> None:
-    _emit(run_call(_ctx(), "getUser", {"user_id": user_id}))
+def user_info(user: str = typer.Argument(..., help="A user id, @username, or me")) -> None:
+    from tdelegram.api import users
+
+    with session(_ctx()) as client:
+        _emit(users.get_user(client, users.resolve_user_id(client, user)))
 
 
 # -- admin --------------------------------------------------------------
@@ -734,10 +740,23 @@ bot_app = typer.Typer(no_args_is_help=True)
 app.add_typer(bot_app, name="bot")
 
 
-@bot_app.command("callback", context_settings=REF_ARGS)
+@bot_app.command("press")
 @handle_errors
-def bot_callback(query_id: int = typer.Argument(...)) -> None:
-    _emit(run_call(_ctx(), "answerCallbackQuery", {"callback_query_id": query_id}))
+def bot_press(
+    chat: str = typer.Option(..., "--chat"),
+    message_id: int = typer.Option(..., "--id"),
+    button: str = typer.Option(..., "--button", help="The button's label, as the record lists it"),
+) -> None:
+    """Press an inline button under a bot's message. The bot sees it and acts."""
+    from tdelegram.api import bots
+
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: bots.press_button(client, chat, message_id, button, allow_write=w),
+            )
+        )
 
 
 @bot_app.command("inline")
@@ -770,11 +789,12 @@ app.add_typer(secret_app, name="secret")
 
 @secret_app.command("create", context_settings=REF_ARGS)
 @handle_errors
-def secret_create(user: int = typer.Argument(...)) -> None:
-    from tdelegram.api import secret
+def secret_create(user: str = typer.Argument(..., help="A user id, @username, or me")) -> None:
+    from tdelegram.api import secret, users
 
     with session(_ctx()) as client:
-        _emit(perform(_ctx(), lambda w, d: secret.create_secret(client, user, allow_write=w)))
+        user_id = users.resolve_user_id(client, user)
+        _emit(perform(_ctx(), lambda w, d: secret.create_secret(client, user_id, allow_write=w)))
 
 
 proxy_app = typer.Typer(

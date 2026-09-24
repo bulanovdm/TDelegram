@@ -340,7 +340,6 @@ MUTATING_COMMANDS = [
     ("enableProxy", ["proxy", "enable", "1"]),
     ("disableProxy", ["proxy", "disable"]),
     ("removeProxy", ["proxy", "remove", "1"]),
-    ("answerCallbackQuery", ["bot", "callback", "9"]),
     ("getInlineQueryResults", ["bot", "inline", "--bot", "1", "--query", "x"]),
     ("logOut", ["auth", "logout"]),
 ]
@@ -1526,3 +1525,101 @@ def test_transcribe_refuses_what_is_not_speech(cli: FakeTransport) -> None:
     result = runner.invoke(cli_main.app, ["--yes", *TRANSCRIBE])
     assert result.exit_code == 1
     assert "recognizeSpeech" not in _sent(cli)
+
+
+# --- bots, users and contacts, as a user account can use them ------------
+
+
+def _bot_message(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 55})
+    cli.add_simple_response(
+        "getMessage",
+        {
+            "@type": "message",
+            "id": 9,
+            "chat_id": 55,
+            "reply_markup": {
+                "@type": "replyMarkupInlineKeyboard",
+                "rows": [
+                    [
+                        {"@type": "inlineKeyboardButton", "text": "Confirm",
+                         "type": {"@type": "inlineKeyboardButtonTypeCallback", "data": "b2s="}},
+                        {"@type": "inlineKeyboardButton", "text": "Docs",
+                         "type": {"@type": "inlineKeyboardButtonTypeUrl",
+                                  "url": "https://example.org"}},
+                    ]
+                ],
+            },
+        },
+    )
+
+
+PRESS = ["bot", "press", "--chat", "somebot", "--id", "9", "--button"]
+
+
+def test_bot_press_presses_the_button_by_its_label(cli: FakeTransport) -> None:
+    """Replaces `bot callback`, which answered queries -- something only a bot can do."""
+    _bot_message(cli)
+    cli.add_simple_response(
+        "getCallbackQueryAnswer", {"@type": "callbackQueryAnswer", "text": "Done!"}
+    )
+    refused = runner.invoke(cli_main.app, [*PRESS, "confirm"])
+    assert refused.exit_code == 2, "the bot sees the press, so it is a write"
+    assert "getCallbackQueryAnswer" not in _sent(cli)
+    result = runner.invoke(cli_main.app, ["--yes", *PRESS, "confirm"])
+    assert result.exit_code == 0
+    assert _lines(result)[0]["answer"] == "Done!"
+    payload = _request(cli, "getCallbackQueryAnswer")["payload"]
+    assert payload == {"@type": "callbackQueryPayloadData", "data": "b2s="}
+
+
+def test_bot_press_hands_back_a_link_button_unpressed(cli: FakeTransport) -> None:
+    _bot_message(cli)
+    result = runner.invoke(cli_main.app, [*PRESS, "Docs"])
+    assert result.exit_code == 0
+    assert _lines(result)[0] == {
+        "chat_id": 55, "message_id": 9, "button": "Docs", "pressed": False,
+        "url": "https://example.org",
+    }
+
+
+def test_bot_press_names_the_buttons_there_are(cli: FakeTransport) -> None:
+    _bot_message(cli)
+    result = runner.invoke(cli_main.app, ["--yes", *PRESS, "Cancel"])
+    assert result.exit_code == 1
+    assert "'Confirm', 'Docs'" in _lines(result)[0]["error"]["message"]
+
+
+def test_user_info_takes_a_username(cli: FakeTransport) -> None:
+    cli.add_simple_response(
+        "searchPublicChat",
+        {"@type": "chat", "id": 42, "type": {"@type": "chatTypePrivate", "user_id": 42}},
+    )
+    cli.add_simple_response(
+        "getUser",
+        {"@type": "user", "id": 42, "first_name": "Ada",
+         "usernames": {"active_usernames": ["ada"]}, "type": {"@type": "userTypeRegular"}},
+    )
+    result = runner.invoke(cli_main.app, ["user", "info", "@ada"])
+    assert result.exit_code == 0
+    record = _lines(result)[0]
+    assert record["user_id"] == 42 and record["username"] == "ada"
+
+
+def test_user_info_refuses_a_channel(cli: FakeTransport) -> None:
+    cli.add_simple_response(
+        "searchPublicChat",
+        {"@type": "chat", "id": -100, "type": {"@type": "chatTypeSupergroup", "is_channel": True}},
+    )
+    result = runner.invoke(cli_main.app, ["user", "info", "@news"])
+    assert result.exit_code == 1
+
+
+def test_contact_list_emits_people_not_ids(cli: FakeTransport) -> None:
+    cli.add_simple_response("getContacts", {"@type": "users", "total_count": 2, "user_ids": [1, 2]})
+    cli.add_response(
+        lambda r: r.get("@type") == "getUser",
+        lambda r: {"@type": "user", "id": r["user_id"], "first_name": f"P{r['user_id']}"},
+    )
+    result = runner.invoke(cli_main.app, ["contact", "list"])
+    assert [(r["user_id"], r["first_name"]) for r in _lines(result)] == [(1, "P1"), (2, "P2")]

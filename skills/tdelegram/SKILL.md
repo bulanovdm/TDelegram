@@ -241,7 +241,7 @@ msg       send get edit delete delete-mine forward react link search transcribe 
 media     download upload              contact   list
 user      info                         admin     ban promote
 topic     list                         folder    list        draft set
-bot       callback inline              story     list        secret create
+bot       press inline                 story     list        secret create
 proxy     list add enable disable remove ping check
 watch     (new messages, filtered)       updates   follow
 call      --request '<raw TDLib JSON>' describe <method|object|type>  version

@@ -57,9 +57,59 @@ def send_inline_result(
     )
 
 
+def press_button(
+    client: TelegramClient,
+    chat_ref: str,
+    message_id: int,
+    label: str,
+    *,
+    allow_write: bool = False,
+) -> dict[str, Any]:
+    """Press the inline button labelled `label` under a bot's message.
+
+    The bot sees the press and acts on it, which is why getCallbackQueryAnswer
+    is a write. A URL button has nothing to press, so its link comes back
+    instead; a button that needs a password, a game or a payment is refused.
+    """
+    chat_id = resolve_id(client, chat_ref)
+    message = client.call("getMessage", {"chat_id": chat_id, "message_id": message_id})
+    markup = message.get("reply_markup") or {}
+    rows = markup.get("rows") if markup.get("@type") == "replyMarkupInlineKeyboard" else None
+    buttons = [button for row in rows or [] for button in row or []]
+    chosen = [b for b in buttons if b.get("text") == label] or [
+        b for b in buttons if str(b.get("text", "")).casefold() == label.casefold()
+    ]
+    if not chosen:
+        offered = ", ".join(repr(b.get("text")) for b in buttons) or "none"
+        raise ValueError(f"Message {message_id} has no button {label!r}; its buttons: {offered}.")
+    kind = chosen[0].get("type") or {}
+    found = {"chat_id": chat_id, "message_id": message_id, "button": chosen[0].get("text")}
+    if kind.get("@type") == "inlineKeyboardButtonTypeUrl":
+        return {**found, "pressed": False, "url": kind.get("url")}
+    if kind.get("@type") != "inlineKeyboardButtonTypeCallback":
+        raise ValueError(f"{label!r} is a {kind.get('@type')} button, which only an app can use.")
+    answer = client.call(
+        "getCallbackQueryAnswer",
+        {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "payload": {"@type": "callbackQueryPayloadData", "data": kind.get("data", "")},
+        },
+        allow_write=allow_write,
+    )
+    return {
+        **found,
+        "pressed": True,
+        "answer": answer.get("text") or None,
+        "show_alert": bool(answer.get("show_alert")),
+        "url": answer.get("url") or None,
+    }
+
+
 def answer_callback(
     client: TelegramClient, query_id: int, *, text: str = "", allow_write: bool = False
 ) -> dict[str, Any]:
+    """For bot accounts only: a user account cannot answer callback queries."""
     return client.call(
         "answerCallbackQuery",
         {"callback_query_id": query_id, "text": text},
