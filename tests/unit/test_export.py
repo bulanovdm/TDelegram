@@ -196,3 +196,64 @@ def test_safe_names() -> None:
     assert export.safe_name("../../etc/passwd") == "_.._etc_passwd"
     assert export.safe_name("отчёт 2026.pdf") == "отчёт_2026.pdf"
     assert export.safe_name("") == "file"
+
+
+def test_a_first_run_that_saved_nothing_still_picks_up_new_messages(
+    client: TelegramClient, transport: FakeTransport, tmp_path: Path
+) -> None:
+    """Regression: an empty first run marked the export complete with nothing
+    saved, and with no newest message to catch up from, no later run fetched
+    anything -- ever."""
+    history = History(transport, 0)
+    assert export.export_chat(client, "archive", tmp_path)["written"] == 0
+    history.add(1, 2, 3)
+    later = export.export_chat(client, "archive", tmp_path)
+    assert later["written"] == 3 and sorted(_ids(tmp_path)) == [1, 2, 3]
+
+
+def test_a_quiet_chat_under_since_still_picks_up_new_messages(
+    client: TelegramClient, transport: FakeTransport, tmp_path: Path
+) -> None:
+    """The same trap through --since: everything older than the window, so a
+    cron job re-running with the same window saw nothing new forever."""
+    history = History(transport, 0)
+    history.add(1, date=10 * 86400)
+    assert export.export_chat(client, "archive", tmp_path, since=20 * 86400)["written"] == 0
+    history.add(2, date=30 * 86400)
+    later = export.export_chat(client, "archive", tmp_path, since=20 * 86400)
+    assert later["written"] == 1 and _ids(tmp_path) == [2]
+
+
+@pytest.mark.parametrize("phase", ["older", "newer"])
+def test_an_interrupted_write_is_not_skipped_on_resume(
+    client: TelegramClient,
+    transport: FakeTransport,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    phase: str,
+) -> None:
+    """Regression: the resume point moved past a message before it was written.
+
+    A Ctrl-C during a media download or a sender lookup saved a checkpoint
+    beyond a message that was never written, and the next run skipped it.
+    """
+    history = History(transport, 5)
+    if phase == "newer":
+        history.messages = {m: v for m, v in history.messages.items() if m <= 2}
+        export.export_chat(client, "archive", tmp_path)
+        history.add(3, 4, 5)
+    original = export._Writer.write
+    calls = {"n": 0}
+
+    def _interrupted(self: Any, message: dict[str, Any]) -> None:
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise KeyboardInterrupt
+        original(self, message)
+
+    monkeypatch.setattr(export._Writer, "write", _interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        export.export_chat(client, "archive", tmp_path)
+    monkeypatch.setattr(export._Writer, "write", original)
+    export.export_chat(client, "archive", tmp_path)
+    assert sorted(_ids(tmp_path)) == [1, 2, 3, 4, 5], "a message was lost to the interruption"

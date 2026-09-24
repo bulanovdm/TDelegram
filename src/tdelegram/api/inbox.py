@@ -1,9 +1,9 @@
 """Unread messages across chats: what the account has not read yet.
 
-Read-only by construction. getChatHistory marks nothing read -- only openChat
-and viewMessages do, and nothing here calls them -- so an inbox can be
-triaged, summarized or drafted against without a single sender seeing a read
-receipt.
+Read-only by construction. getChatHistory marks nothing read; viewMessages
+does, and nothing here calls it -- nor openChat, which tells TDLib the chat is
+on screen -- so an inbox can be triaged, summarized or drafted against without
+a single sender seeing a read receipt.
 """
 
 from __future__ import annotations

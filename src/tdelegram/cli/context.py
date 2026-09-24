@@ -164,8 +164,9 @@ def confirm_destructive(method: str) -> bool:
 
     That is the point of the second layer: `--yes` can be added by a script,
     a shell alias or an agent, so it is not evidence that a person looked. A
-    destructive call therefore never runs from a pipe, a cron job or an agent's
-    shell, only from a terminal where someone typed its name.
+    destructive call therefore does not complete from a pipe, a cron job or an
+    agent's shell. It is a safeguard against accident, not a sandbox: anything
+    that allocates a pseudo-terminal can type the name as well as a person.
     """
     if not interactive():
         warn(

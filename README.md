@@ -79,7 +79,7 @@ tdelegram chat history --chat @durov --limit 5
 tdelegram msg send --chat me --text "hi"        # previews
 tdelegram --yes msg send --chat me --text "hi"  # performs
 tdelegram --yes msg send --chat me --text "*hi*" --parse-mode markdown  # MarkdownV2
-tdelegram watch --chat me --for 1m              # new messages as they arrive
+tdelegram watch --for 10m                       # new messages as they arrive
 tdelegram --format text inbox                   # plain lines, for a screen reader
 ```
 
@@ -117,9 +117,10 @@ or install the packaged bundle.
 Mutating calls preview and exit; `--yes` performs them. Destructive calls
 (`deleteChatHistory`, `banChatMember`, `logOut`, `deleteAccount`,
 `terminateAllOtherSessions`, …) need `--yes` *and* the method name typed at an
-interactive terminal, so they never run from a script, a pipe or an agent's
-shell. The gate lives in `TelegramClient.call()` — including the raw `call`
-escape hatch. See `src/tdelegram/methods.json` for all 1022 verdicts.
+interactive terminal, so a script, a pipe or an agent's shell does not complete
+one by accident. It is a safeguard, not a sandbox: a program that fakes a
+terminal can type the name too. The gate lives in `TelegramClient.call()` —
+including the raw `call` escape hatch. See `src/tdelegram/methods.json` for all 1022 verdicts.
 
 `call` also checks each request against TDLib's schema before sending it,
 because TDLib ignores a field it does not recognise and runs the call without

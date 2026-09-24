@@ -281,11 +281,14 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   everyone, within an optional window. It counts them first and, without
   `--yes`, stops at the count; with `--yes` it takes one typed confirmation
   for the whole batch, deletes a hundred at a time, and steps around a message
-  Telegram will not delete rather than stalling on it. The official apps have
+  Telegram will not delete (a 400 or a 403) rather than stalling on it — or,
+  when the chat refuses every deletion, stops after one batch and says why. The official apps have
   no way to do this, and the scripts that do have neither a preview nor a
   confirmation.
 - `watch`: new messages as records, filtered by chat, any of several words,
-  a regular expression or a sender, bounded by `--for` or `--count`. `updates
+  a regular expression or a sender, bounded by `--for` or `--count`. The chats
+  it watches are opened for the duration, because TDLib receives every update
+  of a supergroup or channel only while it is open; that marks nothing read. `updates
   follow` only ever offered the raw stream filtered by update type.
 - `--format text`: one plain line per message, in reading order — time,
   sender, chat, text, and media described in words, transcripts included — for

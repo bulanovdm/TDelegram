@@ -1663,3 +1663,70 @@ def test_inbox_resolves_default_mute_settings_per_scope(cli: FakeTransport) -> N
     scopes = [req["scope"]["@type"] for _, req in cli.sent
               if req.get("@type") == "getScopeNotificationSettings"]
     assert sorted(scopes) == sorted(defaults), "each scope's default is fetched once"
+
+
+def test_delete_mine_steps_around_a_forbidden_message_too(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Telegram refuses some deletions with a 403, not a 400.
+
+    Only a 400 was stepped around, so one forbidden message stopped every run
+    at the same batch and nothing older was ever deleted.
+    """
+    _script_own_messages(cli, 150)
+
+    def _delete(r: dict[str, Any]) -> dict[str, Any]:
+        if 925 in r["message_ids"]:
+            return {"@type": "error", "code": 403, "message": "MESSAGE_DELETE_FORBIDDEN"}
+        return {"@type": "ok"}
+
+    cli.add_response(lambda r: r.get("@type") == "deleteMessages", _delete)
+    monkeypatch.setattr(cli_context, "interactive", lambda: True)
+    argv = ["--yes", "msg", "delete-mine", "--chat", "somechat"]
+    result = runner.invoke(cli_main.app, argv, input="deleteMessages\n")
+    assert result.exit_code == 0
+    summary = _lines(result)[-1]
+    assert summary["deleted"] == 149 and summary["skipped"] == [925]
+
+
+def test_delete_mine_stops_when_nothing_at_all_can_be_deleted(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Refused wholesale -- no rights in the chat -- it says so after one batch
+    instead of trying every message one at a time."""
+    _script_own_messages(cli, 250)
+    cli.add_simple_response(
+        "deleteMessages", {"@type": "error", "code": 403, "message": "CHAT_ADMIN_REQUIRED"}
+    )
+    monkeypatch.setattr(cli_context, "interactive", lambda: True)
+    argv = ["--yes", "msg", "delete-mine", "--chat", "somechat"]
+    result = runner.invoke(cli_main.app, argv, input="deleteMessages\n")
+    assert result.exit_code == 1
+    assert _lines(result)[-1]["error"]["code"] == 403
+    assert _sent(cli).count("deleteMessages") == 101, "one batch, then each of its messages"
+
+
+def test_contact_list_survives_a_contact_with_no_active_username(cli: FakeTransport) -> None:
+    """user_record indexed [0] into an empty active_usernames list and crashed."""
+    cli.add_simple_response("getContacts", {"@type": "users", "user_ids": [1]})
+    cli.add_simple_response(
+        "getUser",
+        {"@type": "user", "id": 1, "first_name": "Kim",
+         "usernames": {"@type": "usernames", "active_usernames": [],
+                       "disabled_usernames": ["oldkim"]}},
+    )
+    result = runner.invoke(cli_main.app, ["contact", "list"])
+    assert result.exit_code == 0
+    assert _lines(result)[0]["username"] is None
+
+
+def test_watch_opens_the_chats_it_watches_and_closes_them(cli: FakeTransport) -> None:
+    """TDLib receives every update of a channel only while the chat is open."""
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": -1009, "title": "Alerts"})
+    _arrives(cli, -1009, 1, "siren")
+    result = runner.invoke(cli_main.app, ["watch", "--chat", "alerts", "--count", "1"])
+    assert result.exit_code == 0 and _lines(result)[0]["text"] == "siren"
+    sent = _sent(cli)
+    assert _request(cli, "openChat")["chat_id"] == -1009
+    assert sent.index("closeChat") > sent.index("openChat")
+    assert "viewMessages" not in sent, "watching marks nothing read"

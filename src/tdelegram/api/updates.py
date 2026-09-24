@@ -48,6 +48,11 @@ def watch_messages(
     a set of alternatives -- and `pattern` is a regular expression, also
     case-insensitive. The account's own messages are left out unless asked
     for. Stops after `timeout` seconds or `count` matches, whichever is first.
+
+    Each chat in `chat_ids` is opened for the duration: TDLib receives every
+    update of a supergroup or channel only while the chat is open, so an alert
+    on a busy channel could otherwise arrive late or not at all. Opening marks
+    nothing read -- only viewMessages does.
     """
     from tdelegram.api.users import SenderNames
 
@@ -56,32 +61,43 @@ def watch_messages(
     names = SenderNames(client)
     titles: dict[int, str | None] = {}
     deadline = None if timeout is None else time.monotonic() + timeout
+    opened = sorted(chat_ids or ())
+    for watched in opened:
+        client.call("openChat", {"chat_id": watched})
     matched = 0
-    while deadline is None or time.monotonic() < deadline:
-        event = client.next_update(timeout=0.5)
-        if event is None or event.get("@type") != "updateNewMessage":
-            continue
-        message = event.get("message") or {}
-        chat_id = message.get("chat_id")
-        if message.get("is_outgoing") and not include_outgoing:
-            continue
-        if chat_ids and chat_id not in chat_ids:
-            continue
-        if sender_id is not None and (message.get("sender_id") or {}).get("user_id") != sender_id:
-            continue
-        text = normalize.message_text(message)
-        if folded and not any(term in text.casefold() for term in folded):
-            continue
-        if regex is not None and not regex.search(text):
-            continue
-        record = names.label(normalize.message_record(message))
-        if isinstance(chat_id, int) and chat_id not in titles:
+    try:
+        while deadline is None or time.monotonic() < deadline:
+            event = client.next_update(timeout=0.5)
+            if event is None or event.get("@type") != "updateNewMessage":
+                continue
+            message = event.get("message") or {}
+            chat_id = message.get("chat_id")
+            if message.get("is_outgoing") and not include_outgoing:
+                continue
+            if chat_ids and chat_id not in chat_ids:
+                continue
+            sender = (message.get("sender_id") or {}).get("user_id")
+            if sender_id is not None and sender != sender_id:
+                continue
+            text = normalize.message_text(message)
+            if folded and not any(term in text.casefold() for term in folded):
+                continue
+            if regex is not None and not regex.search(text):
+                continue
+            record = names.label(normalize.message_record(message))
+            if isinstance(chat_id, int) and chat_id not in titles:
+                try:
+                    titles[chat_id] = client.call("getChat", {"chat_id": chat_id}).get("title")
+                except TelegramError:
+                    titles[chat_id] = None
+            record["chat_title"] = titles.get(chat_id) if isinstance(chat_id, int) else None
+            yield record
+            matched += 1
+            if count is not None and matched >= count:
+                return
+    finally:
+        for watched in opened:
             try:
-                titles[chat_id] = client.call("getChat", {"chat_id": chat_id}).get("title")
+                client.call("closeChat", {"chat_id": watched})
             except TelegramError:
-                titles[chat_id] = None
-        record["chat_title"] = titles.get(chat_id) if isinstance(chat_id, int) else None
-        yield record
-        matched += 1
-        if count is not None and matched >= count:
-            return
+                pass

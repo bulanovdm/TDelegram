@@ -6,7 +6,8 @@ Every command, its options, and what the gate requires. Verdicts come from
 - **read** — runs immediately
 - **write** — previews and exits 2 unless `--yes`
 - **destructive** — needs `--yes` *and* a typed confirmation on an interactive
-  terminal, so you cannot complete one non-interactively
+  terminal, so you cannot complete one non-interactively — and must not fake a
+  terminal to try
 
 ## Contents
 

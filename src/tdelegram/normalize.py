@@ -345,7 +345,9 @@ def user_record(user: dict[str, Any], *, include_raw: bool = False) -> dict[str,
         "user_id": user.get("id"),
         "first_name": user.get("first_name"),
         "last_name": user.get("last_name"),
-        "username": (user.get("usernames") or {}).get("active_usernames", [None])[0]
+        # A user whose usernames are all disabled or collectible has an empty
+        # active list, which indexing [0] turned into a crash mid-listing.
+        "username": ((user.get("usernames") or {}).get("active_usernames") or [None])[0]
         if isinstance(user.get("usernames"), dict)
         else user.get("username"),
         "phone": user.get("phone_number"),

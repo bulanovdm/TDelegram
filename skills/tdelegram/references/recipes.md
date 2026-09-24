@@ -176,7 +176,9 @@ jq -s 'sort_by(.message_id)[]' ~/backups/somechannel/messages.jsonl \
 ```
 
 A long history is rate-limited, and reads back off on their own. Stopping it —
-Ctrl-C, or `--limit 2000` per run — costs nothing: the next run resumes. Media a
+Ctrl-C, or `--limit 2000` per run — costs nothing: the next run resumes where
+it stopped. Only a hard kill between checkpoints can repeat records, at most a
+hundred; dedupe on `message_id` if one did. Media a
 chat protects from saving are skipped with a note in the record, not
 downloaded. Under Docker, `--out` must be inside a mounted directory (`/work`
 in the alias), or the export stays in the container.

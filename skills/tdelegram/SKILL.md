@@ -108,9 +108,11 @@ something else, produces `Another tdelegram process holds ... .lock` rather than
 speed.
 
 The `destructive` verdict adds a typed confirmation on an interactive terminal.
-You will not have a TTY, so destructive commands simply cannot be completed by
-you alone — that is deliberate. Hand those to the user with the exact command to
-run.
+You will not have a TTY, so destructive commands cannot be completed by you
+alone — that is deliberate. Do not work around it: no `script`, `expect` or
+other pseudo-terminal to type the method name yourself. The name is there to be
+typed by the person whose account it is. Hand those commands to the user with
+the exact command to run.
 
 If a method is not in the registry the call fails closed with a `RuntimeError`
 rather than running ungated. That is working as intended, not a bug to work

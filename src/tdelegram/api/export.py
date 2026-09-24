@@ -63,6 +63,12 @@ def export_chat(
     since_ts = since if isinstance(since, int) else parse_date(since)
     if state["complete"] and _widens(state.get("since"), since_ts):
         state["complete"] = False  # a longer window than any run so far has covered
+    if state["newest_id"] is None:
+        # Nothing saved yet: an empty chat, or all of it older than --since.
+        # With no newest message to catch up from, only a fresh walk from the
+        # top can find what arrived since, so such an export is never done --
+        # marking it complete left every later run fetching nothing, forever.
+        state["complete"] = False
 
     record = normalize.chat_record(chat, detail=detail_of(client, chat))
     (out / CHAT).write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", "utf-8")
@@ -147,9 +153,14 @@ class _Run:
         """Messages from `start` (0: the newest) back towards the beginning."""
         return paginate(history_pages(self._client, self._chat_id), start=start)
 
-    def _wrote(self, message: dict[str, Any]) -> bool:
-        """Write one message; False once this run's budget is spent."""
-        self._writer.write(message)
+    def _counted(self) -> bool:
+        """Count a message just written; False once this run's budget is spent.
+
+        Called only after the write and the move of the resume point, in that
+        order: a write cut short by Ctrl-C, a failed download or a full disk
+        must not leave the checkpoint past a message that is not on disk. The
+        worst an interruption between the two can do is repeat one message.
+        """
         self.written += 1
         self._state["exported"] += 1
         if self.written % CHECKPOINT_EVERY == 0:
@@ -179,10 +190,11 @@ class _Run:
                 break
             if upper and mid >= upper["low"]:
                 continue  # written by the interrupted run
+            self._writer.write(message)
             upper.setdefault("high", mid)
             upper["low"] = mid
             state["upper"] = upper
-            if not self._wrote(message):
+            if not self._counted():
                 return
         state["newest_id"] = upper.get("high", saved)
         state.pop("upper", None)
@@ -198,10 +210,11 @@ class _Run:
             if since_ts is not None and isinstance(date, int) and date < since_ts:
                 state.update(complete=True, since=since_ts)
                 return
+            self._writer.write(message)
             if state["newest_id"] is None:
                 state["newest_id"] = mid
             state["oldest_id"] = mid
-            if not self._wrote(message):
+            if not self._counted():
                 return
         state.update(complete=True, since=None)
 

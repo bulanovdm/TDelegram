@@ -266,14 +266,17 @@ def delete_in_batches(
 ) -> dict[str, Any]:
     """Delete many messages, a hundred at a time, reporting each batch.
 
-    A batch TDLib refuses as a whole is retried one message at a time, so a
-    single message that cannot be deleted -- a service message, say -- is
-    skipped instead of blocking every message behind it. A FloodWait still
-    raises: writes never retry on their own, and a re-run picks up whatever
-    is left.
+    A batch TDLib refuses as a whole -- with a 400, or the 403 Telegram gives a
+    message it will not delete -- is retried one message at a time, so a single
+    such message is skipped instead of blocking every message behind it. If
+    nothing at all could be deleted by then, the chat is refusing, not one
+    message, and the error is raised rather than tried on every other batch.
+    A FloodWait still raises: writes never retry on their own, and a re-run
+    picks up whatever is left.
     """
-    from tdelegram.errors import InvalidRequest
+    from tdelegram.errors import InvalidRequest, TelegramPermissionError
 
+    refusals = (InvalidRequest, TelegramPermissionError)
     deleted, skipped = 0, []
     for start in range(0, len(message_ids), BATCH):
         batch = message_ids[start : start + BATCH]
@@ -285,7 +288,7 @@ def delete_in_batches(
                 allow_destructive=allow_destructive,
             )
             deleted += len(batch)
-        except InvalidRequest:
+        except refusals as refused:
             for mid in batch:
                 try:
                     client.call(
@@ -295,8 +298,10 @@ def delete_in_batches(
                         allow_destructive=allow_destructive,
                     )
                     deleted += 1
-                except InvalidRequest:
+                except refusals:
                     skipped.append(mid)
+            if deleted == 0:
+                raise refused from None
         if on_batch is not None:
             on_batch({"chat_id": chat_id, "deleted": deleted, "of": len(message_ids)})
     return {"chat_id": chat_id, "deleted": deleted, "skipped": skipped, "revoked": revoke}
