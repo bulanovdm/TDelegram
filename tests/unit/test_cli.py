@@ -1232,3 +1232,91 @@ def test_chat_export_reports_the_run(cli: FakeTransport, tmp_path: Any) -> None:
     summary = _lines(result)[0]
     assert summary["written"] == 2 and summary["complete"] is True
     assert (out / "messages.jsonl").exists() and (out / "state.json").exists()
+
+
+# --- deleting your own messages, in bulk, with a count first --------------
+
+ME = 777
+
+
+def _script_own_messages(cli: FakeTransport, count: int, *, others: int = 0) -> None:
+    mine = [
+        {**_message_in(5, 1000 - i, f"mine {i}"),
+         "sender_id": {"@type": "messageSenderUser", "user_id": ME}}
+        for i in range(count)
+    ]
+    theirs = [_message_in(5, 2000 + i, "theirs") for i in range(others)]
+    found = sorted(mine + theirs, key=lambda m: m["id"], reverse=True)
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("getMe", {"@type": "user", "id": ME})
+
+    def _page(r: dict[str, Any]) -> dict[str, Any]:
+        start = r["from_message_id"]
+        page = [m for m in found if start == 0 or m["id"] < start][:100]
+        return {"@type": "foundChatMessages", "messages": page, "next_from_message_id": 0}
+
+    cli.add_response(lambda r: r.get("@type") == "searchChatMessages", _page)
+
+
+def test_delete_mine_counts_first_and_deletes_nothing_without_yes(cli: FakeTransport) -> None:
+    _script_own_messages(cli, 3)
+    result = runner.invoke(cli_main.app, ["msg", "delete-mine", "--chat", "somechat"])
+    assert result.exit_code == 2
+    assert "deleteMessages" not in _sent(cli)
+    assert '"count": 3' in result.stderr
+    search = _request(cli, "searchChatMessages")
+    assert search["sender_id"] == {"@type": "messageSenderUser", "user_id": ME}
+
+
+def test_delete_mine_deletes_for_everyone_in_batches(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _script_own_messages(cli, 150, others=4)
+    monkeypatch.setattr(cli_context, "interactive", lambda: True)
+    argv = ["--yes", "msg", "delete-mine", "--chat", "somechat"]
+    result = runner.invoke(cli_main.app, argv, input="deleteMessages\n")
+    assert result.exit_code == 0
+    batches = [req for _, req in cli.sent if req.get("@type") == "deleteMessages"]
+    assert [len(b["message_ids"]) for b in batches] == [100, 50]
+    assert all(b["revoke"] is True for b in batches)
+    assert all(mid < 2000 for b in batches for mid in b["message_ids"]), "only your own"
+    assert _lines(result)[-1]["deleted"] == 150
+    assert result.stderr.count("Type deleteMessages") == 1, "one confirmation for the batch"
+
+
+def test_delete_mine_refuses_without_a_terminal(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _script_own_messages(cli, 2)
+    monkeypatch.setattr(cli_context, "interactive", lambda: False)
+    result = runner.invoke(cli_main.app, ["--yes", "msg", "delete-mine", "--chat", "somechat"])
+    assert result.exit_code == 2
+    assert "deleteMessages" not in _sent(cli)
+
+
+def test_delete_mine_steps_around_a_message_that_cannot_go(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _script_own_messages(cli, 3)
+
+    def _delete(r: dict[str, Any]) -> dict[str, Any]:
+        if 999 in r["message_ids"]:
+            return {"@type": "error", "code": 400, "message": "MESSAGE_DELETE_FORBIDDEN"}
+        return {"@type": "ok"}
+
+    cli.add_response(lambda r: r.get("@type") == "deleteMessages", _delete)
+    monkeypatch.setattr(cli_context, "interactive", lambda: True)
+    argv = ["--yes", "msg", "delete-mine", "--chat", "somechat"]
+    result = runner.invoke(cli_main.app, argv, input="deleteMessages\n")
+    assert result.exit_code == 0
+    summary = _lines(result)[-1]
+    assert summary["deleted"] == 2 and summary["skipped"] == [999]
+
+
+def test_delete_mine_with_nothing_to_delete_asks_nothing(cli: FakeTransport) -> None:
+    _script_own_messages(cli, 0, others=2)
+    result = runner.invoke(cli_main.app, ["--yes", "msg", "delete-mine", "--chat", "somechat"])
+    assert result.exit_code == 0
+    assert _lines(result)[0]["deleted"] == 0
+    assert "Type deleteMessages" not in result.stderr

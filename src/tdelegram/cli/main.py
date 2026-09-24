@@ -385,6 +385,56 @@ def msg_delete(
         )
 
 
+@msg_app.command("delete-mine")
+@handle_errors
+def msg_delete_mine(
+    chat: str = typer.Option(..., "--chat"),
+    since: str | None = typer.Option(None, "--since", help="Only messages after: 30d, ISO..."),
+    until: str | None = typer.Option(None, "--until", help="Only messages before this"),
+    limit: int | None = typer.Option(None, "--limit", help="At most this many, newest first"),
+) -> None:
+    """Delete your own messages in a chat, for everyone. Counts them first.
+
+    Without --yes it reports how many it found and stops. With --yes it asks for
+    deleteMessages to be typed at a terminal, once for the whole batch.
+    """
+    from tdelegram.api import chats, messages
+
+    with session(_ctx()) as client:
+        chat_id = chats.resolve_id(client, chat)
+        ids: list[int] = []
+        newest = oldest = None
+        for record in messages.iter_own_messages(
+            client, str(chat_id), since=since, until=until, maximum=limit
+        ):
+            ids.append(int(record["message_id"]))
+            newest = newest or record["date"]
+            oldest = record["date"]
+        plan = {
+            "chat_id": chat_id,
+            "count": len(ids),
+            "newest": newest,
+            "oldest": oldest,
+            "for_everyone": True,
+        }
+        warn(json.dumps({"plan": plan}, indent=2))
+        if not ids:
+            _emit({"chat_id": chat_id, "deleted": 0, "skipped": [], "revoked": True})
+            return
+
+        def _progress(step: dict[str, Any]) -> None:
+            warn(f"deleted {step['deleted']} of {step['of']}")
+
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: messages.delete_in_batches(
+                    client, chat_id, ids, allow_write=w, allow_destructive=d, on_batch=_progress
+                ),
+            )
+        )
+
+
 @msg_app.command("forward")
 @handle_errors
 def msg_forward(

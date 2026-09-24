@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from tdelegram import normalize
@@ -209,6 +209,97 @@ def delete(
         allow_write=allow_write,
         allow_destructive=allow_destructive,
     )
+
+
+def iter_own_messages(
+    client: TelegramClient,
+    chat_ref: str,
+    *,
+    since: str | int | None = None,
+    until: str | int | None = None,
+    maximum: int | None = None,
+) -> Iterator[dict[str, Any]]:
+    """The account's own messages in a chat, newest first, found server-side.
+
+    Only messages sent as the user: posts made as a channel belong to the
+    channel, and removing those is an admin's job, not a clean-up of one's own.
+    """
+    from tdelegram.paging import search_pages
+
+    chat_id = resolve_id(client, chat_ref)
+    own_id = client.call("getMe", {}).get("id")
+    if not isinstance(own_id, int):
+        raise ValueError("Could not determine the current account's user id.")
+    since_ts = since if isinstance(since, int) else parse_date(since)
+    until_ts = until if isinstance(until, int) else parse_date(until)
+
+    def _too_old(item: dict[str, Any]) -> bool:
+        date = item.get("date")
+        return isinstance(date, int) and since_ts is not None and date < since_ts
+
+    found = 0
+    mine = search_pages(client, chat_id, "", sender_id=own_id)
+    for message in paginate(mine, stop_when=_too_old):
+        date = message.get("date")
+        if until_ts is not None and isinstance(date, int) and date > until_ts:
+            continue
+        if (message.get("sender_id") or {}).get("user_id") != own_id:
+            continue
+        yield normalize.message_record(message)
+        found += 1
+        if maximum is not None and found >= maximum:
+            return
+
+
+BATCH = 100
+
+
+def delete_in_batches(
+    client: TelegramClient,
+    chat_id: int,
+    message_ids: list[int],
+    *,
+    revoke: bool = True,
+    allow_write: bool = False,
+    allow_destructive: bool = False,
+    on_batch: Callable[[dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    """Delete many messages, a hundred at a time, reporting each batch.
+
+    A batch TDLib refuses as a whole is retried one message at a time, so a
+    single message that cannot be deleted -- a service message, say -- is
+    skipped instead of blocking every message behind it. A FloodWait still
+    raises: writes never retry on their own, and a re-run picks up whatever
+    is left.
+    """
+    from tdelegram.errors import InvalidRequest
+
+    deleted, skipped = 0, []
+    for start in range(0, len(message_ids), BATCH):
+        batch = message_ids[start : start + BATCH]
+        try:
+            client.call(
+                "deleteMessages",
+                {"chat_id": chat_id, "message_ids": batch, "revoke": revoke},
+                allow_write=allow_write,
+                allow_destructive=allow_destructive,
+            )
+            deleted += len(batch)
+        except InvalidRequest:
+            for mid in batch:
+                try:
+                    client.call(
+                        "deleteMessages",
+                        {"chat_id": chat_id, "message_ids": [mid], "revoke": revoke},
+                        allow_write=allow_write,
+                        allow_destructive=allow_destructive,
+                    )
+                    deleted += 1
+                except InvalidRequest:
+                    skipped.append(mid)
+        if on_batch is not None:
+            on_batch({"chat_id": chat_id, "deleted": deleted, "of": len(message_ids)})
+    return {"chat_id": chat_id, "deleted": deleted, "skipped": skipped, "revoked": revoke}
 
 
 def forward(

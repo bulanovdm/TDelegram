@@ -236,7 +236,7 @@ Full options, and the gate verdict for each command, are in
 auth      login logout status          account   info sessions
 inbox     (unread messages, marks nothing read)
 chat      list info resolve history search export create join leave members
-msg       send get edit delete forward react link search poll
+msg       send get edit delete delete-mine forward react link search poll
 media     download upload              contact   list
 user      info                         admin     ban promote
 topic     list                         folder    list        draft set

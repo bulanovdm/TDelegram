@@ -96,6 +96,15 @@ mention the account.
 | `msg react` | write | `--chat`, `--id`, `--emoji` |
 | `msg poll` | write | `--chat`, `--id`, `--option` (repeatable) — votes in a poll |
 | `msg delete` | **destructive** | `--chat`, `--id` (repeatable), `--only-for-me` — deletes for everyone by default |
+| `msg delete-mine` | **destructive** | `--chat`, `--since`, `--until`, `--limit` — your own messages, for everyone |
+
+`msg delete-mine` finds the account's own messages in a chat with a server-side
+search, prints a plan — how many, and the dates of the newest and oldest — and
+without `--yes` stops there. That is the dry run. With `--yes` it asks for
+`deleteMessages` to be typed once, then deletes for everyone, a hundred at a
+time, stepping around any single message Telegram refuses to delete. Messages
+posted *as a channel* are the channel's, and are left alone. On a `FloodWait`
+it stops; run it again and it continues with what is left.
 
 `--parse-mode markdown` is **MarkdownV2**: bold is `*bold*`, italic `_italic_`,
 underline `__underline__`, strikethrough `~struck~`, code `` `code` ``.

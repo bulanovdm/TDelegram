@@ -265,6 +265,13 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   then whatever an interrupted run had not reached — in constant memory.
   `--media` saves files alongside, except where the chat or message forbids
   saving, which is recorded instead.
+- `msg delete-mine`: delete the account's own messages in a chat, for
+  everyone, within an optional window. It counts them first and, without
+  `--yes`, stops at the count; with `--yes` it takes one typed confirmation
+  for the whole batch, deletes a hundred at a time, and steps around a message
+  Telegram will not delete rather than stalling on it. The official apps have
+  no way to do this, and the scripts that do have neither a preview nor a
+  confirmation.
 - `FakeTransport` answers `close` with `authorizationStateClosed` as TDLib does,
   so `close()` no longer waits out a second per client and the suite runs in
   a quarter of the time.
