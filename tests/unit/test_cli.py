@@ -1365,3 +1365,32 @@ def test_watch_rejects_a_broken_pattern_up_front(cli: FakeTransport) -> None:
     result = runner.invoke(cli_main.app, ["watch", "--match", "([unclosed"])
     assert result.exit_code == 1
     assert cli.sent == []
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["msg", "send", "--chat", "me", "--text", "hi", "--yes"],
+        ["chat", "list", "--format", "json"],
+    ],
+)
+def test_a_late_global_flag_says_where_it_goes(cli: FakeTransport, argv: list[str]) -> None:
+    """The README's own "performs" example put --yes last, and exited 2.
+
+    The parser stays strict -- accepting --yes anywhere would let a message
+    text of "--yes" grant permission -- but the error now says what to do.
+    """
+    result = runner.invoke(cli_main.app, argv)
+    assert result.exit_code == 2
+    assert "goes before the command" in result.output
+    assert cli.sent == []
+
+
+def test_a_message_reading_yes_grants_nothing(cli: FakeTransport) -> None:
+    """The text is the text: it previews like any other send."""
+    cli.add_simple_response("getMe", {"@type": "user", "id": 777})
+    cli.add_simple_response("getChat", {"@type": "chat", "id": 777})
+    result = runner.invoke(cli_main.app, ["msg", "send", "--chat", "me", "--text", "--yes"])
+    assert result.exit_code == 2
+    assert "sendMessage" not in _sent(cli)
+    assert '"text": "--yes"' in result.stderr

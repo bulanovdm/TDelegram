@@ -26,7 +26,8 @@ docker run --rm -i -v "$HOME/.tdelegram:/session" \
   ghcr.io/bulanovdm/tdelegram auth status
 ```
 
-One alias makes every command in this README work verbatim:
+Global flags such as `--yes` go before the command. One alias makes every
+command in this README work verbatim:
 
 ```bash
 alias tdelegram='docker run --rm -i -v "$HOME/.tdelegram:/session" \
@@ -59,9 +60,9 @@ tdelegram chat list
 tdelegram inbox                                  # unread messages; marks nothing read
 tdelegram chat history --chat @durov --limit 5
 tdelegram msg send --chat me --text "hi"        # previews
-tdelegram msg send --chat me --text "hi" --yes  # performs
-tdelegram updates follow &
-tdelegram msg send --chat me --text "*hi*" --parse-mode markdown --yes  # MarkdownV2
+tdelegram --yes msg send --chat me --text "hi"  # performs
+tdelegram --yes msg send --chat me --text "*hi*" --parse-mode markdown  # MarkdownV2
+tdelegram watch --chat me --for 1m              # new messages as they arrive
 ```
 
 Where Telegram is blocked, store a proxy before logging in — every `proxy`

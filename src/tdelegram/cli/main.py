@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from typing import Any
 
 import typer
+from typer.core import TyperGroup
 
 from tdelegram import safety
 from tdelegram.cli.context import (
@@ -20,7 +21,38 @@ from tdelegram.cli.context import (
 )
 from tdelegram.cli.output import emit, emit_many, warn
 
-app = typer.Typer(no_args_is_help=True, help="TDelegram: a TDLib-backed Telegram client")
+GLOBAL_FLAGS = frozenset(
+    {"--yes", "--profile", "--session-dir", "--format", "--output", "--verbose", "--no-retry"}
+)
+
+
+class _Root(TyperGroup):
+    """The top-level group, which says where a global flag goes when one is late.
+
+    `--yes` is only read before the command. Accepting it anywhere would make a
+    message text of "--yes" a grant of permission, so the parser stays strict and
+    the error says what to do instead of just "No such option".
+    """
+
+    def invoke(self, ctx: Any) -> Any:
+        try:
+            return super().invoke(ctx)
+        except Exception as exc:
+            # Matched by name: Typer vendors Click in newer releases and
+            # imports it in older ones, so the class lives in either place.
+            flag = getattr(exc, "option_name", None)
+            if type(exc).__name__ == "NoSuchOption" and flag in GLOBAL_FLAGS:
+                command = getattr(ctx, "invoked_subcommand", None) or "..."
+                exc.message = (  # type: ignore[attr-defined]
+                    f"{flag} is a global option and goes before the command: "
+                    f"tdelegram {flag} {command} ..."
+                )
+            raise
+
+
+app = typer.Typer(
+    cls=_Root, no_args_is_help=True, help="TDelegram: a TDLib-backed Telegram client"
+)
 _state: Ctx = Ctx()
 
 # Telegram chat ids for groups and channels are negative, and a bare -100...

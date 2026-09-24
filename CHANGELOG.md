@@ -147,6 +147,13 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
 - `media download` emitted TDLib's raw file object, which keeps the path at
   `.local.path`, so the documented `jq -r '.path'` printed null. It emits a
   file record with `path` and `completed`.
+- The README's and the skill's examples of a performing send put `--yes` after
+  the command, where the parser does not look for it, so the one line meant to
+  show a send going through exited 2 with "No such option". The examples put
+  it first now, and a global flag given too late gets an error saying where it
+  goes. The parser stays strict on purpose: reading `--yes` anywhere would let
+  a message text of "--yes" grant permission. The quickstart also ran
+  `updates follow &` and then a send, which the profile lock refuses.
 - `msg delete` deleted only for the account itself: TDLib revokes nothing
   unless told to, and the command never said, so in a private chat the other
   side kept every "deleted" message. It deletes for everyone now, takes

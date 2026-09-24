@@ -77,8 +77,8 @@ Run a mutating command without `--yes` and it prints a preview to stderr and
 exits **2**. Nothing reaches Telegram.
 
 ```bash
-tdelegram msg send --chat me --text "hi"      # previews, exits 2, sends nothing
-tdelegram msg send --chat me --text "hi" --yes # actually sends
+tdelegram msg send --chat me --text "hi"        # previews, exits 2, sends nothing
+tdelegram --yes msg send --chat me --text "hi"  # actually sends
 ```
 
 **Here is the part that matters for you.** That preview is not an obstacle to
