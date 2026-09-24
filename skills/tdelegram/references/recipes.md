@@ -120,12 +120,12 @@ steady trickle of `updateUserStatus` and friends.
 
 ## Download a file
 
-`file_id` comes from the message record. `media download` writes to local disk
-and makes no remote change, which is why it is a read.
+`file_id` comes from the message record's `media`. `media download` writes to
+local disk and makes no remote change, which is why it is a read.
 
 ```bash
 tdelegram chat history --chat somechat --limit 20 2>/dev/null \
-  | jq -r 'select(.file_name != null) | [.message_id, .file_name] | @tsv'
+  | jq -r 'select(.media != null) | [.message_id, .media.kind, .media.file_id, .media.file_name] | @tsv'
 
 tdelegram media download 12345 2>/dev/null | jq -r '.path'
 ```
@@ -140,7 +140,15 @@ tdelegram --output /tmp/week.jsonl \
   chat history --chat cyprusithr --since 7d --limit 200 2>/dev/null
 
 # Busiest senders
-jq -r '.sender_id.user_id // "unknown"' /tmp/week.jsonl | sort | uniq -c | sort -rn | head
+jq -r '.sender_name // "unknown"' /tmp/week.jsonl | sort | uniq -c | sort -rn | head
+
+# A channel's most-viewed and most-forwarded posts
+jq -r 'select(.views != null) | [.views, .forwards, .message_id, (.text | .[0:60])] | @tsv' \
+  /tmp/week.jsonl | sort -rn | head
+
+# Where forwarded posts came from
+jq -r 'select(.forwarded_from != null) | .forwarded_from.chat_id // .forwarded_from.name' \
+  /tmp/week.jsonl | sort | uniq -c | sort -rn
 
 # Per-day counts
 jq -r '.date[0:10]' /tmp/week.jsonl | sort | uniq -c

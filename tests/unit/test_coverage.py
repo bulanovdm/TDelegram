@@ -597,7 +597,8 @@ def test_api_media_users_misc() -> None:
             "@type": "message",
             "id": 5,
             "content": {
-                "document": {"file_name": "a.pdf", "document": {"@type": "file", "id": 77}}
+                "@type": "messageDocument",
+                "document": {"file_name": "a.pdf", "document": {"@type": "file", "id": 77}},
             },
         },
         downloadFile={

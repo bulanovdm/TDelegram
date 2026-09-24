@@ -23,9 +23,11 @@ def get(
     `.text` was null on one of them. `include_raw=True` keeps the original
     under `raw`, matching `chats.info`.
     """
+    from tdelegram.api.users import SenderNames
+
     chat_id = resolve_id(client, chat_ref)
     message = client.call("getMessage", {"chat_id": chat_id, "message_id": message_id})
-    return normalize.message_record(message, include_raw=include_raw)
+    return SenderNames(client).label(normalize.message_record(message, include_raw=include_raw))
 
 
 def iter_history(
@@ -41,7 +43,9 @@ def iter_history(
     include_raw: bool = False,
 ) -> Iterator[dict[str, Any]]:
     from tdelegram.api.topics import topic_object
+    from tdelegram.api.users import SenderNames
 
+    names = SenderNames(client)
     chat_id = resolve_id(client, chat_ref)
     since_ts = (
         since if isinstance(since, int) else parse_date(since if isinstance(since, str) else None)
@@ -89,7 +93,7 @@ def iter_history(
         text = normalize.message_text(message).casefold()
         if contains and any(term.casefold() not in text for term in contains):
             continue
-        yield normalize.message_record(message, include_raw=include_raw)
+        yield names.label(normalize.message_record(message, include_raw=include_raw))
         yielded += 1
         if maximum is not None and yielded >= maximum:
             return

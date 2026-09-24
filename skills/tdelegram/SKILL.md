@@ -180,9 +180,12 @@ tdelegram chat history --chat cyprusithr --topic 46685 --since 7d --limit 50
 ISO-8601), `--sender <user_id>`, `--topic <id>`, `--contains <text>`, `--limit`.
 Paging streams, so `--limit` genuinely bounds the work.
 
-Records are normalized and flat: `chat_id`, `message_id`, `date` (ISO-8601 UTC),
-`sender_id`, `topic_id`, `content_type`, `text`, `entities`, `links`,
-`file_name`, `reply_to`. `entities` and `links` are preserved rather than
+Records are normalized and flat: `chat_id`, `message_id`, `date` and
+`edit_date` (ISO-8601 UTC), `sender_id` and `sender_name`, `topic_id`,
+`content_type`, `text`, `entities`, `links`, `media` (kind, `file_id`, name,
+MIME type, size — and `transcript` for a voice note someone already
+transcribed), `reply_to`, `forwarded_from`, `views`, `forwards`, `replies`,
+`reactions`, `buttons`. `entities` and `links` are preserved rather than
 flattened into the text, so formatting and URLs survive.
 
 `date` is when the message was **sent**. It is not when the thing described in it

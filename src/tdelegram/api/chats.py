@@ -7,6 +7,7 @@ from typing import Any
 
 from tdelegram import normalize
 from tdelegram.client import TelegramClient
+from tdelegram.errors import TelegramError
 from tdelegram.paging import paginate
 
 
@@ -52,9 +53,29 @@ def resolve_id(client: TelegramClient, chat_ref: str) -> int:
     return cid
 
 
+def detail_of(client: TelegramClient, chat: dict[str, Any]) -> dict[str, Any] | None:
+    """The user, supergroup or basic group behind a chat.
+
+    That is where TDLib keeps usernames, member counts and the forum flag; the
+    chat object has none of them.
+    """
+    chat_type = chat.get("type") or {}
+    kind = chat_type.get("@type")
+    try:
+        if kind == "chatTypeSupergroup":
+            return client.call("getSupergroup", {"supergroup_id": chat_type.get("supergroup_id")})
+        if kind == "chatTypeBasicGroup":
+            return client.call("getBasicGroup", {"basic_group_id": chat_type.get("basic_group_id")})
+        if kind in ("chatTypePrivate", "chatTypeSecret"):
+            return client.call("getUser", {"user_id": chat_type.get("user_id")})
+    except TelegramError:
+        return None
+    return None
+
+
 def info(client: TelegramClient, chat_ref: str, *, include_raw: bool = False) -> dict[str, Any]:
     chat = resolve(client, chat_ref)
-    return normalize.chat_record(chat, include_raw=include_raw)
+    return normalize.chat_record(chat, detail=detail_of(client, chat), include_raw=include_raw)
 
 
 def iter_list(
@@ -73,7 +94,7 @@ def iter_list(
                 continue
             seen.add(chat_id)
             chat = client.call("getChat", {"chat_id": chat_id})
-            record = normalize.chat_record(chat)
+            record = normalize.chat_record(chat, detail=detail_of(client, chat))
             record["chat_list"] = current
             yield record
             yielded += 1

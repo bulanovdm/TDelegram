@@ -19,65 +19,14 @@ def download(client: TelegramClient, file_id: int, *, timeout: float = 300.0) ->
 def download_message_file(
     client: TelegramClient, chat_ref: str, message_id: int, *, timeout: float = 300.0
 ) -> dict[str, Any]:
+    """Download the file a message carries, whatever kind of media it is."""
     from tdelegram.api.messages import get
 
-    # _message_file_id walks the raw TDLib content, which the normalized
-    # record does not carry.
-    record = get(client, chat_ref, message_id, include_raw=True)
-    file_id = _message_file_id(record.get("raw") or {})
-    if file_id is None:
+    media = get(client, chat_ref, message_id).get("media") or {}
+    file_id = media.get("file_id")
+    if not isinstance(file_id, int):
         raise ValueError(f"Message {message_id} has no downloadable file.")
     return _download(client, file_id, timeout=timeout)
-
-
-def _message_file_id(message: dict[str, Any]) -> int | None:
-    content = message.get("content") or {}
-    for key in (
-        "document",
-        "photo",
-        "audio",
-        "video",
-        "voice_note",
-        "video_note",
-        "animation",
-        "sticker",
-    ):
-        node = content.get(key)
-        found = _deep_file_id(node)
-        if found is not None:
-            return found
-    return _deep_file_id(content)
-
-
-def _deep_file_id(node: Any, depth: int = 0) -> int | None:
-    if depth > 4 or not isinstance(node, dict):
-        return None
-    file_node = node.get("file")
-    if isinstance(file_node, dict) and isinstance(file_node.get("id"), int):
-        return int(file_node["id"])
-    if isinstance(node.get("id"), int) and node.get("@type") == "file":
-        return int(node["id"])
-    # document-style nesting: {document: {id: ...}} or {document: {file: {id}}}
-    for key in ("document", "sticker", "audio", "video", "photo", "animation", "voice_note"):
-        nested = node.get(key)
-        if isinstance(nested, dict):
-            found = _deep_file_id(nested, depth + 1)
-            if found is not None:
-                return found
-    sizes = node.get("sizes")
-    if isinstance(sizes, list) and sizes:
-        try:
-            biggest = max(
-                sizes,
-                key=lambda s: s.get("width", 0) * s.get("height", 0) if isinstance(s, dict) else 0,
-            )
-        except (ValueError, TypeError):
-            biggest = None
-        if isinstance(biggest, dict):
-            photo_file = biggest.get("photo")
-            if isinstance(photo_file, dict) and isinstance(photo_file.get("id"), int):
-                return int(photo_file["id"])
-    return None
 
 
 def upload(

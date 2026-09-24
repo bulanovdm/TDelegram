@@ -421,10 +421,12 @@ app.add_typer(media_app, name="media")
 @media_app.command("download", context_settings=REF_ARGS)
 @handle_errors
 def media_download(file_id: int = typer.Argument(...)) -> None:
+    """Download a file by the `media.file_id` of a message record."""
+    from tdelegram import normalize
     from tdelegram.api import media as media_api
 
     with session(_ctx()) as client:
-        _emit(media_api.download(client, file_id))
+        _emit(normalize.file_record(media_api.download(client, file_id)))
 
 
 @media_app.command("upload")

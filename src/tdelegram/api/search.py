@@ -7,6 +7,7 @@ from typing import Any
 
 from tdelegram import normalize
 from tdelegram.api.chats import resolve_id
+from tdelegram.api.users import SenderNames
 from tdelegram.client import TelegramClient
 from tdelegram.dates import parse_date
 from tdelegram.paging import paginate, search_pages
@@ -60,6 +61,7 @@ def iter_global_search(
         params["min_date"] = since_ts
     if until_ts is not None:
         params["max_date"] = until_ts
+    names = SenderNames(client)
     offset = ""
     seen: set[tuple[Any, Any]] = set()
     yielded = 0
@@ -72,7 +74,7 @@ def iter_global_search(
             return
         for message in fresh:
             seen.add((message.get("chat_id"), message.get("id")))
-            yield normalize.message_record(message)
+            yield names.label(normalize.message_record(message))
             yielded += 1
             if maximum is not None and yielded >= maximum:
                 return
@@ -92,8 +94,9 @@ def iter_chat_search(
     maximum: int | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Server-side search inside one chat, as the same records `chat history` yields."""
+    names = SenderNames(client)
     fetch = search_pages(
         client, resolve_id(client, chat_ref), query, sender_id=sender_id, topic_id=topic_id
     )
     for message in paginate(fetch, maximum=maximum):
-        yield normalize.message_record(message)
+        yield names.label(normalize.message_record(message))

@@ -133,6 +133,20 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
     proxy calls, `addContact`, `importContacts`, `deleteStory`,
     `sendInlineQueryResultMessage` and `unpinChatMessage` all sent shapes
     TDLib does not take.
+- `chat info` and `chat list` reported `username`, `member_count` and
+  `is_forum` as null for every chat: TDLib keeps them on the user, supergroup
+  or basic group, and the record read them from the chat. Records now come
+  with the detail object they belong to.
+- Message records carried no file id, so the documented way to download a
+  message's file had nothing to pass to `media download`, and a voice note's
+  file was not found at all. Records now carry `media` (kind, `file_id`, name,
+  MIME type, size, and the transcript of a voice or video note already
+  transcribed), `sender_name`, `edit_date`, `views`, `forwards`, `replies`,
+  `reactions`, `forwarded_from`, `album_id`, `author_signature` and inline
+  `buttons` — what research on a public channel needs, without `--raw`.
+- `media download` emitted TDLib's raw file object, which keeps the path at
+  `.local.path`, so the documented `jq -r '.path'` printed null. It emits a
+  file record with `path` and `completed`.
 - `msg delete` deleted only for the account itself: TDLib revokes nothing
   unless told to, and the command never said, so in a private chat the other
   side kept every "deleted" message. It deletes for everyone now, takes

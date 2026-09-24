@@ -454,15 +454,38 @@ def run_call_ok(ctx: Any) -> bool:
 # --- read commands that were never exercised ------------------------------
 
 
-def test_chat_info_normalizes(cli: FakeTransport) -> None:
+def test_chat_info_reads_what_the_chat_object_does_not_carry(cli: FakeTransport) -> None:
+    """Regression: username, member count and the forum flag were always null.
+
+    TDLib keeps them on the supergroup (or user, or basic group), not on the
+    chat, and the record read them from the chat.
+    """
     cli.add_simple_response(
-        "searchPublicChat", {"@type": "chat", "id": -100, "title": "Group", "is_forum": True}
+        "searchPublicChat",
+        {
+            "@type": "chat",
+            "id": -1001246902558,
+            "title": "Group",
+            "type": {"@type": "chatTypeSupergroup", "supergroup_id": 1246902558},
+        },
+    )
+    cli.add_simple_response(
+        "getSupergroup",
+        {
+            "@type": "supergroup",
+            "id": 1246902558,
+            "usernames": {"@type": "usernames", "active_usernames": ["cyprusithr", "cyit"]},
+            "member_count": 5400,
+            "is_forum": True,
+        },
     )
     result = runner.invoke(cli_main.app, ["chat", "info", "somechat"])
     assert result.exit_code == 0
     record = _lines(result)[0]
     assert record["title"] == "Group"
     assert record["is_forum"] is True
+    assert record["username"] == "cyprusithr" and record["usernames"] == ["cyprusithr", "cyit"]
+    assert record["member_count"] == 5400
 
 
 def test_chat_resolve_emits_the_raw_chat(cli: FakeTransport) -> None:
@@ -655,6 +678,10 @@ def test_media_download_is_permitted_as_a_read(cli: FakeTransport) -> None:
     result = runner.invoke(cli_main.app, ["media", "download", "3"])
     assert result.exit_code == 0
     assert "downloadFile" in _sent(cli)
+    # The documented recipe reads `.path`; the raw file object keeps it under
+    # `.local.path`, so the recipe printed null.
+    record = _lines(result)[0]
+    assert record["path"] == "/tmp/f" and record["completed"] is True
 
 
 # --- --session-dir semantics ----------------------------------------------
@@ -947,3 +974,29 @@ def test_a_preview_flags_a_request_tdlib_would_not_honour(
     cli_context.show_preview(WriteConfirmationRequired("addMessageReaction", request))
     body = json.loads(capsys.readouterr().err)["confirmation_required"]
     assert body["schema_problems"], "approving the preview would approve a different call"
+
+
+def test_history_names_each_sender_once(cli: FakeTransport) -> None:
+    """Records name their senders, looked up once per sender, not per message."""
+    said = [
+        {"@type": "message", "id": 3, "chat_id": 5, "date": 2_000_000_000,
+         "sender_id": {"@type": "messageSenderUser", "user_id": 42},
+         "content": {"@type": "messageText", "text": {"text": "second"}}},
+        {"@type": "message", "id": 2, "chat_id": 5, "date": 2_000_000_000,
+         "sender_id": {"@type": "messageSenderUser", "user_id": 42},
+         "content": {"@type": "messageText", "text": {"text": "first"}}},
+        {"@type": "message", "id": 1, "chat_id": 5, "date": 2_000_000_000,
+         "sender_id": {"@type": "messageSenderChat", "chat_id": -1009},
+         "content": {"@type": "messageText", "text": {"text": "as the channel"}}},
+    ]
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_response(
+        lambda r: r.get("@type") == "getChatHistory",
+        lambda r: {"@type": "messages", "messages": said if r["from_message_id"] == 0 else []},
+    )
+    cli.add_simple_response("getUser", {"@type": "user", "id": 42, "first_name": "Ada"})
+    cli.add_simple_response("getChat", {"@type": "chat", "id": -1009, "title": "Newsroom"})
+    result = runner.invoke(cli_main.app, ["chat", "history", "--chat", "somechat"])
+    assert result.exit_code == 0
+    assert [r["sender_name"] for r in _lines(result)] == ["Ada", "Ada", "Newsroom"]
+    assert _sent(cli).count("getUser") == 1
