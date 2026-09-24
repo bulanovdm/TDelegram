@@ -2976,8 +2976,8 @@
     "verdict": "read"
   },
   "searchPublicPosts": {
-    "reason": "heuristic: search* lookup without remote mutation",
-    "verdict": "read"
+    "reason": "can spend Telegram Stars on the search",
+    "verdict": "destructive"
   },
   "searchPublicStoriesByLocation": {
     "reason": "heuristic: search* lookup without remote mutation",

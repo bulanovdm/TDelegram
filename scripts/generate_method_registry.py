@@ -160,6 +160,8 @@ OVERRIDES: dict[str, tuple[str, str]] = {
     "increaseGiftAuctionBid": ("destructive", "commits more currency to a bid"),
     "transferBusinessAccountStars": ("destructive", "moves currency out of the account"),
     "transferGift": ("destructive", "hands a gift to someone else; irreversible"),
+    # A search* prefix made this a read, but star_count pays for the query.
+    "searchPublicPosts": ("destructive", "can spend Telegram Stars on the search"),
     # Access you may not be able to regain.
     "leaveChat": ("destructive", "a private chat cannot be rejoined without a new invite"),
     # Reviewed and deliberately left as writes, so a heuristic change cannot

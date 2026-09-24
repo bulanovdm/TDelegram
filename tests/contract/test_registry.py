@@ -97,6 +97,8 @@ MUST_BE_GATED = [
     "checkRecoveryEmailAddressCode",
     "cancelPasswordReset",
     "cancelRecoveryEmailAddressVerification",
+    # star_count spends Telegram Stars on the query.
+    "searchPublicPosts",
 ]
 
 
@@ -147,6 +149,7 @@ MUST_BE_DESTRUCTIVE = [
     "clearAllDraftMessages",
     "unpinAllChatMessages",
     "sendPaymentForm",
+    "searchPublicPosts",
     "leaveChat",
     # Already destructive before the audit; pinned so they stay that way.
     "deleteAccount",

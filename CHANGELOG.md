@@ -76,6 +76,9 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   typing the name performed one without `--yes`. Now `--yes` gets a destructive
   call as far as the prompt, the prompt goes to stderr instead of the JSONL
   stream on stdout, and with no terminal to type at the command exits 2.
+- `searchPublicPosts` moved from `read` to `destructive`. The `search*` prefix
+  made it a read, but its `star_count` parameter pays Telegram Stars for the
+  query, and money that leaves is destructive everywhere else in the registry.
 - Closed a gate bypass: `media upload` sent the file without `--yes`.
   `files.send_file()` passed `allow_write=True` itself instead of threading the
   caller's permission down, so the one mutating command missing from the
