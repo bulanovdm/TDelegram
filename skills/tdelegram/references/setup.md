@@ -210,7 +210,12 @@ file under the profile → an interactive prompt. Whatever is typed at a prompt 
 saved to the keychain, so the prompt happens once.
 
 Login codes are the exception: single-use, never stored. A saved code would be
-replayed on the next login and fail as expired.
+replayed on the next login and fail as expired. The 2FA password is not saved
+either: the session outlives it, so a stored copy would only sit beside the
+session it is meant to protect. It is asked for again at the next login, and
+`TELEGRAM_PASSWORD` still supplies it. A password saved by an earlier version
+can be removed with `rm ~/.tdelegram/secrets/password.secret` (or from the
+keychain, service `tdelegram`, account `password`).
 
 Under Docker there is no host keychain inside the container, so pass
 `TELEGRAM_API_ID` / `TELEGRAM_API_HASH` through with `-e`, or let them fall back

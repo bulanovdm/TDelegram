@@ -69,6 +69,11 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   gate is per method, not per payload, so the general setter now takes the
   verdict of the worst thing it can express. The cost is a typed confirmation
   for an ordinary promotion, which is the right side to err on.
+- The 2FA password is no longer saved. It is needed once per login and never
+  after, yet every login stored it — in the keychain, or wherever there is none,
+  such as in a container, in a plain file beside the session it protects. It is
+  still read from `TELEGRAM_PASSWORD` or an earlier copy; a saved copy is left
+  for the user to delete, not removed behind their back.
 - **Destructive calls need `--yes` and the typed method name, not either one.**
   Every document described the typed confirmation as a second layer, but
   `run_call()` treated it as an alternative: `--yes` alone performed any

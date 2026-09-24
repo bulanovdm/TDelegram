@@ -64,6 +64,7 @@ class ConsoleCredentialProvider:
         secret: bool,
         allow_empty: bool = False,
         ephemeral: bool = False,
+        save: bool = True,
     ) -> str:
         return self._creds.resolve_secret(
             account=account,
@@ -74,6 +75,7 @@ class ConsoleCredentialProvider:
             allow_empty=allow_empty,
             prompt_fn=self._prompt_fn,
             ephemeral=ephemeral,
+            save=save,
         )
 
     def get_api_id(self) -> int:
@@ -122,8 +124,15 @@ class ConsoleCredentialProvider:
         return value
 
     def get_password(self) -> str:
+        """The 2FA password: read if supplied, never saved.
+
+        It is needed once per login and never again, since the session outlives
+        it. Saving it left the second factor in the keychain -- or, wherever
+        there is no keychain, as in a container, in a plain file beside the
+        session it was meant to protect.
+        """
         return self._resolve(
-            "password", "TELEGRAM_PASSWORD", "Telegram 2FA password: ", secret=True
+            "password", "TELEGRAM_PASSWORD", "Telegram 2FA password: ", secret=True, save=False
         )
 
     def get_email(self) -> str:
@@ -160,10 +169,17 @@ class NonInteractiveCredentialProvider(ConsoleCredentialProvider):
         secret: bool,
         allow_empty: bool = False,
         ephemeral: bool = False,
+        save: bool = True,
     ) -> str:
         try:
             return super()._resolve(
-                account, env, prompt, secret=secret, allow_empty=allow_empty, ephemeral=ephemeral
+                account,
+                env,
+                prompt,
+                secret=secret,
+                allow_empty=allow_empty,
+                ephemeral=ephemeral,
+                save=save,
             )
         except SecretUnavailable:
             # An optional secret nobody can be asked for is simply blank. An
