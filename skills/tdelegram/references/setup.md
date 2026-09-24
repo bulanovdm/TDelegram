@@ -120,11 +120,11 @@ export TDELEGRAM_TDJSON=/path/to/libtdjson.so   # .dylib on macOS, .dll on Windo
 
 `tdelegram --verbose <any command>` prints which library it loaded.
 
-**2. Install the package.** Not on PyPI yet, so from the repository:
+**2. Install the package.**
 
 ```bash
 python3 -m venv ~/.venvs/tdelegram
-~/.venvs/tdelegram/bin/pip install "git+https://github.com/bulanovdm/TDelegram"
+~/.venvs/tdelegram/bin/pip install tdelegram
 ~/.venvs/tdelegram/bin/tdelegram version     # 0.1.0
 ```
 

@@ -102,6 +102,10 @@ Do this once, before the first release. It cannot be done from this repo.
    release (below) then means switching the ruleset off for that moment,
    which is the point.
 
+4. **The repository website**, once the first release is on PyPI. It was left
+   empty so as not to point at a page that did not exist yet:
+   `gh repo edit bulanovdm/TDelegram --homepage https://pypi.org/project/tdelegram/`
+
 ## Cutting a release
 
 ```bash
@@ -113,19 +117,10 @@ Do this once, before the first release. It cannot be done from this repo.
 #    newest dated section and pyproject.toml disagree, so a half-done bump is
 #    caught here rather than by the tag.
 
-# 2. On the FIRST release only:
-#    - 0.1.0 already has its section; set its date to the day of the release.
-#    - correct the README, which currently says "Not on PyPI yet".
-#      Claiming an install that does not work is worse than saying it
-#      is unavailable.
-#    - set the repository website, left empty for the same reason:
-#      gh repo edit bulanovdm/TDelegram \
-#        --homepage https://pypi.org/project/tdelegram/
-
-# 3. Land it on main and let CI go green.
+# 2. Land it on main and let CI go green.
 git commit -am "Release 0.2.0" && git push
 
-# 4. Tag. The tag is what publishes.
+# 3. Tag. The tag is what publishes.
 git tag v0.2.0
 git push origin v0.2.0
 ```

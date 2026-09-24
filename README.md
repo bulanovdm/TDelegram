@@ -44,7 +44,7 @@ docker run --rm -i -v "$HOME/.tdelegram:/session" \
 ```
 
 Which tag to pull — a pinned release, the newest one, or unreleased `main` —
-and when each moves is in [RELEASING.md](RELEASING.md#docker-image-tags).
+and when each moves is in [RELEASING.md](https://github.com/bulanovdm/TDelegram/blob/main/RELEASING.md#docker-image-tags).
 
 Global flags such as `--yes` go before the command. One alias makes every
 command in this README work verbatim:
@@ -75,14 +75,14 @@ when its input is a pipe.
 Preferable on macOS, and the fallback wherever Docker is not available:
 
 ```bash
-brew install tdlib                                       # macOS
-pip install "git+https://github.com/bulanovdm/TDelegram"  # not on PyPI yet
+brew install tdlib   # macOS
+pip install tdelegram
 ```
 
 On Linux, build TDLib from source and point `TDELEGRAM_TDJSON` at the resulting
 `libtdjson.so`. Full instructions, including getting an `api_id`/`api_hash` and
 the first login, are in
-[skills/tdelegram/references/setup.md](skills/tdelegram/references/setup.md).
+[skills/tdelegram/references/setup.md](https://github.com/bulanovdm/TDelegram/blob/main/skills/tdelegram/references/setup.md).
 
 ## Quickstart
 

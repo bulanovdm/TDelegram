@@ -36,8 +36,7 @@ The short version: `docker pull ghcr.io/bulanovdm/tdelegram:latest`, run it with
 `-v "$HOME/.tdelegram:/session"`, and alias `tdelegram` to that so every command
 below works unchanged. Docker is recommended because TDLib is a C++ dependency
 that otherwise takes a ~20 minute compile; natively it is `brew install tdlib`
-(easy on macOS) plus
-`pip install "git+https://github.com/bulanovdm/TDelegram"`.
+(easy on macOS) plus `pip install tdelegram`.
 
 Two of the steps are not yours to do — the `api_id`/`api_hash` come from a web
 form behind a Telegram login, and the login code arrives on the user's phone and
