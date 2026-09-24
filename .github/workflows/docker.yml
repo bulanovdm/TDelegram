@@ -3,20 +3,82 @@ name: docker
 # Publishes ghcr.io/bulanovdm/tdelegram so the documented install is a pull
 # rather than a 20-minute TDLib compile on the user's machine. That is the only
 # thing that makes Docker a reasonable default.
+#
+# Tags, and what moves them (RELEASING.md has the whole scheme):
+#
+#   push to main            main, sha-<commit>
+#   release v1.2.3          1.2.3, and 1.2, 1 and latest where it is the newest
+#   pre-release v1.3.0rc1   1.3.0rc1
+#
+# `latest` is the newest release, never main. Release images come only from
+# release.yml, which calls this workflow once the suite has passed and the tag
+# agrees with pyproject.toml, with the tags scripts/release.py chose: which
+# floating tags a release takes depends on every other release, and that is
+# decided, and tested, in one place.
 
 on:
   push:
     branches: [main]
-    tags: ["v*"]
+  workflow_call:
+    inputs:
+      version:
+        description: The version being released, which the image must report
+        type: string
+        required: true
+      tags:
+        description: Every tag the release takes, separated by spaces
+        type: string
+        required: true
+  # Rebuilds a branch. A release's image is never rebuilt in place, not even
+  # for a base image fix: that is a patch release (RELEASING.md).
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
 
 jobs:
+  # Decided once, so the per-arch images and the manifest list cannot disagree
+  # about which build they are.
+  meta:
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+      tags: ${{ steps.meta.outputs.tags }}
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - id: meta
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_TAGS: ${{ inputs.tags }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          # A ghcr.io repository must be lowercase, but github.repository keeps
+          # the repo's own capitalisation (bulanovdm/TDelegram), which buildx
+          # rejects as an invalid reference.
+          echo "image=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          if [[ -n "$RELEASE_VERSION" ]]; then
+            version="$RELEASE_VERSION"
+            tags="$RELEASE_TAGS"
+          elif [[ "$GITHUB_REF" == refs/heads/* ]]; then
+            # A branch name becomes a tag once what a tag cannot hold is a dash.
+            version="$(printf '%s' "$GITHUB_REF_NAME" | tr -c 'A-Za-z0-9_.-' '-')"
+            version="${version:0:128}"
+            tags="$version"
+            if [[ "$GITHUB_REF_NAME" == "$DEFAULT_BRANCH" ]]; then
+              tags+=" sha-${GITHUB_SHA::7}"
+            fi
+          else
+            echo "::error::Release images are published by release.yml. Run this on a branch." >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+
   # Built on native runners per architecture. TDLib under QEMU emulation takes
   # hours, and Apple Silicon needs arm64, so neither arch can simply be dropped.
   build:
+    needs: meta
     strategy:
       fail-fast: false
       matrix:
@@ -29,13 +91,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      IMAGE: ${{ needs.meta.outputs.image }}
     steps:
       - uses: actions/checkout@v4
-      - name: Resolve the image name
-        # A ghcr.io repository must be lowercase, but github.repository keeps
-        # the repo's own capitalisation (bulanovdm/TDelegram), which buildx
-        # rejects as an invalid reference.
-        run: echo "IMAGE=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
       - uses: docker/setup-buildx-action@v3
 
@@ -51,17 +110,41 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          # What `docker inspect` answers when asked which build an image is.
+          labels: |
+            org.opencontainers.image.version=${{ needs.meta.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+
+      # Each architecture runs by digest, on its own runner, before anything
+      # is tagged: a broken image never becomes `latest`, and arm64 is tried
+      # natively rather than not at all.
+      - name: Smoke-test the image
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          reported="$(docker run --rm "$IMAGE@$DIGEST" version)"
+          echo "tdelegram version: $reported"
+          if [[ -n "$RELEASE_VERSION" && "$reported" != "$RELEASE_VERSION" ]]; then
+            echo "::error::The image reports $reported but would be tagged $RELEASE_VERSION." >&2
+            exit 1
+          fi
+          # The registry must ship inside the image: the write gate fails closed
+          # without it, so an image missing methods.json refuses every call.
+          docker run --rm --entrypoint python "$IMAGE@$DIGEST" \
+            -c "from tdelegram import safety; assert safety.verdict('sendMessage') == 'write'; print('gate ok')"
 
       - name: Export the digest
         # The filename is the bare hex: upload-artifact rejects a colon, so the
         # "sha256:" prefix cannot stay. The manifest job puts it back.
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           mkdir -p /tmp/digests
-          digest='${{ steps.build.outputs.digest }}'
-          touch "/tmp/digests/${digest#sha256:}"
+          touch "/tmp/digests/${DIGEST#sha256:}"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -69,20 +152,17 @@ jobs:
           path: /tmp/digests/*
           retention-days: 1
 
-  # One multi-arch tag pointing at both per-arch images.
+  # One multi-arch manifest list per tag, each pointing at both per-arch images.
   manifest:
-    needs: build
+    needs: [meta, build]
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    env:
+      IMAGE: ${{ needs.meta.outputs.image }}
+      IMAGE_TAGS: ${{ needs.meta.outputs.tags }}
     steps:
-      - name: Resolve the image name
-        # A ghcr.io repository must be lowercase, but github.repository keeps
-        # the repo's own capitalisation (bulanovdm/TDelegram), which buildx
-        # rejects as an invalid reference.
-        run: echo "IMAGE=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
-
       - uses: actions/download-artifact@v4
         with:
           path: /tmp/digests
@@ -96,30 +176,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE }}
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Create the manifest list
+      - name: Tag both images
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE }}@sha256:%s ' *)
-        env:
-          DOCKER_METADATA_OUTPUT_JSON: ${{ steps.meta.outputs.json }}
+          read -ra tags <<< "$IMAGE_TAGS"
+          args=()
+          for tag in "${tags[@]}"; do args+=(-t "$IMAGE:$tag"); done
+          for digest in *; do args+=("$IMAGE@sha256:$digest"); done
+          docker buildx imagetools create "${args[@]}"
+          {
+            echo "### Published"
+            for tag in "${tags[@]}"; do echo "- \`$IMAGE:$tag\`"; done
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Smoke-test the published image
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.meta.outputs.version }}"
-          docker run --rm "$IMAGE" version
-          # The registry must ship inside the image: the write gate fails closed
-          # without it, so an image missing methods.json refuses every call.
-          docker run --rm --entrypoint python "$IMAGE" \
-            -c "from tdelegram import safety; assert safety.verdict('sendMessage') == 'write'; print('gate ok')"
+      - name: Show the published manifest list
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: docker buildx imagetools inspect "$IMAGE:$VERSION"

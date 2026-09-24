@@ -40,8 +40,9 @@ Issues = "https://github.com/bulanovdm/TDelegram/issues"
 Changelog = "https://github.com/bulanovdm/TDelegram/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.4", "mypy>=1.10"]
-test = ["pytest>=8", "pytest-cov>=5"]
+# packaging: scripts/release.py, which the suite tests, reads versions with it.
+dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.4", "mypy>=1.10", "packaging>=23"]
+test = ["pytest>=8", "pytest-cov>=5", "packaging>=23"]
 
 [project.scripts]
 tdelegram = "tdelegram.cli.main:app"
