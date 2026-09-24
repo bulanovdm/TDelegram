@@ -55,8 +55,11 @@ def parse_future(value: str) -> int:
     match = _AHEAD_RE.fullmatch(text)
     if match:
         seconds = float(match.group(1)) * _UNIT_SECONDS[match.group(2).lower()]
-        return int((now + timedelta(seconds=seconds)).timestamp())
-    moment = parse_date(text)
+        moment: int | None = int((now + timedelta(seconds=seconds)).timestamp())
+    else:
+        moment = parse_date(text)
+    # Checked for both forms: `0m`, or an offset int() truncates to this very
+    # second, would otherwise schedule for now -- that is, send at once.
     if moment is None or moment <= int(now.timestamp()):
         raise ValueError(f"{value!r} is not in the future; use 30m, 2h, 1d, or ISO-8601.")
     return moment

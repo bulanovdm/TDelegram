@@ -1,7 +1,9 @@
 # Recipes
 
-Worked tasks. Every command here is read-only, so all of it is safe to run
-without asking anyone.
+Worked tasks. Almost every command here is read-only and safe to run without
+asking anyone. The two that are not — `draft set` and `msg transcribe` — are
+marked **write**: run them without `--yes` first, show the user the preview,
+and add `--yes` only once they approve that specific action.
 
 ## Contents
 
@@ -36,6 +38,7 @@ A draft is visible only to the account itself, in that chat's input box on
 every device, so the user reads it and presses send:
 
 ```bash
+# write: preview first, and --yes only once the user approves this draft
 tdelegram draft set --chat someone --text "Yes, 8 works."          # previews
 tdelegram --yes draft set --chat someone --text "Yes, 8 works."    # after approval
 ```
@@ -200,7 +203,9 @@ record. For one that has not been, `msg transcribe` asks Telegram — a write,
 since it spends the account's quota:
 
 ```bash
-tdelegram --yes msg transcribe --chat someone --id 8812
+# write: it spends the account's quota, so preview first and ask
+tdelegram msg transcribe --chat someone --id 8812          # previews, unless already transcribed
+tdelegram --yes msg transcribe --chat someone --id 8812    # after approval
 ```
 
 ## Shaping output for a report

@@ -56,7 +56,8 @@ def iter_global_search(
     """Normalized results from every chat, newest first, within an optional window."""
     params: dict[str, Any] = {"query": query, "limit": 100}
     since_ts = since if isinstance(since, int) else parse_date(since)
-    until_ts = until if isinstance(until, int) else parse_date(until)
+    # A date alone means through the end of that day, not its first second.
+    until_ts = until if isinstance(until, int) else parse_date(until, end_of_day=True)
     if since_ts is not None:
         params["min_date"] = since_ts
     if until_ts is not None:

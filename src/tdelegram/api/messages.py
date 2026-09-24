@@ -50,8 +50,11 @@ def iter_history(
     since_ts = (
         since if isinstance(since, int) else parse_date(since if isinstance(since, str) else None)
     )
+    # A date alone means through the end of that day, not its first second.
     until_ts = (
-        until if isinstance(until, int) else parse_date(until if isinstance(until, str) else None)
+        until
+        if isinstance(until, int)
+        else parse_date(until if isinstance(until, str) else None, end_of_day=True)
     )
     _ = topic_object(topic_id, "forum")
 
@@ -231,7 +234,7 @@ def iter_own_messages(
     if not isinstance(own_id, int):
         raise ValueError("Could not determine the current account's user id.")
     since_ts = since if isinstance(since, int) else parse_date(since)
-    until_ts = until if isinstance(until, int) else parse_date(until)
+    until_ts = until if isinstance(until, int) else parse_date(until, end_of_day=True)
 
     def _too_old(item: dict[str, Any]) -> bool:
         date = item.get("date")

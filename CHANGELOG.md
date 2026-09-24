@@ -232,6 +232,10 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   QEMU takes hours.
 
 ### Changed
+- `--until` with a bare date (`--until 2026-09-01`) now means through the end
+  of that day rather than its first second, in `chat history`, `msg search`
+  and `msg delete-mine`. `parse_date` always had an `end_of_day` switch for
+  this; nothing used it.
 - `tdelegram describe <name>` shows what the schema says about a function (its
   parameters and the gate's verdict), an object or an abstract type, for
   building `call` requests from the schema instead of from memory.

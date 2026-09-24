@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from tdelegram.api.chats import resolve_id
+from tdelegram.api.chats import resolve, resolve_id
 from tdelegram.client import TelegramClient
 
 # The least an administrator can hold, and what `promote` grants unless told
@@ -90,9 +90,14 @@ def promote(
 
     The status used to carry `custom_title` and no `rights`, neither of which
     TDLib's administrator status takes any more, so the promotion granted
-    nothing. A title is now the member's tag, set by a second call.
+    nothing. A title is now the member's tag, set by a second call -- which
+    channels do not have, so a title there is refused before anything changes
+    rather than failing after the promotion went through.
     """
-    chat_id = resolve_id(client, chat_ref)
+    chat = resolve(client, chat_ref)
+    if title and (chat.get("type") or {}).get("is_channel"):
+        raise ValueError("Channels have no member titles; promote without --title.")
+    chat_id = int(chat["id"])
     result = _set_status(
         client,
         chat_id,

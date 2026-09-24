@@ -20,6 +20,27 @@ def chat_list_object(scope: str) -> dict[str, str]:
 SELF_REFS = frozenset({"me", "self", "saved"})
 
 
+def iter_chat_ids(client: TelegramClient, scope: str, *, first: int = 1000) -> Iterator[int]:
+    """Every chat id in a chat list, in order, loading more as the walk goes on.
+
+    getChats returns a prefix of the list, so a walk that must see all of it --
+    looking for unread chats, say -- asks for a prefix twice as long each time,
+    until TDLib returns fewer than asked for.
+    """
+    seen: set[int] = set()
+    limit = first
+    while True:
+        found = client.call("getChats", {"chat_list": chat_list_object(scope), "limit": limit})
+        ids = found.get("chat_ids", [])
+        for chat_id in ids:
+            if isinstance(chat_id, int) and chat_id not in seen:
+                seen.add(chat_id)
+                yield chat_id
+        if len(ids) < limit:
+            return
+        limit *= 2
+
+
 def resolve(client: TelegramClient, chat_ref: str) -> dict[str, Any]:
     """Resolve @handle, a bare handle, a numeric id, or `me` to a chat object.
 
@@ -88,13 +109,18 @@ def iter_list(
     scopes = ("main", "archive") if scope == "all" else (scope,)
     seen: set[int] = set()
     yielded = 0
-    # Filtering to unread chats means reading past the ones that are not.
-    request_limit = 1000 if maximum is None or unread_only else max(1, min(int(maximum), 1000))
+    request_limit = 1000 if maximum is None else max(1, min(int(maximum), 1000))
     for current in scopes:
-        result = client.call(
-            "getChats", {"chat_list": chat_list_object(current), "limit": request_limit}
+        # Filtering to unread chats means reading past all the ones that are
+        # not, however far down the list the unread ones sit.
+        listed: Iterator[int] | list[int] = (
+            iter_chat_ids(client, current)
+            if unread_only
+            else client.call(
+                "getChats", {"chat_list": chat_list_object(current), "limit": request_limit}
+            ).get("chat_ids", [])
         )
-        for chat_id in result.get("chat_ids", []):
+        for chat_id in listed:
             if not isinstance(chat_id, int) or chat_id in seen:
                 continue
             seen.add(chat_id)

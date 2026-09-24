@@ -1730,3 +1730,65 @@ def test_watch_opens_the_chats_it_watches_and_closes_them(cli: FakeTransport) ->
     assert _request(cli, "openChat")["chat_id"] == -1009
     assert sent.index("closeChat") > sent.index("openChat")
     assert "viewMessages" not in sent, "watching marks nothing read"
+
+
+# --- from the PR review ----------------------------------------------------
+
+
+def test_promote_refuses_a_title_in_a_channel_before_changing_anything(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Channels have no member titles, so the tag call would fail -- after the
+    member had already been promoted."""
+    cli.add_simple_response(
+        "searchPublicChat",
+        {"@type": "chat", "id": -1009, "type": {"@type": "chatTypeSupergroup",
+                                                "supergroup_id": 9, "is_channel": True}},
+    )
+    monkeypatch.setattr(cli_context, "interactive", lambda: True)
+    argv = ["--yes", "admin", "promote", "--chat", "news", "--user", "2", "--title", "Editor"]
+    result = runner.invoke(cli_main.app, argv, input="setChatMemberStatus\n")
+    assert result.exit_code == 1
+    assert "setChatMemberStatus" not in _sent(cli), "nothing may change before the refusal"
+
+
+def test_unread_chats_are_found_past_the_first_thousand(cli: FakeTransport) -> None:
+    """getChats returns a prefix of the list; one call of 1000 missed the rest."""
+    ids = list(range(1, 2501))
+    unread = {1500, 2400}
+    cli.add_response(
+        lambda r: r.get("@type") == "getChats",
+        lambda r: {"@type": "chats", "chat_ids": ids[: r["limit"]]},
+    )
+    cli.add_response(
+        lambda r: r.get("@type") == "getChat",
+        lambda r: {"@type": "chat", "id": r["chat_id"], "title": f"c{r['chat_id']}",
+                   "unread_count": 1 if r["chat_id"] in unread else 0},
+    )
+    result = runner.invoke(cli_main.app, ["chat", "list", "--unread"])
+    assert result.exit_code == 0
+    assert [r["chat_id"] for r in _lines(result)] == [1500, 2400]
+    limits = [req["limit"] for _, req in cli.sent if req.get("@type") == "getChats"]
+    assert limits == [1000, 2000, 4000], "a longer prefix each time, until TDLib runs out"
+
+
+def test_until_a_date_includes_that_whole_day(cli: FakeTransport) -> None:
+    afternoon = 1_788_274_800  # 2026-09-01T15:00:00Z
+    said = [{**_message_in(5, 2, "that afternoon"), "date": afternoon}]
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_response(
+        lambda r: r.get("@type") == "getChatHistory",
+        lambda r: {"@type": "messages", "messages": said if r["from_message_id"] == 0 else []},
+    )
+    argv = ["chat", "history", "--chat", "x", "--until", "2026-09-01"]
+    assert [r["text"] for r in _lines(runner.invoke(cli_main.app, argv))] == ["that afternoon"]
+
+
+def test_a_schedule_of_now_is_refused(cli: FakeTransport) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("sendMessage", {"@type": "message", "id": 9})
+    argv = ["--yes", "msg", "send", "--chat", "somechat", "--text", "x", "--schedule", "0m"]
+    result = runner.invoke(cli_main.app, argv)
+    assert result.exit_code == 1
+    assert "sendMessage" not in _sent(cli)
+    assert "future" in _lines(result)[0]["error"]["message"]

@@ -12,7 +12,7 @@ from collections.abc import Iterator
 from typing import Any
 
 from tdelegram import normalize
-from tdelegram.api.chats import chat_list_object
+from tdelegram.api.chats import iter_chat_ids
 from tdelegram.api.users import SenderNames
 from tdelegram.client import TelegramClient
 from tdelegram.errors import TelegramError
@@ -70,9 +70,8 @@ def unread_chats(
     seen: set[int] = set()
     found = 0
     for current in scopes:
-        listed = client.call("getChats", {"chat_list": chat_list_object(current), "limit": 1000})
-        for chat_id in listed.get("chat_ids", []):
-            if not isinstance(chat_id, int) or chat_id in seen:
+        for chat_id in iter_chat_ids(client, current):
+            if chat_id in seen:
                 continue
             seen.add(chat_id)
             chat = client.call("getChat", {"chat_id": chat_id})
