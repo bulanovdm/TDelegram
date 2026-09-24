@@ -10,6 +10,23 @@ all of them on day one through one generic transport, with ergonomics,
 normalization, safety, errors and docs on top. No MCP layer: an importable Python
 library plus a `tdelegram` CLI.
 
+## What it is for
+
+- **Where Telegram is blocked** — `proxy add` takes a shared `tg://proxy`,
+  `t.me/proxy` or `socks5://` link and works before login, which is when it is
+  needed.
+- **Catching up without being seen to** — `inbox` lists unread messages across
+  chats and marks nothing read; `draft set` leaves a reply for you to send.
+- **Backups and research** — `chat export` is resumable and incremental, with
+  media where the chat allows saving it; records carry views, forwards,
+  reactions and where a forward came from.
+- **Taking your words back** — `msg delete-mine` removes your own messages in a
+  chat for everyone, after showing how many.
+- **Alerts** — `watch` streams new messages matching words, a pattern, a chat
+  or a sender.
+- **Reading without seeing or hearing** — `--format text` gives screen readers
+  plain sentences, and `msg transcribe` turns a voice message into text.
+
 ## Install
 
 TDLib is a C++ dependency with no distribution package, so installing it
@@ -26,7 +43,8 @@ docker run --rm -i -v "$HOME/.tdelegram:/session" \
   ghcr.io/bulanovdm/tdelegram auth status
 ```
 
-One alias makes every command in this README work verbatim:
+Global flags such as `--yes` go before the command. One alias makes every
+command in this README work verbatim:
 
 ```bash
 alias tdelegram='docker run --rm -i -v "$HOME/.tdelegram:/session" \
@@ -34,7 +52,8 @@ alias tdelegram='docker run --rm -i -v "$HOME/.tdelegram:/session" \
   ghcr.io/bulanovdm/tdelegram'
 ```
 
-`auth login` is the exception — it prompts, so run that one with `-it`.
+`auth login` and destructive commands are the exceptions — they prompt, so run
+those with `-it`.
 
 ### Native
 
@@ -55,11 +74,21 @@ the first login, are in
 ```bash
 tdelegram auth login
 tdelegram chat list
+tdelegram inbox                                  # unread messages; marks nothing read
 tdelegram chat history --chat @durov --limit 5
 tdelegram msg send --chat me --text "hi"        # previews
-tdelegram msg send --chat me --text "hi" --yes  # performs
-tdelegram updates follow &
-tdelegram msg send --chat me --text "*hi*" --parse-mode markdown --yes  # MarkdownV2
+tdelegram --yes msg send --chat me --text "hi"  # performs
+tdelegram --yes msg send --chat me --text "*hi*" --parse-mode markdown  # MarkdownV2
+tdelegram watch --for 10m                       # new messages as they arrive
+tdelegram --format text inbox                   # plain lines, for a screen reader
+```
+
+Where Telegram is blocked, store a proxy before logging in — every `proxy`
+command works without a session:
+
+```bash
+tdelegram --yes proxy add 'https://t.me/proxy?server=...&port=443&secret=...'
+tdelegram proxy ping 1 && tdelegram auth login
 ```
 
 Library:
@@ -87,9 +116,15 @@ or install the packaged bundle.
 
 Mutating calls preview and exit; `--yes` performs them. Destructive calls
 (`deleteChatHistory`, `banChatMember`, `logOut`, `deleteAccount`,
-`terminateAllOtherSessions`, …) need `--yes`, plus a typed confirmation on an
-interactive TTY. The gate lives in `TelegramClient.call()` — including the raw
-`call` escape hatch. See `src/tdelegram/methods.json` for all 1022 verdicts.
+`terminateAllOtherSessions`, …) need `--yes` *and* the method name typed at an
+interactive terminal, so a script, a pipe or an agent's shell does not complete
+one by accident. It is a safeguard, not a sandbox: a program that fakes a
+terminal can type the name too. The gate lives in `TelegramClient.call()` —
+including the raw `call` escape hatch. See `src/tdelegram/methods.json` for all 1022 verdicts.
+
+`call` also checks each request against TDLib's schema before sending it,
+because TDLib ignores a field it does not recognise and runs the call without
+it. `tdelegram describe <method>` shows the real parameters.
 
 ## Layout
 
@@ -98,7 +133,8 @@ interactive TTY. The gate lives in `TelegramClient.call()` — including the raw
 - `auth.py` — 11-state machine with `CredentialProvider`
 - `safety.py` + `methods.json` — write gate + registry
 - `normalize.py` / `entities.py` / `dates.py` / `paging.py` / `files.py`
-- `api/` — account chats messages media contacts users admin topics folders drafts reactions polls search updates bots stories secret proxies
+- `api/` — account chats messages media contacts users admin topics folders drafts reactions polls search updates bots stories secret proxies inbox export
+- `schema.py` + `schema.json` — every TDLib request shape; what `call` and the tests check against
 - `cli/` — Typer tree, JSONL on stdout, diagnostics on stderr
 
 ## Session

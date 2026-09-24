@@ -10,6 +10,8 @@ By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
   `python scripts/generate_method_registry.py --output src/tdelegram/methods.json`.
   It reads `td_api.h` or `td_api.tl`, found via `--schema`, `$TDELEGRAM_TD_API`, or a
   TDLib install. CI fetches the `.tl` at a pinned commit, so no TDLib build is needed.
+  From a `.tl` it also rewrites `src/tdelegram/schema.json`, the request shapes every
+  test request is checked against; a `.h` leaves that file alone.
   A bump moves `TDLIB_COMMIT` in the workflow and `EXPECTED_FUNCTION_COUNT` in
   `tests/contract/test_registry.py` alongside the regenerated JSON.
   The contract test fails CI on unclassified functions — classify, don't default.

@@ -62,16 +62,37 @@ class FakeTransport:
       the response (dict or callable returning dict) is queued for receive.
     - `add_update(update, client_id)`: queue an unsolicited update.
     - `sent`: log of (client_id, request_dict) tuples.
+
+    Every request is checked against the pinned TDLib schema. One that does
+    not match is answered with the 400 real TDLib would give -- or, for a field
+    TDLib would silently drop, the 400 it should give -- and recorded in
+    `schema_violations`. A fake that answers anything is how requests with
+    parameters TDLib does not have passed every test. Pass `validate=False`
+    only to test transport mechanics with requests that are not TDLib's.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, validate: bool = True) -> None:
         self.sent: list[tuple[int, dict[str, Any]]] = []
+        self.schema_violations: list[tuple[dict[str, Any], list[str]]] = []
+        self._validate = validate
         self._rules: list[tuple[Matcher, Any]] = []
         self._inbox: queue.Queue[str] = queue.Queue()
         self._clients: dict[int, int] = {}
         self._next_client_id = 1
         self._lock = threading.Lock()
         self.default_client_id = 1
+
+    def _schema_error(self, req: dict[str, Any]) -> dict[str, Any] | None:
+        if not self._validate:
+            return None
+        from tdelegram import schema
+
+        problems = schema.validate(req)
+        if not problems:
+            return None
+        with self._lock:
+            self.schema_violations.append((req, problems))
+        return {"@type": "error", "code": 400, "message": "; ".join(problems)}
 
     def receive_domain(self) -> str:
         # Each fake owns its queues, so each gets its own reader thread.
@@ -102,6 +123,13 @@ class FakeTransport:
         with self._lock:
             self.sent.append((client_id, req))
             rules = list(self._rules)
+        refusal = self._schema_error(req)
+        if refusal is not None:
+            refusal["@client_id"] = client_id
+            if "@extra" in req:
+                refusal["@extra"] = req["@extra"]
+            self._inbox.put(json.dumps(refusal))
+            return
         for matcher, response in rules:
             try:
                 matched = matcher(req)
@@ -121,6 +149,15 @@ class FakeTransport:
         if "@extra" in req:
             fallback["@extra"] = req["@extra"]
         self._inbox.put(json.dumps(fallback))
+        if req.get("@type") == "close":
+            # As TDLib does. Without it close() waits out its timeout, a second
+            # per client, for an update that never comes.
+            closed = {
+                "@type": "updateAuthorizationState",
+                "@client_id": client_id,
+                "authorization_state": {"@type": "authorizationStateClosed"},
+            }
+            self._inbox.put(json.dumps(closed))
 
     def receive(self, timeout: float) -> str | None:
         try:
@@ -130,6 +167,9 @@ class FakeTransport:
 
     def execute(self, request: str) -> str | None:
         req = json.loads(request)
+        refusal = self._schema_error(req)
+        if refusal is not None:
+            return json.dumps(refusal)
         if req.get("@type") == "parseTextEntities":
             text = req.get("text", "")
             parse_mode = (req.get("parse_mode") or {}).get("@type", "")

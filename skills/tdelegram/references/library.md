@@ -84,7 +84,7 @@ Each module under `tdelegram.api` owns its own implementations:
 ```
 account  chats  messages  media  contacts  users  admin  topics
 folders  drafts reactions polls  search    updates bots   stories
-secret   proxies
+secret   proxies inbox    export
 ```
 
 Functions take the client first and thread permission through rather than
@@ -186,6 +186,23 @@ transport.add_simple_response("getMe", {"@type": "user", "id": 7})
 client = TelegramClient(transport)
 assert client.call("getMe", {})["id"] == 7
 assert transport.sent  # every request, for assertions
+```
+
+Every request is checked against the pinned TDLib schema. One with a field
+TDLib does not have, or a value of the wrong type, gets the 400 TDLib would
+give — or, for a field TDLib would silently ignore, the 400 it should give —
+and lands in `transport.schema_violations`. The repository's test suite fails
+any test that leaves one there. `FakeTransport(validate=False)` is for testing
+transport mechanics with requests that are not TDLib's.
+
+The same check is available directly:
+
+```python
+from tdelegram import schema
+
+schema.validate({"@type": "addMessageReaction", "chat_id": 1, "message_id": 5, "emoji": "x"})
+# ["addMessageReaction: addMessageReaction has no field 'emoji'; it takes chat_id, ..."]
+schema.describe("addMessageReaction")["params"]   # {"chat_id": "int53", ...}
 ```
 
 Two behaviours will make a test lie if you forget them:

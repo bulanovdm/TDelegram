@@ -23,6 +23,13 @@ from tdelegram.transport import Transport
 
 UpdateHandler = Callable[[dict[str, Any]], None]
 
+# State TDLib only ever pushes, never returns from a request. The chat folder
+# list, for one, arrives as an update around login and has no getter, so the
+# latest of each is kept for `latest_update()` to read after the fact.
+REMEMBERED_UPDATES = frozenset(
+    {"updateChatFolders", "updateConnectionState", "updateSpeechRecognitionTrial"}
+)
+
 
 class Subscription:
     def __init__(self, unsubscribe: Callable[[], None]) -> None:
@@ -51,6 +58,10 @@ class TelegramClient:
         self._default_timeout = default_timeout
         self._closed = False
         self._no_retry = False
+        self._latest: dict[str, dict[str, Any]] = {}
+        # A dormant TDLib instance emits nothing until its first request, so
+        # registering here cannot miss an update.
+        self._subscriber.handlers.append(self._remember)
 
     @property
     def client_id(self) -> int:
@@ -147,6 +158,15 @@ class TelegramClient:
 
     def dropped_updates(self) -> int:
         return self._subscriber.dropped
+
+    def _remember(self, event: dict[str, Any]) -> None:
+        kind = event.get("@type")
+        if kind in REMEMBERED_UPDATES:
+            self._latest[str(kind)] = event
+
+    def latest_update(self, kind: str) -> dict[str, Any] | None:
+        """The most recent update of a kind in REMEMBERED_UPDATES, if one came."""
+        return self._latest.get(kind)
 
     # -- lifecycle -----------------------------------------------------
     def close(self) -> None:

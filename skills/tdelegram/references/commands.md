@@ -6,7 +6,8 @@ Every command, its options, and what the gate requires. Verdicts come from
 - **read** — runs immediately
 - **write** — previews and exits 2 unless `--yes`
 - **destructive** — needs `--yes` *and* a typed confirmation on an interactive
-  terminal, so you cannot complete one non-interactively
+  terminal, so you cannot complete one non-interactively — and must not fake a
+  terminal to try
 
 ## Contents
 
@@ -27,7 +28,7 @@ Placed before the subcommand: `tdelegram --format json chat list`.
 |---|---|
 | `--profile NAME` | profile under `~/.tdelegram/` (default `default`) |
 | `--session-dir PATH` | use this directory as the profile directory |
-| `--format jsonl\|json\|table` | `jsonl` default; `table` is for humans, never parse it |
+| `--format jsonl\|json\|table\|text` | `jsonl` default; `text` is plain lines for reading or a screen reader; never parse `table` or `text` |
 | `--output FILE` | append to a file instead of stdout |
 | `--yes` | perform mutating operations rather than previewing |
 | `--verbose` | extra diagnostics on stderr (library path, profile dir) |
@@ -47,15 +48,23 @@ Placed before the subcommand: `tdelegram --format json chat list`.
 
 | Command | Gate | Options |
 |---|---|---|
-| `chat list` | read | `--scope main\|archive\|all`, `--limit` |
+| `chat list` | read | `--scope main\|archive\|all`, `--limit`, `--unread` |
 | `chat info <chat>` | read | normalized record (title, type, `is_forum`, counts) |
 | `chat resolve <chat>` | read | the raw TDLib chat object |
 | `chat history` | read | `--chat`, `--limit`, `--since`, `--until`, `--sender`, `--topic`, `--contains` |
-| `chat search` | read | `--chat`, `--query`, `--limit` |
-| `chat members <chat>` | read | `--limit` |
+| `chat search` | read | `--chat`, `--query`, `--limit`, `--sender` — records shaped like `chat history` |
+| `chat export` | read | `--chat`, `--out DIR`, `--since`, `--media`, `--limit` — resumable; re-run to update |
+| `chat members <chat>` | read | `--limit` — one bounded page; supergroups, channels and basic groups |
 | `chat create <title>` | write | creates a supergroup |
 | `chat join <chat>` | write | |
 | `chat leave <chat>` | **destructive** | a private chat cannot be rejoined without a new invite |
+
+`chat export` writes `DIR/messages.jsonl`, `DIR/chat.json` and a
+`DIR/state.json` checkpoint. Running it again fetches only what is missing —
+newer messages, then whatever an earlier run did not reach — so it doubles as a
+backup you keep current and as a resumable download of a long history. Records
+are written as fetched, so sort on `message_id` when order matters. `--media`
+saves files to `DIR/media/`, except where the chat forbids saving content.
 
 Chat references accept `@handle`, a bare handle, a numeric id (negative for
 groups and channels), or `me` / `self` / `saved` for Saved Messages.
@@ -63,19 +72,48 @@ groups and channels), or `me` / `self` / `saved` for Saved Messages.
 `--since` / `--until` accept `7d`, `24h`, `2w`, or ISO-8601 (`2026-09-01`,
 `2026-09-01T12:00:00Z`).
 
+## inbox
+
+| Command | Gate | Options |
+|---|---|---|
+| `inbox` | read | `--chats` (20), `--per-chat` (20), `--scope`, `--include-muted` |
+
+Unread incoming messages across chats, oldest first within each chat, each
+record carrying `chat_title` and the chat's `chat_unread_count`. It marks
+nothing read — it never opens a chat or views a message — so no sender sees a
+read receipt. Muted chats are skipped unless `--include-muted`, except when they
+mention the account.
+
 ## msg
 
 | Command | Gate | Options |
 |---|---|---|
 | `msg get` | read | `--chat`, `--id` |
 | `msg link` | read | `--chat`, `--id` — a t.me permalink |
-| `msg search` | read | `--query`, `--limit` — global, across chats |
-| `msg send` | write | `--chat`, `--text`, `--parse-mode markdown\|html`, `--reply-to` |
-| `msg edit` | write | `--chat`, `--id`, `--text` |
-| `msg forward` | write | `--from`, `--to`, `--id` |
+| `msg search` | read | `--query`, `--limit`, `--since`, `--until` — global, across chats |
+| `msg send` | write | `--chat`, `--text`, `--parse-mode markdown\|html`, `--reply-to`, `--topic`, `--silent`, `--schedule 2h\|ISO-8601` |
+| `msg edit` | write | `--chat`, `--id`, `--text`, `--parse-mode` |
+| `msg forward` | write | `--from`, `--to`, `--id` (repeatable) |
 | `msg react` | write | `--chat`, `--id`, `--emoji` |
-| `msg poll` | write | `--chat`, `--id`, `--option` — votes in a poll |
-| `msg delete` | **destructive** | `--chat`, `--id` |
+| `msg transcribe` | write | `--chat`, `--id`, `--timeout` — free when already transcribed |
+| `msg poll` | write | `--chat`, `--id`, `--option` (repeatable) — votes in a poll |
+| `msg delete` | **destructive** | `--chat`, `--id` (repeatable), `--only-for-me` — deletes for everyone by default |
+| `msg delete-mine` | **destructive** | `--chat`, `--since`, `--until`, `--limit` — your own messages, for everyone |
+
+`msg transcribe` returns the words of a voice or video message. Once anyone has
+transcribed one, Telegram keeps the text on the message, and it comes back
+without `--yes` and without cost — it also shows up in every record as
+`media.transcript`. Otherwise it is a write, because Telegram counts it against
+the account's quota (a few a week without Premium); the record says how many
+free ones are left.
+
+`msg delete-mine` finds the account's own messages in a chat with a server-side
+search, prints a plan — how many, and the dates of the newest and oldest — and
+without `--yes` stops there. That is the dry run. With `--yes` it asks for
+`deleteMessages` to be typed once, then deletes for everyone, a hundred at a
+time, stepping around any single message Telegram refuses to delete. Messages
+posted *as a channel* are the channel's, and are left alone. On a `FloodWait`
+it stops; run it again and it continues with what is left.
 
 `--parse-mode markdown` is **MarkdownV2**: bold is `*bold*`, italic `_italic_`,
 underline `__underline__`, strikethrough `~struck~`, code `` `code` ``.
@@ -87,18 +125,18 @@ stripped and no formatting, silently. Use `html` if you want `<b>`/`<i>`.
 | Command | Gate | Notes |
 |---|---|---|
 | `media download <file_id>` | read | writes to local disk only, which is why it is a read |
-| `media upload` | write | `--chat`, `--path` — sends a file as a document |
-| `contact list` | read | |
-| `user info <user_id>` | read | numeric id, not a username |
+| `media upload` | write | `--chat`, `--path`, `--caption` — sends a file as a document |
+| `contact list` | read | one user record per contact |
+| `user info <user>` | read | a user id, `@username`, or `me` |
 
 ## admin, topic, folder, draft
 
 | Command | Gate | Notes |
 |---|---|---|
 | `topic list <chat>` | read | forum topics; get `topic_id` here before reading a topic |
-| `folder list` | read | |
+| `folder list` | read | one record per folder, from the list TDLib pushes after login |
 | `draft set` | write | `--chat`, `--text` |
-| `admin promote` | **destructive** | `--chat`, `--user` |
+| `admin promote` | **destructive** | `--chat`, `--user`, `--right` (repeatable; default `manage_chat`), `--title` |
 | `admin ban` | **destructive** | `--chat`, `--user` |
 
 `admin promote` is destructive because it goes through `setChatMemberStatus`,
@@ -110,10 +148,19 @@ method takes the verdict of the worst thing it can express.
 | Command | Gate | Notes |
 |---|---|---|
 | `story list <chat>` | read | archived stories |
-| `proxy list` | read | |
-| `bot callback <query_id>` | write | answers a callback query |
+| `proxy list` | read | stored proxies, without secrets or passwords |
+| `proxy add <link>` | write | `tg://proxy`, `t.me/proxy`, `tg://socks`, `socks5://`, `http://`; `--comment`, `--no-enable` |
+| `proxy enable <id>` / `proxy disable` | write | switch proxy, or connect directly |
+| `proxy remove <id>` | **destructive** | |
+| `proxy ping [<id>]` | read | seconds to Telegram through the proxy, or directly |
+| `proxy check <id>` | read | fails if the proxy cannot reach Telegram |
+| `bot press` | write | `--chat`, `--id`, `--button LABEL` — presses an inline button; a link button is returned unpressed |
 | `bot inline` | write | `--bot`, `--query` — the bot is notified of the query |
-| `secret create <user>` | write | new secret chat |
+| `secret create <user>` | write | new secret chat; a user id, `@username`, or `me` |
+
+Every `proxy` command works before login — a blocked network needs the proxy
+before a login can get through. They need only `TELEGRAM_API_ID` and
+`TELEGRAM_API_HASH`.
 
 `bot inline` looks like a read and is not: sending an inline query notifies a
 third-party bot, which can act on it.
@@ -122,11 +169,22 @@ third-party bot, which can act on it.
 
 | Command | Gate | Notes |
 |---|---|---|
+| `watch` | read | `--chat` (repeatable), `--contains` (repeatable; any matches), `--match REGEX`, `--sender`, `--include-outgoing`, `--for 30m`, `--count N` |
 | `updates follow` | read | `--types` comma-separated `@type` filter; streams until interrupted |
-| `call --request '<json>'` | per method | raw TDLib JSON through the same gate |
+| `call --request '<json>'` | per method | raw TDLib JSON through the same gate, checked against the schema first |
+| `describe <name>` | — | a function's parameters and verdict, an object's fields, or a type's objects |
 | `version` | — | prints the package version |
 
-`updates follow` runs until killed. Give it a bounded window or a filter rather
+`watch` is the one to reach for: new messages as the same records `chat history`
+emits, filtered by chat, words, pattern or sender. `--count 1` waits for the next
+match and exits, which is how to wait for a reply:
+
+```bash
+tdelegram watch --chat jobsboard --contains hiring --contains vacancy --for 8h
+tdelegram watch --chat @somebot --count 1 --for 2m     # the bot's answer
+```
+
+`updates follow` is the raw TDLib stream, and runs until killed. Give it a bounded window or a filter rather
 than leaving it streaming:
 
 ```bash
@@ -142,3 +200,17 @@ tdelegram call --request '{"@type":"getChatMember","chat_id":-100123,"member_id"
 Reaches any of the 1022 TDLib methods. It exists because no CLI surface covers
 all of them — not because it bypasses anything. Without `--yes` it previews and
 exits 2 exactly like a named command, and an unrecognized `@type` fails closed.
+
+Every request is checked against the TDLib schema the build was made from, and
+refused with exit 2 if a field is unknown or has the wrong JSON type. That is
+not pedantry: TDLib *ignores* a field it does not recognise and runs the call
+without it, so `"revoke_all": true` on `deleteMessages` would delete for you
+alone, silently. Look parameters up first:
+
+```bash
+tdelegram describe deleteMessages
+# {"kind":"function","name":"deleteMessages","params":{"chat_id":"int53","message_ids":"vector<int53>","revoke":"Bool"},"returns":"Ok","verdict":"destructive",...}
+tdelegram describe ReactionType     # the objects an abstract type accepts
+```
+
+`--no-validate` skips the check, for a TDLib newer than the pinned schema.

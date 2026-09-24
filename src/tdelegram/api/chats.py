@@ -7,16 +7,38 @@ from typing import Any
 
 from tdelegram import normalize
 from tdelegram.client import TelegramClient
+from tdelegram.errors import TelegramError
 from tdelegram.paging import paginate
 
 
-def _chat_list_object(scope: str) -> dict[str, str]:
+def chat_list_object(scope: str) -> dict[str, str]:
     if scope == "archive":
         return {"@type": "chatListArchive"}
     return {"@type": "chatListMain"}
 
 
 SELF_REFS = frozenset({"me", "self", "saved"})
+
+
+def iter_chat_ids(client: TelegramClient, scope: str, *, first: int = 1000) -> Iterator[int]:
+    """Every chat id in a chat list, in order, loading more as the walk goes on.
+
+    getChats returns a prefix of the list, so a walk that must see all of it --
+    looking for unread chats, say -- asks for a prefix twice as long each time,
+    until TDLib returns fewer than asked for.
+    """
+    seen: set[int] = set()
+    limit = first
+    while True:
+        found = client.call("getChats", {"chat_list": chat_list_object(scope), "limit": limit})
+        ids = found.get("chat_ids", [])
+        for chat_id in ids:
+            if isinstance(chat_id, int) and chat_id not in seen:
+                seen.add(chat_id)
+                yield chat_id
+        if len(ids) < limit:
+            return
+        limit *= 2
 
 
 def resolve(client: TelegramClient, chat_ref: str) -> dict[str, Any]:
@@ -52,28 +74,60 @@ def resolve_id(client: TelegramClient, chat_ref: str) -> int:
     return cid
 
 
+def detail_of(client: TelegramClient, chat: dict[str, Any]) -> dict[str, Any] | None:
+    """The user, supergroup or basic group behind a chat.
+
+    That is where TDLib keeps usernames, member counts and the forum flag; the
+    chat object has none of them.
+    """
+    chat_type = chat.get("type") or {}
+    kind = chat_type.get("@type")
+    try:
+        if kind == "chatTypeSupergroup":
+            return client.call("getSupergroup", {"supergroup_id": chat_type.get("supergroup_id")})
+        if kind == "chatTypeBasicGroup":
+            return client.call("getBasicGroup", {"basic_group_id": chat_type.get("basic_group_id")})
+        if kind in ("chatTypePrivate", "chatTypeSecret"):
+            return client.call("getUser", {"user_id": chat_type.get("user_id")})
+    except TelegramError:
+        return None
+    return None
+
+
 def info(client: TelegramClient, chat_ref: str, *, include_raw: bool = False) -> dict[str, Any]:
     chat = resolve(client, chat_ref)
-    return normalize.chat_record(chat, include_raw=include_raw)
+    return normalize.chat_record(chat, detail=detail_of(client, chat), include_raw=include_raw)
 
 
 def iter_list(
-    client: TelegramClient, *, scope: str = "main", maximum: int | None = None
+    client: TelegramClient,
+    *,
+    scope: str = "main",
+    maximum: int | None = None,
+    unread_only: bool = False,
 ) -> Iterator[dict[str, Any]]:
     scopes = ("main", "archive") if scope == "all" else (scope,)
     seen: set[int] = set()
     yielded = 0
     request_limit = 1000 if maximum is None else max(1, min(int(maximum), 1000))
     for current in scopes:
-        result = client.call(
-            "getChats", {"chat_list": _chat_list_object(current), "limit": request_limit}
+        # Filtering to unread chats means reading past all the ones that are
+        # not, however far down the list the unread ones sit.
+        listed: Iterator[int] | list[int] = (
+            iter_chat_ids(client, current)
+            if unread_only
+            else client.call(
+                "getChats", {"chat_list": chat_list_object(current), "limit": request_limit}
+            ).get("chat_ids", [])
         )
-        for chat_id in result.get("chat_ids", []):
+        for chat_id in listed:
             if not isinstance(chat_id, int) or chat_id in seen:
                 continue
             seen.add(chat_id)
             chat = client.call("getChat", {"chat_id": chat_id})
-            record = normalize.chat_record(chat)
+            if unread_only and not (chat.get("unread_count") or chat.get("is_marked_as_unread")):
+                continue
+            record = normalize.chat_record(chat, detail=detail_of(client, chat))
             record["chat_list"] = current
             yield record
             yielded += 1
@@ -144,7 +198,7 @@ def archive(
         "addChatToList",
         {
             "chat_id": resolve_id(client, chat_ref),
-            "chat_list": _chat_list_object("archive" if archived else "main"),
+            "chat_list": chat_list_object("archive" if archived else "main"),
         },
         allow_write=allow_write,
     )
@@ -156,7 +210,7 @@ def set_pinned(
     return client.call(
         "toggleChatIsPinned",
         {
-            "chat_list": _chat_list_object("main"),
+            "chat_list": chat_list_object("main"),
             "chat_id": resolve_id(client, chat_ref),
             "is_pinned": pinned,
         },
@@ -215,15 +269,37 @@ def invite_link(
 def members(
     client: TelegramClient, chat_ref: str, *, limit: int = 100, offset: int = 0
 ) -> dict[str, Any]:
-    return client.call(
-        "getSupergroupMembers",
-        {
-            "supergroup_id": resolve_id(client, chat_ref),
-            "filter": {"@type": "supergroupMembersFilterRecent"},
-            "offset": offset,
-            "limit": limit,
-        },
-    )
+    """One bounded page of a group's members, most recently active first.
+
+    getSupergroupMembers takes the supergroup id from the chat's type, not the
+    chat id: -1001234567890 is supergroup 1234567890. Passing the chat id asked
+    for a supergroup that does not exist. A basic group lists its members in
+    its full info instead.
+    """
+    chat = resolve(client, chat_ref)
+    chat_type = chat.get("type") or {}
+    kind = chat_type.get("@type")
+    if kind == "chatTypeSupergroup":
+        return client.call(
+            "getSupergroupMembers",
+            {
+                "supergroup_id": chat_type.get("supergroup_id"),
+                "filter": {"@type": "supergroupMembersFilterRecent"},
+                "offset": offset,
+                "limit": limit,
+            },
+        )
+    if kind == "chatTypeBasicGroup":
+        info = client.call(
+            "getBasicGroupFullInfo", {"basic_group_id": chat_type.get("basic_group_id")}
+        )
+        found = info.get("members") or []
+        return {
+            "@type": "chatMembers",
+            "total_count": len(found),
+            "members": found[offset : offset + limit],
+        }
+    raise ValueError(f"{chat_ref!r} is not a group or channel, so it has no member list.")
 
 
 def iter_all(client: TelegramClient, *, scope: str = "main") -> Iterator[dict[str, Any]]:

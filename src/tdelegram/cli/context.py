@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from tdelegram.auth import (
     ConsoleCredentialProvider,
@@ -21,9 +23,10 @@ from tdelegram.errors import (
     ConfirmationRequired,
     DestructiveConfirmationRequired,
     TelegramError,
-    WriteConfirmationRequired,
 )
 from tdelegram.transport import TdJsonTransport
+
+T = TypeVar("T")
 
 
 @dataclass
@@ -110,30 +113,139 @@ def ensure_login(client: TelegramClient, ctx: Ctx) -> None:
     )
 
 
+def open_profile(ctx: Ctx, client: TelegramClient) -> dict[str, Any]:
+    """Clear the handshake steps stored secrets can clear, and report the state.
+
+    Never prompts. Afterwards TDLib has its parameters and the profile's
+    database is open, whether or not the account is logged in.
+    """
+    profile_dir: Path = getattr(client, "_profile_dir", base_dir(ctx) / "profiles" / ctx.profile)
+    provider = NonInteractiveCredentialProvider(base_dir=getattr(client, "_base_dir", None))
+    return current_state(
+        client,
+        provider,
+        database_directory=str(profile_dir / "tdlib"),
+        files_directory=str(profile_dir / "files"),
+    )
+
+
 def report_auth_state(ctx: Ctx) -> dict[str, Any]:
     """Answer "am I logged in?" using stored secrets only, never a prompt."""
-    client, lock = make_client(ctx, login=False)
-    try:
-        profile_dir: Path = getattr(
-            client, "_profile_dir", base_dir(ctx) / "profiles" / ctx.profile
-        )
-        provider = NonInteractiveCredentialProvider(
-            base_dir=getattr(client, "_base_dir", None)
-        )
-        state = current_state(
-            client,
-            provider,
-            database_directory=str(profile_dir / "tdlib"),
-            files_directory=str(profile_dir / "files"),
-        )
+    with session(ctx, login=False) as client:
+        state = open_profile(ctx, client)
         state["profile"] = ctx.profile
         return state
+
+
+@contextmanager
+def setup_session(ctx: Ctx) -> Iterator[TelegramClient]:
+    """A client with its profile open, logged in or not.
+
+    For what TDLib accepts before authorization -- proxies above all, which
+    someone behind a block needs before a login can reach Telegram at all.
+    """
+    with session(ctx, login=False) as client:
+        state = open_profile(ctx, client)
+        if state.get("@type") == "authorizationStateWaitTdlibParameters":
+            raise RuntimeError(
+                f"Could not open the profile: it needs {state.get('needs')}. "
+                "Export TELEGRAM_API_ID and TELEGRAM_API_HASH, then retry."
+            )
+        yield client
+
+
+def interactive() -> bool:
+    """Whether a human is at a terminal to answer a prompt."""
+    return sys.stdin.isatty()
+
+
+def confirm_destructive(method: str) -> bool:
+    """Ask for the method name to be typed. Only a terminal can answer.
+
+    That is the point of the second layer: `--yes` can be added by a script,
+    a shell alias or an agent, so it is not evidence that a person looked. A
+    destructive call therefore does not complete from a pipe, a cron job or an
+    agent's shell. It is a safeguard against accident, not a sandbox: anything
+    that allocates a pseudo-terminal can type the name as well as a person.
+    """
+    if not interactive():
+        warn(
+            f"{method} is destructive: after --yes it also needs its name typed at an "
+            "interactive terminal, so it cannot run from a script, a pipe or an agent. "
+            "Nothing was done."
+        )
+        return False
+    # The prompt goes to stderr with everything else that is not data. input()
+    # would print it on stdout, into the JSONL stream a caller may be parsing.
+    warn(f"Type {method} to confirm, or anything else to cancel:")
+    if sys.stdin.readline().strip() != method:
+        warn("Not confirmed. Nothing was done.")
+        return False
+    return True
+
+
+@contextmanager
+def session(ctx: Ctx, *, login: bool = True) -> Iterator[TelegramClient]:
+    """A client for this profile, holding its lock until the block ends."""
+    client, lock = make_client(ctx, login=login)
+    try:
+        yield client
     finally:
         try:
             client.close()
         finally:
             if lock is not None:
                 lock.release()
+
+
+def show_preview(exc: ConfirmationRequired) -> None:
+    """Put what a gated call would do on stderr, for a human to judge.
+
+    A request that does not match TDLib's schema is flagged here too, because
+    TDLib would run it with the unmatched fields silently dropped: approving
+    the preview would approve something other than what it shows.
+    """
+    from tdelegram import safety, schema
+
+    body: dict[str, Any] = {
+        "method": exc.method,
+        "verdict": exc.verdict,
+        "reason": safety.reason(exc.method),
+        "preview": exc.preview,
+    }
+    try:
+        problems = schema.validate(exc.preview)
+    except RuntimeError:
+        problems = []
+    if problems:
+        body["schema_problems"] = problems
+    warn(json.dumps({"confirmation_required": body}, indent=2, ensure_ascii=False))
+
+
+def perform(ctx: Ctx, action: Callable[[bool, bool], T]) -> T:
+    """Run `action(allow_write, allow_destructive)` under the CLI's gate rules.
+
+    Without --yes, the first gated call raises: its preview goes to stderr and
+    the command exits 2. With --yes, writes run and a destructive call stops
+    once more for its method name at a terminal; confirmed, the action runs
+    again with both permissions. Whatever it read before the gated call is
+    simply read again -- which is why an action must make its destructive call
+    before any write: a write made first would be made twice.
+
+    A `write` needs --yes. A `destructive` needs --yes *and* its typed name.
+    The name used to be an alternative to --yes rather than an addition, so
+    neither layer was actually required.
+    """
+    try:
+        return action(ctx.yes, False)
+    except ConfirmationRequired as exc:
+        show_preview(exc)
+        if not ctx.yes:
+            warn("Preview only: re-run with --yes to perform.")
+            raise SystemExit(2) from None
+        if isinstance(exc, DestructiveConfirmationRequired) and confirm_destructive(exc.method):
+            return action(True, True)
+        raise SystemExit(2) from None
 
 
 def run_call(
@@ -150,40 +262,15 @@ def run_call(
     registry decides, so forgetting to annotate a command cannot open a
     hole in the gate.
     """
-    own = client is None
-    lock: SessionLock | None = None
-    if own:
-        client, lock = make_client(ctx, login=login)
-        assert client is not None
-    try:
-        assert client is not None
-        try:
-            return client.call(
-                method,
-                params,
-                allow_write=ctx.yes,
-                allow_destructive=ctx.yes,
-            )
-        except (WriteConfirmationRequired, DestructiveConfirmationRequired) as exc:
-            preview = {"preview": exc.preview, "verdict": exc.verdict, "method": method}
-            warn(json.dumps({"confirmation_required": preview}, indent=2))
-            if (
-                isinstance(exc, DestructiveConfirmationRequired)
-                and sys.stdin.isatty()
-                and not ctx.yes
-            ):
-                answer = input("Type the method name to confirm destructive action: ").strip()
-                if answer == method:
-                    return client.call(method, params, allow_write=True, allow_destructive=True)
-            warn("Preview only: re-run with --yes to perform.")
-            raise SystemExit(2) from None
-    finally:
-        if own and client is not None:
-            try:
-                client.close()
-            finally:
-                if lock is not None:
-                    lock.release()
+    if client is not None:
+        active = client
+        return perform(
+            ctx, lambda w, d: active.call(method, params, allow_write=w, allow_destructive=d)
+        )
+    with session(ctx, login=login) as own:
+        return perform(
+            ctx, lambda w, d: own.call(method, params, allow_write=w, allow_destructive=d)
+        )
 
 
 def handle_errors(func: Any) -> Any:

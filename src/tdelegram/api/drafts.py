@@ -11,14 +11,21 @@ from tdelegram.client import TelegramClient
 def set_draft(
     client: TelegramClient, chat_ref: str, text: str, *, allow_write: bool = False
 ) -> dict[str, Any]:
+    """Leave `text` in the chat's input box, for the user to review and send.
+
+    A draft is only visible to the account itself, across its devices, which
+    makes it the natural hand-off for anything an agent composes. The text goes
+    in `content`; the old `input_message_text` field is gone from TDLib, which
+    ignored it and saved an empty draft.
+    """
     return client.call(
         "setChatDraftMessage",
         {
             "chat_id": resolve_id(client, chat_ref),
             "draft_message": {
                 "@type": "draftMessage",
-                "input_message_text": {
-                    "@type": "inputMessageText",
+                "content": {
+                    "@type": "draftMessageContentText",
                     "text": {"@type": "formattedText", "text": text, "entities": []},
                 },
             },

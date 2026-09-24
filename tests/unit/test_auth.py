@@ -49,9 +49,27 @@ def test_wait_tdlib_parameters() -> None:
     assert req["api_id"] == 123
 
 
-def test_wait_encryption_key() -> None:
-    req = _req("authorizationStateWaitEncryptionKey")
-    assert req is not None and req["@type"] == "checkDatabaseEncryptionKey"
+def test_the_database_key_rides_in_the_parameters() -> None:
+    """TDLib dropped WaitEncryptionKey and checkDatabaseEncryptionKey.
+
+    The key is part of setTdlibParameters now, which is the only place a
+    locked database can be opened, so it must travel there.
+    """
+    import base64
+
+    class KeyedProvider(StaticProvider):
+        def get_database_key(self) -> str:
+            return "s3cret"
+
+    req = response_for_state(
+        "authorizationStateWaitTdlibParameters",
+        {},
+        KeyedProvider(),
+        database_directory="/tmp/db",
+        files_directory="/tmp/files",
+    )
+    assert req is not None
+    assert base64.b64decode(req["database_encryption_key"]) == b"s3cret"
 
 
 def test_wait_phone() -> None:

@@ -325,3 +325,26 @@ def test_required_secret_still_fails_loudly_without_a_terminal(
             account="api_hash", env_name="TELEGRAM_API_HASH",
             base_dir=tmp_path, prompt_fn=eof,
         )
+
+
+def test_the_2fa_password_is_used_but_never_saved(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A session outlives the password, so storing it only weakens the second factor.
+
+    Without a keychain -- a container, a headless server -- it used to land in a
+    plain file next to the session it protects.
+    """
+    from tdelegram.auth import ConsoleCredentialProvider
+
+    monkeypatch.delenv("TELEGRAM_PASSWORD", raising=False)
+    monkeypatch.setattr(creds, "os_store_get", lambda service, account: None)
+    stored: list[str] = []
+    monkeypatch.setattr(creds, "os_store_set", lambda s, a, v: stored.append(a) or True)
+    monkeypatch.setattr(creds.sys.stdin, "isatty", lambda: True)
+    provider = ConsoleCredentialProvider(tmp_path, prompt_fn=lambda prompt, secret: "hunter2")
+    assert provider.get_password() == "hunter2"
+    assert "password" not in stored, "the password went to the keychain"
+    assert creds.file_get(tmp_path, "password") is None, "the password went to a file"
+    # Other secrets are still remembered, so a re-run need not ask again.
+    assert provider.get_phone() == "hunter2" and "phone" in stored

@@ -62,6 +62,22 @@ def test_registry_is_reproducible() -> None:
     assert regenerated == _registry(), "methods.json is stale; re-run the generator"
 
 
+def test_request_shapes_are_reproducible() -> None:
+    """schema.json must be exactly what the generator emits from td_api.tl.
+
+    It is what every request is checked against, in tests and in `call`, so a
+    stale copy would pass requests the loaded TDLib silently mangles.
+    """
+    from generate_method_registry import parse_shapes, render_shapes
+
+    path = _schema()
+    if path.suffix != ".tl":
+        pytest.skip("request shapes are generated from td_api.tl only")
+    expected = render_shapes(parse_shapes(path.read_text(encoding="utf-8", errors="replace")))
+    actual = (REPO_ROOT / "src" / "tdelegram" / "schema.json").read_text(encoding="utf-8")
+    assert actual == expected, "schema.json is stale; re-run the generator against td_api.tl"
+
+
 def test_every_entry_is_well_formed() -> None:
     """Runs without a schema: guards the file shape the write gate relies on."""
     registry = _registry()
@@ -97,6 +113,8 @@ MUST_BE_GATED = [
     "checkRecoveryEmailAddressCode",
     "cancelPasswordReset",
     "cancelRecoveryEmailAddressVerification",
+    # star_count spends Telegram Stars on the query.
+    "searchPublicPosts",
 ]
 
 
@@ -117,6 +135,21 @@ def test_reviewed_verdicts_are_pinned() -> None:
         if m in registry and registry[m]["verdict"] != verdict
     ]
     assert not drifted, drifted
+
+
+def test_every_override_names_a_real_function() -> None:
+    """An override for a name TDLib does not have silently does nothing.
+
+    When TDLib renames a method, its reviewed verdict stops applying and the
+    prefix heuristic takes over without a word -- the drift this file exists
+    to catch. The registry holds exactly the schema's functions, so this needs
+    no schema to run.
+    """
+    from generate_method_registry import OVERRIDES
+
+    registry = _registry()
+    dead = sorted(m for m in OVERRIDES if m not in registry)
+    assert not dead, f"overrides for functions TDLib does not have: {dead}"
 
 
 def test_read_prefix_requires_a_word_boundary() -> None:
@@ -147,6 +180,7 @@ MUST_BE_DESTRUCTIVE = [
     "clearAllDraftMessages",
     "unpinAllChatMessages",
     "sendPaymentForm",
+    "searchPublicPosts",
     "leaveChat",
     # Already destructive before the audit; pinned so they stay that way.
     "deleteAccount",

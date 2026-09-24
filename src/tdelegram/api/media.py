@@ -19,65 +19,14 @@ def download(client: TelegramClient, file_id: int, *, timeout: float = 300.0) ->
 def download_message_file(
     client: TelegramClient, chat_ref: str, message_id: int, *, timeout: float = 300.0
 ) -> dict[str, Any]:
+    """Download the file a message carries, whatever kind of media it is."""
     from tdelegram.api.messages import get
 
-    # _message_file_id walks the raw TDLib content, which the normalized
-    # record does not carry.
-    record = get(client, chat_ref, message_id, include_raw=True)
-    file_id = _message_file_id(record.get("raw") or {})
-    if file_id is None:
+    media = get(client, chat_ref, message_id).get("media") or {}
+    file_id = media.get("file_id")
+    if not isinstance(file_id, int):
         raise ValueError(f"Message {message_id} has no downloadable file.")
     return _download(client, file_id, timeout=timeout)
-
-
-def _message_file_id(message: dict[str, Any]) -> int | None:
-    content = message.get("content") or {}
-    for key in (
-        "document",
-        "photo",
-        "audio",
-        "video",
-        "voice_note",
-        "video_note",
-        "animation",
-        "sticker",
-    ):
-        node = content.get(key)
-        found = _deep_file_id(node)
-        if found is not None:
-            return found
-    return _deep_file_id(content)
-
-
-def _deep_file_id(node: Any, depth: int = 0) -> int | None:
-    if depth > 4 or not isinstance(node, dict):
-        return None
-    file_node = node.get("file")
-    if isinstance(file_node, dict) and isinstance(file_node.get("id"), int):
-        return int(file_node["id"])
-    if isinstance(node.get("id"), int) and node.get("@type") == "file":
-        return int(node["id"])
-    # document-style nesting: {document: {id: ...}} or {document: {file: {id}}}
-    for key in ("document", "sticker", "audio", "video", "photo", "animation", "voice_note"):
-        nested = node.get(key)
-        if isinstance(nested, dict):
-            found = _deep_file_id(nested, depth + 1)
-            if found is not None:
-                return found
-    sizes = node.get("sizes")
-    if isinstance(sizes, list) and sizes:
-        try:
-            biggest = max(
-                sizes,
-                key=lambda s: s.get("width", 0) * s.get("height", 0) if isinstance(s, dict) else 0,
-            )
-        except (ValueError, TypeError):
-            biggest = None
-        if isinstance(biggest, dict):
-            photo_file = biggest.get("photo")
-            if isinstance(photo_file, dict) and isinstance(photo_file.get("id"), int):
-                return int(photo_file["id"])
-    return None
 
 
 def upload(
@@ -87,8 +36,10 @@ def upload(
     *,
     caption: str = "",
     wait: bool = False,
+    allow_write: bool = False,
 ) -> dict[str, Any]:
-    pending = _send_file(client, resolve_id(client, chat_ref), path, caption=caption)
+    chat_id = resolve_id(client, chat_ref)
+    pending = _send_file(client, chat_id, path, caption=caption, allow_write=allow_write)
     if not wait:
         return {
             "status": "pending",
@@ -96,7 +47,18 @@ def upload(
             "note": "delivery not confirmed; pass wait=True",
         }
     mid = (pending.get("message") or pending).get("id", 0)
-    return wait_for_send(client, int(mid or 0), resolve_id(client, chat_ref))
+    return wait_for_send(client, int(mid or 0), chat_id)
+
+
+def local_file(path: str | Path) -> dict[str, Any]:
+    """An InputFile for a path on this machine.
+
+    TDLib wraps it once more per media kind, in an input object that also
+    carries the thumbnail and dimensions: inputMessagePhoto takes an
+    inputPhoto, not an InputFile. The bare file is what older TDLib wanted,
+    and the pinned one refuses every media send built that way.
+    """
+    return {"@type": "inputFileLocal", "path": str(Path(path).expanduser())}
 
 
 def send_photo(
@@ -113,7 +75,7 @@ def send_photo(
             "chat_id": resolve_id(client, chat_ref),
             "input_message_content": {
                 "@type": "inputMessagePhoto",
-                "photo": {"@type": "inputFileLocal", "path": str(path)},
+                "photo": {"@type": "inputPhoto", "photo": local_file(path)},
                 "caption": {"@type": "formattedText", "text": caption, "entities": []},
             },
         },
@@ -135,7 +97,7 @@ def send_video(
             "chat_id": resolve_id(client, chat_ref),
             "input_message_content": {
                 "@type": "inputMessageVideo",
-                "video": {"@type": "inputFileLocal", "path": str(path)},
+                "video": {"@type": "inputVideo", "video": local_file(path)},
                 "caption": {"@type": "formattedText", "text": caption, "entities": []},
             },
         },
@@ -157,7 +119,7 @@ def send_voice(
             "chat_id": resolve_id(client, chat_ref),
             "input_message_content": {
                 "@type": "inputMessageVoiceNote",
-                "voice_note": {"@type": "inputFileLocal", "path": str(path)},
+                "voice_note": {"@type": "inputVoiceNote", "voice_note": local_file(path)},
                 "caption": {"@type": "formattedText", "text": caption, "entities": []},
             },
         },
@@ -174,8 +136,67 @@ def send_sticker(
             "chat_id": resolve_id(client, chat_ref),
             "input_message_content": {
                 "@type": "inputMessageSticker",
-                "sticker": {"@type": "inputFileRemote", "id": sticker_file_id},
+                # A numeric file id is a local one; inputFileRemote takes the
+                # string remote id.
+                "sticker": {
+                    "@type": "inputSticker",
+                    "sticker": {"@type": "inputFileId", "id": sticker_file_id},
+                },
             },
         },
         allow_write=allow_write,
     )
+
+
+def transcribe(
+    client: TelegramClient,
+    chat_ref: str,
+    message_id: int,
+    *,
+    allow_write: bool = False,
+    timeout: float = 60.0,
+) -> dict[str, Any]:
+    """The words of a voice or video message.
+
+    A transcript anyone has already asked for is kept on the message and comes
+    back free. Otherwise recognizeSpeech is a write: Telegram counts it against
+    the account's quota -- a few a week without Premium -- and the text arrives
+    later, as an update, which this waits for.
+    """
+    import time
+
+    from tdelegram.api.messages import get
+    from tdelegram.errors import TelegramError, TelegramTimeoutError
+
+    chat_id = resolve_id(client, chat_ref)
+    media = get(client, str(chat_id), message_id).get("media") or {}
+    if media.get("kind") not in ("voice_note", "video_note"):
+        raise ValueError(f"Message {message_id} is not a voice or video message.")
+    found = {"chat_id": chat_id, "message_id": message_id}
+    if media.get("transcript") is not None:
+        return {**found, "transcript": media["transcript"], "cached": True}
+    client.call(
+        "recognizeSpeech", {"chat_id": chat_id, "message_id": message_id}, allow_write=allow_write
+    )
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        event = client.next_update(timeout=0.5)
+        if not event or event.get("@type") != "updateMessageContent":
+            continue
+        if event.get("chat_id") != chat_id or event.get("message_id") != message_id:
+            continue
+        content = event.get("new_content") or {}
+        holder = content.get("voice_note") or content.get("video_note") or {}
+        result = holder.get("speech_recognition_result") or {}
+        if result.get("@type") == "speechRecognitionResultText":
+            trial = client.latest_update("updateSpeechRecognitionTrial") or {}
+            left = trial.get("left_count")
+            return {**found, "transcript": result.get("text"), "cached": False, "free_left": left}
+        if result.get("@type") == "speechRecognitionResultError":
+            error = result.get("error") or {}
+            raise TelegramError(
+                int(error.get("code") or 400),
+                str(error.get("message") or "speech recognition failed"),
+                "recognizeSpeech",
+            )
+    raise TelegramTimeoutError(f"No transcript arrived within {timeout:g}s.")

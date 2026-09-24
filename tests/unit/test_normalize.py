@@ -36,16 +36,158 @@ def test_message_record_links_and_entities() -> None:
     assert "raw" not in record
 
 
-def test_chat_record_username_fallback() -> None:
+def test_chat_record_takes_names_and_counts_from_the_detail() -> None:
     from tdelegram import normalize
 
-    chat = {
-        "id": 5,
-        "title": "t",
+    chat = {"id": 5, "title": "t", "type": {"@type": "chatTypeSupergroup", "supergroup_id": 5}}
+    supergroup = {
+        "@type": "supergroup",
         "usernames": {"active_usernames": ["durov"]},
-        "type": {"@type": "chatTypeSupergroup"},
+        "member_count": 0,
+        "is_forum": False,
     }
-    assert normalize.chat_record(chat)["username"] == "durov"
+    record = normalize.chat_record(chat, detail=supergroup)
+    assert record["username"] == "durov"
+    assert record["member_count"] is None, "0 means unknown for a supergroup, not empty"
+    bare = normalize.chat_record(chat)
+    assert bare["username"] is None and bare["usernames"] == []
+
+
+def _message(**fields: object) -> dict:
+    base: dict = {"@type": "message", "id": 9, "chat_id": -100, "date": 1700000000}
+    base.update(fields)
+    return base
+
+
+def test_media_records_carry_the_file_id_download_needs() -> None:
+    """Regression: records had no file id, so `media download` had nothing to take."""
+    from tdelegram import normalize
+
+    photo = _message(
+        content={
+            "@type": "messagePhoto",
+            "photo": {
+                "sizes": [
+                    {"type": "s", "width": 90, "height": 90, "photo": {"id": 1, "size": 900}},
+                    {"type": "y", "width": 1280, "height": 960, "photo": {"id": 2, "size": 90000}},
+                ]
+            },
+            "caption": {"text": "sunset"},
+        }
+    )
+    media = normalize.message_record(photo)["media"]
+    assert media == {"kind": "photo", "file_id": 2, "size": 90000, "width": 1280, "height": 960}
+
+    document = _message(
+        content={
+            "@type": "messageDocument",
+            "document": {
+                "file_name": "cv.pdf",
+                "mime_type": "application/pdf",
+                "document": {"id": 7, "size": 0, "expected_size": 1234},
+            },
+        }
+    )
+    record = normalize.message_record(document)
+    assert record["media"]["file_id"] == 7 and record["media"]["size"] == 1234
+    assert record["file_name"] == "cv.pdf", "the old top-level field still works"
+
+
+def test_a_voice_note_file_is_found_and_its_transcript_kept() -> None:
+    """A voice note keeps its file under `voice`, which the old walk never looked at."""
+    from tdelegram import normalize
+
+    voice = _message(
+        content={
+            "@type": "messageVoiceNote",
+            "voice_note": {
+                "duration": 14,
+                "mime_type": "audio/ogg",
+                "voice": {"id": 31, "size": 2048},
+                "speech_recognition_result": {
+                    "@type": "speechRecognitionResultText",
+                    "text": "running ten minutes late",
+                },
+            },
+        }
+    )
+    media = normalize.message_record(voice)["media"]
+    assert media["kind"] == "voice_note" and media["file_id"] == 31
+    assert media["transcript"] == "running ten minutes late"
+
+
+def test_engagement_and_provenance_for_research() -> None:
+    from tdelegram import normalize
+
+    post = _message(
+        is_channel_post=True,
+        edit_date=1700000500,
+        media_album_id="6012345678",
+        author_signature="Desk",
+        interaction_info={
+            "view_count": 15000,
+            "forward_count": 42,
+            "reply_info": {"reply_count": 7},
+            "reactions": {
+                "reactions": [
+                    {"type": {"@type": "reactionTypeEmoji", "emoji": "👍"}, "total_count": 90},
+                    {"type": {"@type": "reactionTypeCustomEmoji", "custom_emoji_id": "55"},
+                     "total_count": 3},
+                    {"type": {"@type": "reactionTypePaid"}, "total_count": 1},
+                ]
+            },
+        },
+        forward_info={
+            "date": 1690000000,
+            "origin": {"@type": "messageOriginChannel", "chat_id": -1009, "message_id": 77},
+        },
+        content={"@type": "messageText", "text": {"text": "news"}},
+    )
+    record = normalize.message_record(post)
+    assert (record["views"], record["forwards"], record["replies"]) == (15000, 42, 7)
+    assert record["reactions"] == [
+        {"reaction": "👍", "count": 90},
+        {"reaction": "custom:55", "count": 3},
+        {"reaction": "paid", "count": 1},
+    ]
+    origin = record["forwarded_from"]
+    assert origin["type"] == "channel" and origin["message_id"] == 77
+    assert origin["date"].startswith("2023-")
+    assert record["album_id"] == "6012345678" and record["author_signature"] == "Desk"
+    assert record["edit_date"] is not None
+    plain = normalize.message_record(_message(content={"@type": "messageText"}))
+    assert plain["views"] is None and plain["reactions"] == [] and plain["album_id"] is None
+
+
+def test_inline_buttons_are_listed() -> None:
+    from tdelegram import normalize
+
+    message = _message(
+        reply_markup={
+            "@type": "replyMarkupInlineKeyboard",
+            "rows": [
+                [
+                    {"text": "Yes", "type": {"@type": "inlineKeyboardButtonTypeCallback",
+                                             "data": "eWVz"}},
+                    {"text": "Site", "type": {"@type": "inlineKeyboardButtonTypeUrl",
+                                              "url": "https://example.org"}},
+                ]
+            ],
+        }
+    )
+    assert normalize.message_record(message)["buttons"] == [
+        {"text": "Yes", "type": "callback"},
+        {"text": "Site", "type": "url", "url": "https://example.org"},
+    ]
+
+
+def test_display_names() -> None:
+    from tdelegram import normalize
+
+    assert normalize.display_name({"first_name": "Ada", "last_name": "Lovelace"}) == "Ada Lovelace"
+    assert normalize.display_name({"usernames": {"active_usernames": ["ada"]}}) == "@ada"
+    assert normalize.display_name({"type": {"@type": "userTypeDeleted"}}) == "Deleted Account"
+    assert normalize.display_name({}) is None
 
 
 def test_parse_entities_via_execute() -> None:

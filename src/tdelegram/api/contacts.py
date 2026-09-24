@@ -2,13 +2,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import Any
 
 from tdelegram.client import TelegramClient
 
 
 def list_contacts(client: TelegramClient) -> dict[str, Any]:
+    """TDLib's answer as it is: a count and the contacts' user ids."""
     return client.call("getContacts", {})
+
+
+def iter_contacts(client: TelegramClient) -> Iterator[dict[str, Any]]:
+    """The account's contacts as user records -- names and usernames, not bare ids."""
+    from tdelegram.api.users import get_user
+
+    for user_id in list_contacts(client).get("user_ids") or []:
+        yield get_user(client, int(user_id))
 
 
 def add_contact(
@@ -22,13 +32,14 @@ def add_contact(
     return client.call(
         "addContact",
         {
+            "user_id": user_id,
             "contact": {
-                "@type": "contact",
+                "@type": "importedContact",
                 "phone_number": "",
                 "first_name": first_name,
                 "last_name": last_name,
-                "user_id": user_id,
-            }
+            },
+            "share_phone_number": False,
         },
         allow_write=allow_write,
     )
@@ -41,13 +52,7 @@ def import_contacts(
         "importContacts",
         {
             "contacts": [
-                {
-                    "@type": "contact",
-                    "phone_number": p,
-                    "first_name": p,
-                    "last_name": "",
-                    "user_id": 0,
-                }
+                {"@type": "importedContact", "phone_number": p, "first_name": p, "last_name": ""}
                 for p in phones
             ]
         },

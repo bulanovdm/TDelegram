@@ -1,10 +1,13 @@
 # Recipes
 
-Worked tasks. Every command here is read-only, so all of it is safe to run
-without asking anyone.
+Worked tasks. Almost every command here is read-only and safe to run without
+asking anyone. The two that are not — `draft set` and `msg transcribe` — are
+marked **write**: run them without `--yes` first, show the user the preview,
+and add `--yes` only once they approve that specific action.
 
 ## Contents
 
+- [Triage an inbox](#triage-an-inbox)
 - [Narrow before you read](#narrow-before-you-read)
 - [Everything one person posted](#everything-one-person-posted)
 - [Quote a message verbatim](#quote-a-message-verbatim)
@@ -12,7 +15,33 @@ without asking anyone.
 - [Page a large history](#page-a-large-history)
 - [Watch for new messages](#watch-for-new-messages)
 - [Download a file](#download-a-file)
+- [Back up a chat](#back-up-a-chat)
+- [Reading aloud, and voice messages](#reading-aloud-and-voice-messages)
 - [Shaping output for a report](#shaping-output-for-a-report)
+
+## Triage an inbox
+
+```bash
+tdelegram chat list --unread --limit 30 2>/dev/null \
+  | jq -r '[.unread_count, .unread_mention_count, .title] | @tsv'
+tdelegram inbox --chats 10 --per-chat 15 2>/dev/null \
+  | jq -r '[.chat_title, .sender_name, (.text | split("\n")[0])] | @tsv'
+```
+
+`inbox` marks nothing read, so senders see no read receipt until the user
+actually opens the chat. `--per-chat` keeps the newest messages; each record's
+`chat_unread_count` says how many there were in all, so a summary can say what
+it skipped.
+
+When a message calls for an answer, write it as a draft rather than sending it.
+A draft is visible only to the account itself, in that chat's input box on
+every device, so the user reads it and presses send:
+
+```bash
+# write: preview first, and --yes only once the user approves this draft
+tdelegram draft set --chat someone --text "Yes, 8 works."          # previews
+tdelegram --yes draft set --chat someone --text "Yes, 8 works."    # after approval
+```
 
 ## Narrow before you read
 
@@ -109,25 +138,74 @@ together.
 
 ## Watch for new messages
 
-`updates follow` streams until interrupted. Always bound it, or you will hang.
+`watch` streams new messages as records. Always bound it — `--for`, `--count`
+or `head` — or it runs until killed.
 
 ```bash
-tdelegram updates follow --types updateNewMessage 2>/dev/null | head -20
+tdelegram watch --chat cyprusithr --contains kubernetes --for 1h 2>/dev/null \
+  | jq -r '[.date, .sender_name, (.text | split("\n")[0])] | @tsv'
 ```
+
+`--contains` matches when any of its words appear; `--match` takes a regular
+expression. The raw stream is still there as `updates follow --types ...`.
 
 Filter by `@type` rather than reading everything — an idle account still emits a
 steady trickle of `updateUserStatus` and friends.
 
 ## Download a file
 
-`file_id` comes from the message record. `media download` writes to local disk
-and makes no remote change, which is why it is a read.
+`file_id` comes from the message record's `media`. `media download` writes to
+local disk and makes no remote change, which is why it is a read.
 
 ```bash
 tdelegram chat history --chat somechat --limit 20 2>/dev/null \
-  | jq -r 'select(.file_name != null) | [.message_id, .file_name] | @tsv'
+  | jq -r 'select(.media != null) | [.message_id, .media.kind, .media.file_id, .media.file_name] | @tsv'
 
 tdelegram media download 12345 2>/dev/null | jq -r '.path'
+```
+
+## Back up a chat
+
+```bash
+tdelegram chat export --chat somechannel --out ~/backups/somechannel --media
+# {"written":5123,"exported":5123,"complete":true,"media_saved":812,...}
+
+# Later: only what is new is fetched.
+tdelegram chat export --chat somechannel --out ~/backups/somechannel --media
+
+# In date order, and as CSV for a spreadsheet:
+jq -s 'sort_by(.message_id)[]' ~/backups/somechannel/messages.jsonl \
+  | jq -r '[.date, .sender_name, .views, .text] | @csv' > somechannel.csv
+```
+
+A long history is rate-limited, and reads back off on their own. Stopping it —
+Ctrl-C, or `--limit 2000` per run — costs nothing: the next run resumes where
+it stopped. Only a hard kill between checkpoints can repeat records, at most a
+hundred; dedupe on `message_id` if one did. Media a
+chat protects from saving are skipped with a note in the record, not
+downloaded. Under Docker, `--out` must be inside a mounted directory (`/work`
+in the alias), or the export stays in the container.
+
+## Reading aloud, and voice messages
+
+`--format text` turns records into plain lines — time, sender, chat, then the
+text, with media described in words — which a screen reader takes in order
+without reading out JSON punctuation:
+
+```bash
+tdelegram --format text inbox
+# 2026-09-24 14:02, Ada in Friends: dinner?
+# 2026-09-24 14:05, Ada in Friends: [voice message, 14 seconds] transcript: "running late"
+```
+
+A voice message someone has already transcribed carries its transcript in the
+record. For one that has not been, `msg transcribe` asks Telegram — a write,
+since it spends the account's quota:
+
+```bash
+# write: it spends the account's quota, so preview first and ask
+tdelegram msg transcribe --chat someone --id 8812          # previews, unless already transcribed
+tdelegram --yes msg transcribe --chat someone --id 8812    # after approval
 ```
 
 ## Shaping output for a report
@@ -140,7 +218,15 @@ tdelegram --output /tmp/week.jsonl \
   chat history --chat cyprusithr --since 7d --limit 200 2>/dev/null
 
 # Busiest senders
-jq -r '.sender_id.user_id // "unknown"' /tmp/week.jsonl | sort | uniq -c | sort -rn | head
+jq -r '.sender_name // "unknown"' /tmp/week.jsonl | sort | uniq -c | sort -rn | head
+
+# A channel's most-viewed and most-forwarded posts
+jq -r 'select(.views != null) | [.views, .forwards, .message_id, (.text | .[0:60])] | @tsv' \
+  /tmp/week.jsonl | sort -rn | head
+
+# Where forwarded posts came from
+jq -r 'select(.forwarded_from != null) | .forwarded_from.chat_id // .forwarded_from.name' \
+  /tmp/week.jsonl | sort | uniq -c | sort -rn
 
 # Per-day counts
 jq -r '.date[0:10]' /tmp/week.jsonl | sort | uniq -c

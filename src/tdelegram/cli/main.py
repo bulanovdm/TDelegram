@@ -3,30 +3,78 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from typing import Any
 
 import typer
+from typer.core import TyperGroup
 
 from tdelegram import safety
-from tdelegram.cli.context import Ctx, handle_errors, make_client, run_call
-from tdelegram.cli.output import emit, emit_many, warn
+from tdelegram.cli.context import (
+    Ctx,
+    handle_errors,
+    perform,
+    run_call,
+    session,
+    setup_session,
+    show_preview,
+)
+from tdelegram.cli.output import FORMATS, emit, emit_many, warn
 
-app = typer.Typer(no_args_is_help=True, help="TDelegram: a TDLib-backed Telegram client")
+GLOBAL_FLAGS = frozenset(
+    {"--yes", "--profile", "--session-dir", "--format", "--output", "--verbose", "--no-retry"}
+)
+
+
+class _Root(TyperGroup):
+    """The top-level group, which says where a global flag goes when one is late.
+
+    `--yes` is only read before the command. Accepting it anywhere would make a
+    message text of "--yes" a grant of permission, so the parser stays strict and
+    the error says what to do instead of just "No such option".
+    """
+
+    def invoke(self, ctx: Any) -> Any:
+        try:
+            return super().invoke(ctx)
+        except Exception as exc:
+            # Matched by name: Typer vendors Click in newer releases and
+            # imports it in older ones, so the class lives in either place.
+            flag = getattr(exc, "option_name", None)
+            if type(exc).__name__ == "NoSuchOption" and flag in GLOBAL_FLAGS:
+                command = getattr(ctx, "invoked_subcommand", None) or "..."
+                exc.message = (  # type: ignore[attr-defined]
+                    f"{flag} is a global option and goes before the command: "
+                    f"tdelegram {flag} {command} ..."
+                )
+            raise
+
+
+app = typer.Typer(
+    cls=_Root, no_args_is_help=True, help="TDelegram: a TDLib-backed Telegram client"
+)
 _state: Ctx = Ctx()
+
+# Telegram chat ids for groups and channels are negative, and a bare -100...
+# is otherwise parsed as a cluster of short options. Every command taking a
+# positional chat or user reference needs this.
+REF_ARGS = {"ignore_unknown_options": True}
 
 
 @app.callback()
 def _global(
     profile: str = typer.Option("default", "--profile", help="Profile name under ~/.tdelegram/"),
     session_dir: str = typer.Option("", "--session-dir", help="Session directory override"),
-    fmt: str = typer.Option("jsonl", "--format", help="Output format: jsonl|json|table"),
+    fmt: str = typer.Option(
+        "jsonl", "--format", help="jsonl|json|table|text (text: plain lines, for reading aloud)"
+    ),
     output: str | None = typer.Option(None, "--output", help="Write output to file"),
     yes: bool = typer.Option(False, "--yes", help="Perform mutating operations"),
     verbose: bool = typer.Option(False, "--verbose", help="Verbose diagnostics on stderr"),
     no_retry: bool = typer.Option(False, "--no-retry", help="Disable FloodWait auto-retry"),
 ) -> None:
-    if fmt not in ("jsonl", "json", "table"):
-        raise typer.BadParameter("--format must be jsonl|json|table")
+    if fmt not in FORMATS:
+        raise typer.BadParameter(f"--format must be {'|'.join(FORMATS)}")
     _state.profile = profile
     _state.session_dir = session_dir
     _state.fmt = fmt
@@ -40,8 +88,12 @@ def _ctx() -> Ctx:
     return _state
 
 
-def _client_and_lock() -> tuple[Any, Any]:
-    return make_client(_ctx())
+def _emit(record: dict[str, Any]) -> None:
+    emit(record, fmt=_ctx().fmt, out=_ctx().output)
+
+
+def _emit_many(records: Iterable[dict[str, Any]]) -> None:
+    emit_many(records, fmt=_ctx().fmt, out=_ctx().output)
 
 
 # -- auth ---------------------------------------------------------------
@@ -54,21 +106,16 @@ app.add_typer(auth_app, name="auth")
 def auth_login() -> None:
     from tdelegram.cli.context import ensure_login
 
-    client, lock = _client_and_lock()
-    try:
+    with session(_ctx(), login=False) as client:
         ensure_login(client, _ctx())
-        emit({"ok": True, "profile": _ctx().profile}, fmt=_ctx().fmt, out=_ctx().output)
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
+        _emit({"ok": True, "profile": _ctx().profile})
 
 
 @auth_app.command("logout")
 @handle_errors
 def auth_logout() -> None:
     run_call(_ctx(), "logOut", {})
-    emit({"ok": True}, fmt=_ctx().fmt, out=_ctx().output)
+    _emit({"ok": True})
 
 
 @auth_app.command("status")
@@ -77,7 +124,7 @@ def auth_status() -> None:
     """Report whether this profile is logged in, without prompting."""
     from tdelegram.cli.context import report_auth_state
 
-    emit(report_auth_state(_ctx()), fmt=_ctx().fmt, out=_ctx().output)
+    _emit(report_auth_state(_ctx()))
 
 
 # -- account ------------------------------------------------------------
@@ -88,13 +135,13 @@ app.add_typer(account_app, name="account")
 @account_app.command("info")
 @handle_errors
 def account_info() -> None:
-    emit(run_call(_ctx(), "getMe", {}), fmt=_ctx().fmt, out=_ctx().output)
+    _emit(run_call(_ctx(), "getMe", {}))
 
 
 @account_app.command("sessions")
 @handle_errors
 def account_sessions() -> None:
-    emit(run_call(_ctx(), "getActiveSessions", {}), fmt=_ctx().fmt, out=_ctx().output)
+    _emit(run_call(_ctx(), "getActiveSessions", {}))
 
 
 # -- chat ---------------------------------------------------------------
@@ -107,56 +154,30 @@ app.add_typer(chat_app, name="chat")
 def chat_list(
     scope: str = typer.Option("main", help="main|archive|all"),
     limit: int | None = typer.Option(None, help="Max chats"),
+    unread: bool = typer.Option(False, "--unread", help="Only chats with unread messages"),
 ) -> None:
     from tdelegram.api import chats
 
-    client, lock = _client_and_lock()
-    try:
-        emit_many(
-            chats.iter_list(client, scope=scope, maximum=limit), fmt=_ctx().fmt, out=_ctx().output
-        )
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
+    with session(_ctx()) as client:
+        _emit_many(chats.iter_list(client, scope=scope, maximum=limit, unread_only=unread))
 
 
-@chat_app.command(
-    "info",
-    # Telegram chat ids for groups and channels are negative, and a
-    # bare -100... is otherwise parsed as a cluster of short options.
-    context_settings={"ignore_unknown_options": True},
-)
+@chat_app.command("info", context_settings=REF_ARGS)
 @handle_errors
 def chat_info(chat: str = typer.Argument(...)) -> None:
     from tdelegram.api import chats
 
-    client, lock = _client_and_lock()
-    try:
-        emit(chats.info(client, chat), fmt=_ctx().fmt, out=_ctx().output)
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
+    with session(_ctx()) as client:
+        _emit(chats.info(client, chat))
 
 
-@chat_app.command(
-    "resolve",
-    # Telegram chat ids for groups and channels are negative, and a
-    # bare -100... is otherwise parsed as a cluster of short options.
-    context_settings={"ignore_unknown_options": True},
-)
+@chat_app.command("resolve", context_settings=REF_ARGS)
 @handle_errors
 def chat_resolve(chat: str = typer.Argument(...)) -> None:
     from tdelegram.api import chats
 
-    client, lock = _client_and_lock()
-    try:
-        emit(chats.resolve(client, chat), fmt=_ctx().fmt, out=_ctx().output)
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
+    with session(_ctx()) as client:
+        _emit(chats.resolve(client, chat))
 
 
 @chat_app.command("history")
@@ -172,9 +193,8 @@ def chat_history(
 ) -> None:
     from tdelegram.api import messages
 
-    client, lock = _client_and_lock()
-    try:
-        emit_many(
+    with session(_ctx()) as client:
+        _emit_many(
             messages.iter_history(
                 client,
                 chat,
@@ -184,14 +204,8 @@ def chat_history(
                 sender_id=sender,
                 topic_id=topic,
                 contains=[contains] if contains else None,
-            ),
-            fmt=_ctx().fmt,
-            out=_ctx().output,
+            )
         )
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
 
 
 @chat_app.command("search")
@@ -200,98 +214,104 @@ def chat_search(
     chat: str = typer.Option(..., "--chat"),
     query: str = typer.Option(..., "--query"),
     limit: int = typer.Option(20, "--limit"),
+    sender: int | None = typer.Option(None, "--sender", help="Only this user's messages"),
 ) -> None:
-    client, lock = _client_and_lock()
-    try:
-        result = client.call(
-            "searchChatMessages",
-            {"chat_id": _resolve(client, chat), "query": query, "limit": limit},
+    """Server-side search in one chat; records shaped like `chat history`."""
+    from tdelegram.api import search as search_api
+
+    with session(_ctx()) as client:
+        _emit_many(
+            search_api.iter_chat_search(client, chat, query, sender_id=sender, maximum=limit)
         )
-        for message in result.get("messages", []):
-            emit(message, fmt=_ctx().fmt, out=_ctx().output)
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
 
 
-def _resolve(client: Any, ref: str) -> int:
-    from tdelegram.api import chats
+@chat_app.command("export")
+@handle_errors
+def chat_export(
+    chat: str = typer.Option(..., "--chat"),
+    out: str = typer.Option(..., "--out", help="Export directory; running again resumes it"),
+    since: str | None = typer.Option(None, "--since", help="Go back no further than 7d, ISO..."),
+    media: bool = typer.Option(False, "--media", help="Also save each message's file"),
+    limit: int | None = typer.Option(
+        None, "--limit", help="Stop after this many messages; the next run carries on"
+    ),
+) -> None:
+    """Export a chat to OUT/messages.jsonl, resumably; only what is missing is fetched.
 
-    return chats.resolve_id(client, ref)
-
-
-
-def _run_with_chats(
-    method: str, params: dict[str, Any], chat_fields: dict[str, str]
-) -> dict[str, Any]:
-    """Resolve chat references, then run the call through the gate.
-
-    These commands used to pass `--chat` straight into `chat_id`, which only
-    worked for a numeric id: TDLib answers a username with "Can't parse as an
-    integer string". Resolution and the call share one client so the profile
-    lock is taken once.
+    Re-run it to pick up new messages, or to finish an export that was stopped.
+    Media are saved to OUT/media only where the chat allows saving them.
     """
-    client, lock = _client_and_lock()
-    try:
-        resolved = dict(params)
-        for field, ref in chat_fields.items():
-            resolved[field] = _resolve(client, ref)
-        return run_call(_ctx(), method, resolved, client=client)
-    finally:
-        try:
-            client.close()
-        finally:
-            if lock is not None:
-                lock.release()
+    from tdelegram.api import export
+
+    with session(_ctx()) as client:
+        _emit(export.export_chat(client, chat, out, since=since, media=media, maximum=limit))
 
 
-@chat_app.command(
-    "create",
-    # Telegram chat ids for groups and channels are negative, and a
-    # bare -100... is otherwise parsed as a cluster of short options.
-    context_settings={"ignore_unknown_options": True},
-)
+@chat_app.command("create", context_settings=REF_ARGS)
 @handle_errors
 def chat_create(title: str = typer.Argument(...)) -> None:
-    result = run_call(_ctx(), "createNewSupergroupChat", {"title": title})
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import chats
+
+    with session(_ctx()) as client:
+        _emit(perform(_ctx(), lambda w, d: chats.create_supergroup(client, title, allow_write=w)))
 
 
-@chat_app.command(
-    "join",
-    # Telegram chat ids for groups and channels are negative, and a
-    # bare -100... is otherwise parsed as a cluster of short options.
-    context_settings={"ignore_unknown_options": True},
-)
+@chat_app.command("join", context_settings=REF_ARGS)
 @handle_errors
 def chat_join(chat: str = typer.Argument(...)) -> None:
-    result = _run_with_chats("joinChat", {}, {"chat_id": chat})
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import chats
+
+    with session(_ctx()) as client:
+        _emit(perform(_ctx(), lambda w, d: chats.join(client, chat, allow_write=w)))
 
 
-@chat_app.command(
-    "leave",
-    # Telegram chat ids for groups and channels are negative, and a
-    # bare -100... is otherwise parsed as a cluster of short options.
-    context_settings={"ignore_unknown_options": True},
-)
+@chat_app.command("leave", context_settings=REF_ARGS)
 @handle_errors
 def chat_leave(chat: str = typer.Argument(...)) -> None:
-    result = _run_with_chats("leaveChat", {}, {"chat_id": chat})
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import chats
+
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: chats.leave(client, chat, allow_write=w, allow_destructive=d),
+            )
+        )
 
 
-@chat_app.command(
-    "members",
-    # Telegram chat ids for groups and channels are negative, and a
-    # bare -100... is otherwise parsed as a cluster of short options.
-    context_settings={"ignore_unknown_options": True},
-)
+@chat_app.command("members", context_settings=REF_ARGS)
 @handle_errors
 def chat_members(chat: str = typer.Argument(...), limit: int = typer.Option(100)) -> None:
-    result = run_call(_ctx(), "getSupergroupMembers", {"supergroup_id": chat, "limit": limit})
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import chats
+
+    with session(_ctx()) as client:
+        _emit(chats.members(client, chat, limit=limit))
+
+
+@app.command("inbox")
+@handle_errors
+def inbox(
+    chats: int = typer.Option(20, "--chats", help="At most this many unread chats"),
+    per_chat: int = typer.Option(
+        20, "--per-chat", help="At most this many messages from each; the newest are kept"
+    ),
+    scope: str = typer.Option("main", "--scope", help="main|archive|all"),
+    include_muted: bool = typer.Option(
+        False, "--include-muted", help="Muted chats too (they appear anyway if they mention you)"
+    ),
+) -> None:
+    """Unread messages across chats, oldest first within each. Marks nothing read.
+
+    For "what did I miss": nothing here tells a sender their message was seen.
+    """
+    from tdelegram.api import inbox as inbox_api
+
+    with session(_ctx()) as client:
+        _emit_many(
+            inbox_api.iter_unread(
+                client, scope=scope, chats=chats, per_chat=per_chat, include_muted=include_muted
+            )
+        )
 
 
 # -- msg ----------------------------------------------------------------
@@ -306,30 +326,33 @@ def msg_send(
     text: str = typer.Option(..., "--text"),
     parse_mode: str | None = typer.Option(None, "--parse-mode"),
     reply_to: int | None = typer.Option(None, "--reply-to"),
+    topic: int | None = typer.Option(None, "--topic", help="Forum topic to post in"),
+    silent: bool = typer.Option(False, "--silent", help="Deliver without a notification"),
+    schedule: str | None = typer.Option(
+        None, "--schedule", help="Send later: 30m, 2h, 1d from now, or ISO-8601"
+    ),
 ) -> None:
     from tdelegram.api import messages
+    from tdelegram.dates import parse_future
 
-    client, lock = _client_and_lock()
-    try:
-        emit(
-            messages.send(
-                client, chat, text, parse_mode=parse_mode, reply_to=reply_to, allow_write=_ctx().yes
-            ),
-            fmt=_ctx().fmt,
-            out=_ctx().output,
+    schedule_date = parse_future(schedule) if schedule else None
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: messages.send(
+                    client,
+                    chat,
+                    text,
+                    parse_mode=parse_mode,
+                    reply_to=reply_to,
+                    topic_id=topic,
+                    silent=silent,
+                    schedule_date=schedule_date,
+                    allow_write=w,
+                ),
+            )
         )
-    except Exception as exc:
-        from tdelegram.errors import ConfirmationRequired as _CR
-
-        if isinstance(exc, _CR):
-            warn(json.dumps({"preview": exc.preview, "verdict": exc.verdict}, indent=2))
-            warn("Preview only: re-run with --yes to perform.")
-            raise SystemExit(2) from None
-        raise
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
 
 
 @msg_app.command("get")
@@ -339,13 +362,8 @@ def msg_get(
 ) -> None:
     from tdelegram.api import messages
 
-    client, lock = _client_and_lock()
-    try:
-        emit(messages.get(client, chat, message_id), fmt=_ctx().fmt, out=_ctx().output)
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
+    with session(_ctx()) as client:
+        _emit(messages.get(client, chat, message_id))
 
 
 @msg_app.command("edit")
@@ -354,23 +372,101 @@ def msg_edit(
     chat: str = typer.Option(..., "--chat"),
     message_id: int = typer.Option(..., "--id"),
     text: str = typer.Option(..., "--text"),
+    parse_mode: str | None = typer.Option(None, "--parse-mode"),
 ) -> None:
-    result = _run_with_chats(
-        "editMessageText", {"message_id": message_id, "text": text}, {"chat_id": chat}
-    )
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import messages
+
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: messages.edit(
+                    client, chat, message_id, text, parse_mode=parse_mode, allow_write=w
+                ),
+            )
+        )
 
 
 @msg_app.command("delete")
 @handle_errors
 def msg_delete(
     chat: str = typer.Option(..., "--chat"),
-    message_id: int = typer.Option(..., "--id"),
+    message_ids: list[int] = typer.Option(..., "--id", help="Repeat for several messages"),
+    only_for_me: bool = typer.Option(
+        False, "--only-for-me", help="Keep them for the other side of a private chat"
+    ),
 ) -> None:
-    result = _run_with_chats(
-        "deleteMessages", {"message_ids": [message_id]}, {"chat_id": chat}
-    )
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    """Delete messages for everyone, unless --only-for-me.
+
+    TDLib deletes only locally unless told to revoke, and this used to leave
+    that unset: in a private chat the other side kept every "deleted" message.
+    """
+    from tdelegram.api import messages
+
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: messages.delete(
+                    client,
+                    chat,
+                    list(message_ids),
+                    revoke=not only_for_me,
+                    allow_write=w,
+                    allow_destructive=d,
+                ),
+            )
+        )
+
+
+@msg_app.command("delete-mine")
+@handle_errors
+def msg_delete_mine(
+    chat: str = typer.Option(..., "--chat"),
+    since: str | None = typer.Option(None, "--since", help="Only messages after: 30d, ISO..."),
+    until: str | None = typer.Option(None, "--until", help="Only messages before this"),
+    limit: int | None = typer.Option(None, "--limit", help="At most this many, newest first"),
+) -> None:
+    """Delete your own messages in a chat, for everyone. Counts them first.
+
+    Without --yes it reports how many it found and stops. With --yes it asks for
+    deleteMessages to be typed at a terminal, once for the whole batch.
+    """
+    from tdelegram.api import chats, messages
+
+    with session(_ctx()) as client:
+        chat_id = chats.resolve_id(client, chat)
+        ids: list[int] = []
+        newest = oldest = None
+        for record in messages.iter_own_messages(
+            client, str(chat_id), since=since, until=until, maximum=limit
+        ):
+            ids.append(int(record["message_id"]))
+            newest = newest or record["date"]
+            oldest = record["date"]
+        plan = {
+            "chat_id": chat_id,
+            "count": len(ids),
+            "newest": newest,
+            "oldest": oldest,
+            "for_everyone": True,
+        }
+        warn(json.dumps({"plan": plan}, indent=2))
+        if not ids:
+            _emit({"chat_id": chat_id, "deleted": 0, "skipped": [], "revoked": True})
+            return
+
+        def _progress(step: dict[str, Any]) -> None:
+            warn(f"deleted {step['deleted']} of {step['of']}")
+
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: messages.delete_in_batches(
+                    client, chat_id, ids, allow_write=w, allow_destructive=d, on_batch=_progress
+                ),
+            )
+        )
 
 
 @msg_app.command("forward")
@@ -378,14 +474,19 @@ def msg_delete(
 def msg_forward(
     from_chat: str = typer.Option(..., "--from"),
     to_chat: str = typer.Option(..., "--to"),
-    message_id: int = typer.Option(..., "--id"),
+    message_ids: list[int] = typer.Option(..., "--id", help="Repeat for several messages"),
 ) -> None:
-    result = _run_with_chats(
-        "forwardMessages",
-        {"message_ids": [message_id]},
-        {"from_chat_id": from_chat, "chat_id": to_chat},
-    )
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import messages
+
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: messages.forward(
+                    client, from_chat, to_chat, list(message_ids), allow_write=w
+                ),
+            )
+        )
 
 
 @msg_app.command("react")
@@ -395,10 +496,14 @@ def msg_react(
     message_id: int = typer.Option(..., "--id"),
     emoji: str = typer.Option("👍", "--emoji"),
 ) -> None:
-    result = _run_with_chats(
-        "addMessageReaction", {"message_id": message_id, "emoji": emoji}, {"chat_id": chat}
-    )
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import messages
+
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(), lambda w, d: messages.react(client, chat, message_id, emoji, allow_write=w)
+            )
+        )
 
 
 @msg_app.command("link")
@@ -406,28 +511,52 @@ def msg_react(
 def msg_link(
     chat: str = typer.Option(..., "--chat"), message_id: int = typer.Option(..., "--id")
 ) -> None:
-    emit(
-        _run_with_chats("getMessageLink", {"message_id": message_id}, {"chat_id": chat}),
-        fmt=_ctx().fmt,
-        out=_ctx().output,
-    )
+    from tdelegram.api import messages
+
+    with session(_ctx()) as client:
+        _emit(messages.link(client, chat, message_id))
 
 
 @msg_app.command("search")
 @handle_errors
 def msg_search(
-    query: str = typer.Option(..., "--query"), limit: int = typer.Option(20, "--limit")
+    query: str = typer.Option(..., "--query"),
+    limit: int = typer.Option(20, "--limit"),
+    since: str | None = typer.Option(None, "--since"),
+    until: str | None = typer.Option(None, "--until"),
 ) -> None:
+    """Search every chat at once, newest first."""
     from tdelegram.api import search as search_api
 
-    client, lock = _client_and_lock()
-    try:
-        for record in search_api.iter_global_search(client, query, maximum=limit):
-            emit(record, fmt=_ctx().fmt, out=_ctx().output)
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
+    with session(_ctx()) as client:
+        _emit_many(
+            search_api.iter_global_search(client, query, maximum=limit, since=since, until=until)
+        )
+
+
+@msg_app.command("transcribe")
+@handle_errors
+def msg_transcribe(
+    chat: str = typer.Option(..., "--chat"),
+    message_id: int = typer.Option(..., "--id"),
+    timeout: float = typer.Option(60.0, "--timeout", help="Seconds to wait for the text"),
+) -> None:
+    """The words of a voice or video message.
+
+    Free when someone already transcribed it; otherwise a write, because
+    Telegram counts it against the account's quota.
+    """
+    from tdelegram.api import media as media_api
+
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: media_api.transcribe(
+                    client, chat, message_id, allow_write=w, timeout=timeout
+                ),
+            )
+        )
 
 
 @msg_app.command("poll")
@@ -435,12 +564,19 @@ def msg_search(
 def msg_poll(
     chat: str = typer.Option(..., "--chat"),
     message_id: int = typer.Option(..., "--id"),
-    option: int = typer.Option(..., "--option"),
+    options: list[int] = typer.Option(..., "--option", help="Repeat in multiple-answer polls"),
 ) -> None:
-    result = _run_with_chats(
-        "setPollAnswer", {"message_id": message_id, "option_ids": [option]}, {"chat_id": chat}
-    )
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import polls
+
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: polls.answer_poll(
+                    client, chat, message_id, list(options), allow_write=w
+                ),
+            )
+        )
 
 
 # -- media --------------------------------------------------------------
@@ -448,46 +584,33 @@ media_app = typer.Typer(no_args_is_help=True)
 app.add_typer(media_app, name="media")
 
 
-@media_app.command(
-    "download",
-    # Telegram chat ids for groups and channels are negative, and a
-    # bare -100... is otherwise parsed as a cluster of short options.
-    context_settings={"ignore_unknown_options": True},
-)
+@media_app.command("download", context_settings=REF_ARGS)
 @handle_errors
 def media_download(file_id: int = typer.Argument(...)) -> None:
+    """Download a file by the `media.file_id` of a message record."""
+    from tdelegram import normalize
     from tdelegram.api import media as media_api
 
-    client, lock = _client_and_lock()
-    try:
-        emit(media_api.download(client, file_id), fmt=_ctx().fmt, out=_ctx().output)
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
+    with session(_ctx()) as client:
+        _emit(normalize.file_record(media_api.download(client, file_id)))
 
 
 @media_app.command("upload")
 @handle_errors
 def media_upload(
-    chat: str = typer.Option(..., "--chat"), path: str = typer.Option(..., "--path")
+    chat: str = typer.Option(..., "--chat"),
+    path: str = typer.Option(..., "--path"),
+    caption: str = typer.Option("", "--caption"),
 ) -> None:
     from tdelegram.api import media as media_api
 
-    client, lock = _client_and_lock()
-    try:
-        emit(media_api.upload(client, chat, path), fmt=_ctx().fmt, out=_ctx().output)
-    except Exception as exc:
-        from tdelegram.errors import ConfirmationRequired as _CR
-
-        if isinstance(exc, _CR):
-            warn(json.dumps({"preview": exc.preview}, indent=2))
-            raise SystemExit(2) from None
-        raise
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: media_api.upload(client, chat, path, caption=caption, allow_write=w),
+            )
+        )
 
 
 # -- contact / user -----------------------------------------------------
@@ -498,22 +621,23 @@ app.add_typer(contact_app, name="contact")
 @contact_app.command("list")
 @handle_errors
 def contact_list() -> None:
-    emit(run_call(_ctx(), "getContacts", {}), fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import contacts
+
+    with session(_ctx()) as client:
+        _emit_many(contacts.iter_contacts(client))
 
 
 user_app = typer.Typer(no_args_is_help=True)
 app.add_typer(user_app, name="user")
 
 
-@user_app.command(
-    "info",
-    # Telegram chat ids for groups and channels are negative, and a
-    # bare -100... is otherwise parsed as a cluster of short options.
-    context_settings={"ignore_unknown_options": True},
-)
+@user_app.command("info", context_settings=REF_ARGS)
 @handle_errors
-def user_info(user_id: int = typer.Argument(...)) -> None:
-    emit(run_call(_ctx(), "getUser", {"user_id": user_id}), fmt=_ctx().fmt, out=_ctx().output)
+def user_info(user: str = typer.Argument(..., help="A user id, @username, or me")) -> None:
+    from tdelegram.api import users
+
+    with session(_ctx()) as client:
+        _emit(users.get_user(client, users.resolve_user_id(client, user)))
 
 
 # -- admin --------------------------------------------------------------
@@ -526,17 +650,47 @@ app.add_typer(admin_app, name="admin")
 def admin_ban(
     chat: str = typer.Option(..., "--chat"), user: int = typer.Option(..., "--user")
 ) -> None:
-    result = _run_with_chats("banChatMember", {"user_id": user}, {"chat_id": chat})
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import admin
+
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: admin.ban(client, chat, user, allow_write=w, allow_destructive=d),
+            )
+        )
 
 
 @admin_app.command("promote")
 @handle_errors
 def admin_promote(
-    chat: str = typer.Option(..., "--chat"), user: int = typer.Option(..., "--user")
+    chat: str = typer.Option(..., "--chat"),
+    user: int = typer.Option(..., "--user"),
+    rights: list[str] = typer.Option(
+        [], "--right", help="e.g. delete_messages, pin_messages; repeat. Default: manage_chat"
+    ),
+    title: str = typer.Option("", "--title", help="Custom title shown next to the admin"),
 ) -> None:
-    result = _run_with_chats("setChatMemberStatus", {"user_id": user}, {"chat_id": chat})
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import admin
+
+    granted = list(rights) or list(admin.DEFAULT_RIGHTS)
+    # Fail on a misspelled right before anything is previewed or sent.
+    admin.administrator_rights(granted)
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: admin.promote(
+                    client,
+                    chat,
+                    user,
+                    rights=granted,
+                    title=title,
+                    allow_write=w,
+                    allow_destructive=d,
+                ),
+            )
+        )
 
 
 # -- topic / folder / draft ---------------------------------------------
@@ -544,24 +698,13 @@ topic_app = typer.Typer(no_args_is_help=True)
 app.add_typer(topic_app, name="topic")
 
 
-@topic_app.command(
-    "list",
-    # Telegram chat ids for groups and channels are negative, and a
-    # bare -100... is otherwise parsed as a cluster of short options.
-    context_settings={"ignore_unknown_options": True},
-)
+@topic_app.command("list", context_settings=REF_ARGS)
 @handle_errors
 def topic_list(chat: str = typer.Argument(...)) -> None:
     from tdelegram.api import topics
 
-    client, lock = _client_and_lock()
-    try:
-        for topic in topics.iter_topics(client, chat):
-            emit(topic, fmt=_ctx().fmt, out=_ctx().output)
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
+    with session(_ctx()) as client:
+        _emit_many(topics.iter_topics(client, chat))
 
 
 folder_app = typer.Typer(no_args_is_help=True)
@@ -571,7 +714,10 @@ app.add_typer(folder_app, name="folder")
 @folder_app.command("list")
 @handle_errors
 def folder_list() -> None:
-    emit(run_call(_ctx(), "getChatFolders", {}), fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import folders
+
+    with session(_ctx()) as client:
+        _emit_many(folders.list_folders(client))
 
 
 draft_app = typer.Typer(no_args_is_help=True)
@@ -583,8 +729,10 @@ app.add_typer(draft_app, name="draft")
 def draft_set(
     chat: str = typer.Option(..., "--chat"), text: str = typer.Option(..., "--text")
 ) -> None:
-    result = _run_with_chats("setChatDraftMessage", {"text": text}, {"chat_id": chat})
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+    from tdelegram.api import drafts
+
+    with session(_ctx()) as client:
+        _emit(perform(_ctx(), lambda w, d: drafts.set_draft(client, chat, text, allow_write=w)))
 
 
 # -- bot / story / secret / proxy ---------------------------------------
@@ -592,16 +740,23 @@ bot_app = typer.Typer(no_args_is_help=True)
 app.add_typer(bot_app, name="bot")
 
 
-@bot_app.command(
-    "callback",
-    # Telegram chat ids for groups and channels are negative, and a
-    # bare -100... is otherwise parsed as a cluster of short options.
-    context_settings={"ignore_unknown_options": True},
-)
+@bot_app.command("press")
 @handle_errors
-def bot_callback(query_id: int = typer.Argument(...)) -> None:
-    result = run_call(_ctx(), "answerCallbackQuery", {"callback_query_id": query_id})
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+def bot_press(
+    chat: str = typer.Option(..., "--chat"),
+    message_id: int = typer.Option(..., "--id"),
+    button: str = typer.Option(..., "--button", help="The button's label, as the record lists it"),
+) -> None:
+    """Press an inline button under a bot's message. The bot sees it and acts."""
+    from tdelegram.api import bots
+
+    with session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: bots.press_button(client, chat, message_id, button, allow_write=w),
+            )
+        )
 
 
 @bot_app.command("inline")
@@ -609,58 +764,140 @@ def bot_callback(query_id: int = typer.Argument(...)) -> None:
 def bot_inline(
     bot: int = typer.Option(..., "--bot"), query: str = typer.Option(..., "--query")
 ) -> None:
-    emit(
-        run_call(_ctx(), "getInlineQueryResults", {"bot_user_id": bot, "query": query}),
-        fmt=_ctx().fmt,
-        out=_ctx().output,
-    )
+    from tdelegram.api import bots
+
+    with session(_ctx()) as client:
+        _emit(perform(_ctx(), lambda w, d: bots.inline_results(client, bot, query, allow_write=w)))
 
 
 story_app = typer.Typer(no_args_is_help=True)
 app.add_typer(story_app, name="story")
 
 
-@story_app.command(
-    "list",
-    # Telegram chat ids for groups and channels are negative, and a
-    # bare -100... is otherwise parsed as a cluster of short options.
-    context_settings={"ignore_unknown_options": True},
-)
+@story_app.command("list", context_settings=REF_ARGS)
 @handle_errors
 def story_list(chat: str = typer.Argument(...)) -> None:
-    emit(
-        _run_with_chats(
-            "getChatArchivedStories", {"from_story_id": 0, "limit": 20}, {"chat_id": chat}
-        ),
-        fmt=_ctx().fmt,
-        out=_ctx().output,
-    )
+    from tdelegram.api import stories
+
+    with session(_ctx()) as client:
+        _emit(stories.list_archived_stories(client, chat))
 
 
 secret_app = typer.Typer(no_args_is_help=True)
 app.add_typer(secret_app, name="secret")
 
 
-@secret_app.command(
-    "create",
-    # Telegram chat ids for groups and channels are negative, and a
-    # bare -100... is otherwise parsed as a cluster of short options.
-    context_settings={"ignore_unknown_options": True},
-)
+@secret_app.command("create", context_settings=REF_ARGS)
 @handle_errors
-def secret_create(user: int = typer.Argument(...)) -> None:
-    result = run_call(_ctx(), "createNewSecretChat", {"user_id": user})
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+def secret_create(user: str = typer.Argument(..., help="A user id, @username, or me")) -> None:
+    from tdelegram.api import secret, users
+
+    with session(_ctx()) as client:
+        user_id = users.resolve_user_id(client, user)
+        _emit(perform(_ctx(), lambda w, d: secret.create_secret(client, user_id, allow_write=w)))
 
 
-proxy_app = typer.Typer(no_args_is_help=True)
+proxy_app = typer.Typer(
+    no_args_is_help=True,
+    help="Reach Telegram through a proxy. Works before login, which is when a blocked "
+    "network needs it: add one, then run `auth login`.",
+)
 app.add_typer(proxy_app, name="proxy")
 
 
 @proxy_app.command("list")
 @handle_errors
 def proxy_list() -> None:
-    emit(run_call(_ctx(), "getProxies", {}), fmt=_ctx().fmt, out=_ctx().output)
+    """Stored proxies; secrets and passwords are left out."""
+    from tdelegram.api import proxies
+
+    with setup_session(_ctx()) as client:
+        _emit_many(proxies.proxy_record(p) for p in proxies.list_proxies(client).get("proxies", []))
+
+
+@proxy_app.command("add")
+@handle_errors
+def proxy_add(
+    link: str = typer.Argument(
+        ..., help="tg://proxy?..., t.me/proxy?..., tg://socks?..., socks5://host:port, http://..."
+    ),
+    comment: str = typer.Option("", "--comment"),
+    enable: bool = typer.Option(True, "--enable/--no-enable", help="Switch to it now"),
+) -> None:
+    """Store a proxy from a shared link, and by default switch to it."""
+    from tdelegram.api import proxies
+
+    proxies.parse_proxy_link(link)  # a bad link fails before anything is opened
+    with setup_session(_ctx()) as client:
+        added = perform(
+            _ctx(),
+            lambda w, d: proxies.add_proxy_link(
+                client, link, enable=enable, comment=comment, allow_write=w
+            ),
+        )
+        _emit(proxies.proxy_record(added))
+
+
+@proxy_app.command("enable")
+@handle_errors
+def proxy_enable(proxy_id: int = typer.Argument(...)) -> None:
+    from tdelegram.api import proxies
+
+    with setup_session(_ctx()) as client:
+        _emit(perform(_ctx(), lambda w, d: proxies.enable_proxy(client, proxy_id, allow_write=w)))
+
+
+@proxy_app.command("disable")
+@handle_errors
+def proxy_disable() -> None:
+    """Connect directly again."""
+    from tdelegram.api import proxies
+
+    with setup_session(_ctx()) as client:
+        _emit(perform(_ctx(), lambda w, d: proxies.disable_proxy(client, allow_write=w)))
+
+
+@proxy_app.command("remove")
+@handle_errors
+def proxy_remove(proxy_id: int = typer.Argument(...)) -> None:
+    from tdelegram.api import proxies
+
+    with setup_session(_ctx()) as client:
+        _emit(
+            perform(
+                _ctx(),
+                lambda w, d: proxies.remove_proxy(
+                    client, proxy_id, allow_write=w, allow_destructive=d
+                ),
+            )
+        )
+
+
+@proxy_app.command("ping")
+@handle_errors
+def proxy_ping(
+    proxy_id: int | None = typer.Argument(None, help="Omit to ping Telegram directly"),
+) -> None:
+    """Seconds to reach Telegram through a stored proxy, or directly."""
+    from tdelegram.api import proxies
+
+    with setup_session(_ctx()) as client:
+        seconds = proxies.ping_proxy(client, proxy_id).get("seconds")
+        _emit({"proxy_id": proxy_id, "seconds": seconds})
+
+
+@proxy_app.command("check")
+@handle_errors
+def proxy_check(
+    proxy_id: int = typer.Argument(...),
+    timeout: float = typer.Option(10.0, "--timeout", help="Seconds to wait"),
+) -> None:
+    """Whether a stored proxy can reach Telegram at all; fails if it cannot."""
+    from tdelegram.api import proxies
+
+    with setup_session(_ctx()) as client:
+        proxies.check_proxy(client, proxy_id, timeout=timeout)
+        _emit({"proxy_id": proxy_id, "ok": True})
 
 
 # -- updates ------------------------------------------------------------
@@ -674,24 +911,74 @@ def updates_follow(types: str = typer.Option("", help="Comma-separated @type fil
     from tdelegram.api import updates as updates_api
 
     wanted = [t.strip() for t in types.split(",") if t.strip()]
-    client, lock = _client_and_lock()
-    try:
-        for event in updates_api.follow_filtered(client, wanted):
-            emit(event, fmt=_ctx().fmt, out=_ctx().output)
-    finally:
-        client.close()
-        if lock is not None:
-            lock.release()
+    with session(_ctx()) as client:
+        _emit_many(updates_api.follow_filtered(client, wanted))
+
+
+@app.command("watch")
+@handle_errors
+def watch(
+    chats: list[str] = typer.Option([], "--chat", help="Only these chats; repeat"),
+    contains: list[str] = typer.Option([], "--contains", help="Any of these words; repeat"),
+    match: str | None = typer.Option(None, "--match", help="A regular expression"),
+    sender: int | None = typer.Option(None, "--sender", help="Only this user"),
+    include_outgoing: bool = typer.Option(False, "--include-outgoing"),
+    duration: str | None = typer.Option(None, "--for", help="Stop after 90s, 30m, 2h..."),
+    count: int | None = typer.Option(None, "--count", help="Stop after this many matches"),
+) -> None:
+    """Stream new messages that match, as records -- an alert feed. Read-only.
+
+    `--count 1` waits for the next matching message and exits, e.g. a reply.
+    """
+    import re as _re
+
+    from tdelegram.api import chats as chats_api
+    from tdelegram.api import updates as updates_api
+    from tdelegram.dates import parse_duration
+
+    seconds = parse_duration(duration) if duration else None
+    if match:
+        try:
+            _re.compile(match)
+        except _re.error as exc:
+            raise ValueError(f"Invalid --match pattern: {exc}") from None
+    with session(_ctx()) as client:
+        wanted = {chats_api.resolve_id(client, ref) for ref in chats} or None
+        _emit_many(
+            updates_api.watch_messages(
+                client,
+                chat_ids=wanted,
+                terms=list(contains),
+                pattern=match,
+                sender_id=sender,
+                include_outgoing=include_outgoing,
+                timeout=seconds,
+                count=count,
+            )
+        )
 
 
 # -- raw call (escape hatch, same gate) ----------------------------------
 @app.command("call")
 @handle_errors
-def raw_call(request: str = typer.Option(..., "--request", help="Raw TDLib JSON request")) -> None:
+def raw_call(
+    request: str = typer.Option(..., "--request", help="Raw TDLib JSON request"),
+    validate: bool = typer.Option(
+        True,
+        "--validate/--no-validate",
+        help="Refuse a request that does not match the pinned TDLib schema",
+    ),
+) -> None:
+    from tdelegram import schema
+    from tdelegram.errors import DestructiveConfirmationRequired, WriteConfirmationRequired
+
     try:
         obj = json.loads(request)
     except json.JSONDecodeError as exc:
         warn(f"Invalid --request JSON: {exc}")
+        raise SystemExit(2) from None
+    if not isinstance(obj, dict):
+        warn("--request must be a JSON object.")
         raise SystemExit(2) from None
     method = str(obj.get("@type", ""))
     if not method:
@@ -703,23 +990,49 @@ def raw_call(request: str = typer.Option(..., "--request", help="Raw TDLib JSON 
     except RuntimeError as exc:
         warn(str(exc))
         raise SystemExit(2) from None
-    mutating = verdict in ("write", "destructive")
-    if not _ctx().yes:
+    problems = schema.validate(obj) if validate else []
+    if problems:
+        # TDLib would not refuse most of these: it drops a field it does not
+        # know and runs the call without it.
+        warn(json.dumps({"method": method, "schema_problems": problems}, indent=2))
         warn(
-            json.dumps(
-                {
-                    "preview": {"@type": method, **params},
-                    "verdict": verdict,
-                    "reason": safety.reason(method),
-                },
-                indent=2,
-            )
+            f"Refused: TDLib would run {method} with these silently ignored. Check "
+            f"`tdelegram describe {method}`, or pass --no-validate if the loaded TDLib "
+            "is newer than the schema this build was made from."
         )
-        if mutating:
-            warn("Preview only: re-run with --yes to perform.")
-            raise SystemExit(2) from None
-    result = run_call(_ctx(), method, params, )
-    emit(result, fmt=_ctx().fmt, out=_ctx().output)
+        raise SystemExit(2) from None
+    if verdict != "read" and not _ctx().yes:
+        # Previewing needs no session, so refuse before logging in.
+        gated = (
+            DestructiveConfirmationRequired(method, obj)
+            if verdict == "destructive"
+            else WriteConfirmationRequired(method, obj)
+        )
+        show_preview(gated)
+        warn("Preview only: re-run with --yes to perform.")
+        raise SystemExit(2) from None
+    _emit(run_call(_ctx(), method, params))
+
+
+@app.command("describe")
+@handle_errors
+def describe(name: str = typer.Argument(..., help="A TDLib function, object or type")) -> None:
+    """What the pinned TDLib schema says about a name, and the gate's verdict.
+
+    For composing `call` requests: every parameter and its type, the objects an
+    abstract type accepts, and a link to TDLib's own documentation.
+    """
+    from tdelegram import schema
+
+    entry = schema.describe(name)
+    if entry is None:
+        close = schema.suggest(name)
+        hint = f" Did you mean: {', '.join(close)}?" if close else ""
+        raise ValueError(f"{name!r} is not in the TDLib schema.{hint}")
+    if entry["kind"] == "function":
+        entry["verdict"] = safety.verdict(name)
+        entry["reason"] = safety.reason(name)
+    _emit(entry)
 
 
 @app.command("version")

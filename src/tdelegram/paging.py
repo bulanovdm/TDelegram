@@ -22,10 +22,12 @@ def paginate(
     *,
     maximum: int | None = None,
     stop_when: Callable[[dict[str, Any]], bool] | None = None,
+    start: int = 0,
 ) -> Iterator[dict[str, Any]]:
+    """Walk pages from `start` (0: the newest end) until the cursor gives out."""
     seen: set[Any] = set()
     yielded = 0
-    cursor = 0
+    cursor = start
     while True:
         items, next_cursor = fetch(cursor)
         if not items:

@@ -77,8 +77,8 @@ Run a mutating command without `--yes` and it prints a preview to stderr and
 exits **2**. Nothing reaches Telegram.
 
 ```bash
-tdelegram msg send --chat me --text "hi"      # previews, exits 2, sends nothing
-tdelegram msg send --chat me --text "hi" --yes # actually sends
+tdelegram msg send --chat me --text "hi"        # previews, exits 2, sends nothing
+tdelegram --yes msg send --chat me --text "hi"  # actually sends
 ```
 
 **Here is the part that matters for you.** That preview is not an obstacle to
@@ -108,9 +108,11 @@ something else, produces `Another tdelegram process holds ... .lock` rather than
 speed.
 
 The `destructive` verdict adds a typed confirmation on an interactive terminal.
-You will not have a TTY, so destructive commands simply cannot be completed by
-you alone — that is deliberate. Hand those to the user with the exact command to
-run.
+You will not have a TTY, so destructive commands cannot be completed by you
+alone — that is deliberate. Do not work around it: no `script`, `expect` or
+other pseudo-terminal to type the method name yourself. The name is there to be
+typed by the person whose account it is. Hand those commands to the user with
+the exact command to run.
 
 If a method is not in the registry the call fails closed with a `RuntimeError`
 rather than running ungated. That is working as intended, not a bug to work
@@ -136,8 +138,9 @@ Exit codes carry meaning, so check them instead of grepping output:
 | 2 | previewed and refused — nothing happened, `--yes` was absent or the request was malformed |
 
 `--format` takes `jsonl` (default, one object per line), `json` (a single array,
-convenient for `jq` over a whole result) or `table` (human reading only — never
-parse it). `--output FILE` appends there instead of stdout.
+convenient for `jq` over a whole result), `table`, or `text` — one plain line
+per message in reading order (time, sender, chat, text, media in words), for a
+person or a screen reader. Never parse `table` or `text`. `--output FILE` appends there instead of stdout.
 
 Global flags go **before** the subcommand — `tdelegram --output f.jsonl chat
 history --chat x`, not the other way round, which fails with "No such option".
@@ -180,14 +183,22 @@ tdelegram chat history --chat cyprusithr --topic 46685 --since 7d --limit 50
 ISO-8601), `--sender <user_id>`, `--topic <id>`, `--contains <text>`, `--limit`.
 Paging streams, so `--limit` genuinely bounds the work.
 
-Records are normalized and flat: `chat_id`, `message_id`, `date` (ISO-8601 UTC),
-`sender_id`, `topic_id`, `content_type`, `text`, `entities`, `links`,
-`file_name`, `reply_to`. `entities` and `links` are preserved rather than
+Records are normalized and flat: `chat_id`, `message_id`, `date` and
+`edit_date` (ISO-8601 UTC), `sender_id` and `sender_name`, `topic_id`,
+`content_type`, `text`, `entities`, `links`, `media` (kind, `file_id`, name,
+MIME type, size — and `transcript` for a voice note someone already
+transcribed), `reply_to`, `forwarded_from`, `views`, `forwards`, `replies`,
+`reactions`, `buttons`. `entities` and `links` are preserved rather than
 flattened into the text, so formatting and URLs survive.
 
 `date` is when the message was **sent**. It is not when the thing described in it
 happened — do not present a message timestamp as a job's posting date, an event
 date, or a deadline.
+
+For "what did I miss", start with `tdelegram inbox`: unread messages across
+chats, and it marks nothing read, so reading on the user's behalf sends no read
+receipts. To answer something, prefer `draft set` over `msg send` — a draft sits
+in the user's own input box, visible only to them, and they send it themselves.
 
 Worked examples for finding a person's posts, quoting verbatim, following live
 updates and paging large histories are in `references/recipes.md`.
@@ -225,20 +236,34 @@ Full options, and the gate verdict for each command, are in
 `references/commands.md`.
 
 ```
-auth      login logout status          account   info sessions
-chat      list info resolve history search create join leave members
-msg       send get edit delete forward react link search poll
-media     download upload              contact   list
-user      info                         admin     ban promote
-topic     list                         folder    list        draft set
-bot       callback inline              story     list        secret create
-proxy     list                         updates   follow
-call      --request '<raw TDLib JSON>' version
+auth      login logout status
+account   info sessions
+inbox                                   unread messages; marks nothing read
+watch                                   new messages as they arrive, filtered
+chat      list info resolve history search export create join leave members
+msg       send get edit delete delete-mine forward react link search transcribe poll
+media     download upload
+contact   list
+user      info
+admin     ban promote
+topic     list
+folder    list
+draft     set
+bot       press inline
+story     list
+secret    create
+proxy     list add enable disable remove ping check
+updates   follow
+call      --request '<raw TDLib JSON>'
+describe  <method|object|type>
+version
 ```
 
 `tdelegram call --request '{"@type":"...","..."}'` reaches any of the 1022
 methods directly and goes through the identical gate — it is an escape hatch for
-coverage, not for permission.
+coverage, not for permission. Build the request from `tdelegram describe
+<method>`, not from memory: TDLib silently ignores a field it does not know, so
+`call` refuses one rather than let the request run without it.
 
 Global flags: `--profile`, `--session-dir`, `--format`, `--output`, `--yes`,
 `--verbose`, `--no-retry`.

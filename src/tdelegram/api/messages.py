@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from tdelegram import normalize
@@ -23,9 +23,11 @@ def get(
     `.text` was null on one of them. `include_raw=True` keeps the original
     under `raw`, matching `chats.info`.
     """
+    from tdelegram.api.users import SenderNames
+
     chat_id = resolve_id(client, chat_ref)
     message = client.call("getMessage", {"chat_id": chat_id, "message_id": message_id})
-    return normalize.message_record(message, include_raw=include_raw)
+    return SenderNames(client).label(normalize.message_record(message, include_raw=include_raw))
 
 
 def iter_history(
@@ -41,13 +43,18 @@ def iter_history(
     include_raw: bool = False,
 ) -> Iterator[dict[str, Any]]:
     from tdelegram.api.topics import topic_object
+    from tdelegram.api.users import SenderNames
 
+    names = SenderNames(client)
     chat_id = resolve_id(client, chat_ref)
     since_ts = (
         since if isinstance(since, int) else parse_date(since if isinstance(since, str) else None)
     )
+    # A date alone means through the end of that day, not its first second.
     until_ts = (
-        until if isinstance(until, int) else parse_date(until if isinstance(until, str) else None)
+        until
+        if isinstance(until, int)
+        else parse_date(until if isinstance(until, str) else None, end_of_day=True)
     )
     _ = topic_object(topic_id, "forum")
 
@@ -89,7 +96,7 @@ def iter_history(
         text = normalize.message_text(message).casefold()
         if contains and any(term.casefold() not in text for term in contains):
             continue
-        yield normalize.message_record(message, include_raw=include_raw)
+        yield names.label(normalize.message_record(message, include_raw=include_raw))
         yielded += 1
         if maximum is not None and yielded >= maximum:
             return
@@ -100,14 +107,32 @@ def history(client: TelegramClient, chat_ref: str, **kwargs: Any) -> list[dict[s
 
 
 def _input_text(client: TelegramClient, text: str, parse_mode: str | None) -> dict[str, Any]:
-    if parse_mode:
-        formatted = parse_entities(client.transport, text, parse_mode)
-        return {"@type": "inputMessageText", "text": formatted, "link_preview": None}
-    return {
-        "@type": "inputMessageText",
-        "text": {"@type": "formattedText", "text": text, "entities": []},
-        "link_preview": None,
-    }
+    formatted = (
+        parse_entities(client.transport, text, parse_mode)
+        if parse_mode
+        else {"@type": "formattedText", "text": text, "entities": []}
+    )
+    return {"@type": "inputMessageText", "text": formatted}
+
+
+def send_options(
+    *, schedule_date: int | None = None, silent: bool = False
+) -> dict[str, Any] | None:
+    """messageSendOptions, or None when every option is at its default.
+
+    Scheduling lives inside this object. It used to be passed at the top level
+    of sendMessage, which has no such field, so TDLib ignored it and a message
+    meant for later went out at once.
+    """
+    options: dict[str, Any] = {}
+    if silent:
+        options["disable_notification"] = True
+    if schedule_date is not None:
+        options["scheduling_state"] = {
+            "@type": "messageSchedulingStateSendAtDate",
+            "send_date": schedule_date,
+        }
+    return {"@type": "messageSendOptions", **options} if options else None
 
 
 def send(
@@ -118,18 +143,24 @@ def send(
     parse_mode: str | None = None,
     reply_to: int | None = None,
     schedule_date: int | None = None,
+    silent: bool = False,
+    topic_id: int | None = None,
     allow_write: bool = False,
 ) -> dict[str, Any]:
+    """Send a text message. `topic_id` names a forum topic; without it a forum
+    message lands in General."""
+    from tdelegram.api.topics import topic_object
+
     chat_id = resolve_id(client, chat_ref)
     content = _input_text(client, text, parse_mode)
     params: dict[str, Any] = {"chat_id": chat_id, "input_message_content": content}
+    if topic_id is not None:
+        params["topic_id"] = topic_object(topic_id, "forum")
     if reply_to is not None:
         params["reply_to"] = {"@type": "inputMessageReplyToMessage", "message_id": reply_to}
-    if schedule_date is not None:
-        params["scheduling_state"] = {
-            "@type": "messageSchedulingStateSendAtDate",
-            "send_date": schedule_date,
-        }
+    options = send_options(schedule_date=schedule_date, silent=silent)
+    if options is not None:
+        params["options"] = options
     return client.call("sendMessage", params, allow_write=allow_write)
 
 
@@ -183,6 +214,102 @@ def delete(
     )
 
 
+def iter_own_messages(
+    client: TelegramClient,
+    chat_ref: str,
+    *,
+    since: str | int | None = None,
+    until: str | int | None = None,
+    maximum: int | None = None,
+) -> Iterator[dict[str, Any]]:
+    """The account's own messages in a chat, newest first, found server-side.
+
+    Only messages sent as the user: posts made as a channel belong to the
+    channel, and removing those is an admin's job, not a clean-up of one's own.
+    """
+    from tdelegram.paging import search_pages
+
+    chat_id = resolve_id(client, chat_ref)
+    own_id = client.call("getMe", {}).get("id")
+    if not isinstance(own_id, int):
+        raise ValueError("Could not determine the current account's user id.")
+    since_ts = since if isinstance(since, int) else parse_date(since)
+    until_ts = until if isinstance(until, int) else parse_date(until, end_of_day=True)
+
+    def _too_old(item: dict[str, Any]) -> bool:
+        date = item.get("date")
+        return isinstance(date, int) and since_ts is not None and date < since_ts
+
+    found = 0
+    mine = search_pages(client, chat_id, "", sender_id=own_id)
+    for message in paginate(mine, stop_when=_too_old):
+        date = message.get("date")
+        if until_ts is not None and isinstance(date, int) and date > until_ts:
+            continue
+        if (message.get("sender_id") or {}).get("user_id") != own_id:
+            continue
+        yield normalize.message_record(message)
+        found += 1
+        if maximum is not None and found >= maximum:
+            return
+
+
+BATCH = 100
+
+
+def delete_in_batches(
+    client: TelegramClient,
+    chat_id: int,
+    message_ids: list[int],
+    *,
+    revoke: bool = True,
+    allow_write: bool = False,
+    allow_destructive: bool = False,
+    on_batch: Callable[[dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    """Delete many messages, a hundred at a time, reporting each batch.
+
+    A batch TDLib refuses as a whole -- with a 400, or the 403 Telegram gives a
+    message it will not delete -- is retried one message at a time, so a single
+    such message is skipped instead of blocking every message behind it. If
+    nothing at all could be deleted by then, the chat is refusing, not one
+    message, and the error is raised rather than tried on every other batch.
+    A FloodWait still raises: writes never retry on their own, and a re-run
+    picks up whatever is left.
+    """
+    from tdelegram.errors import InvalidRequest, TelegramPermissionError
+
+    refusals = (InvalidRequest, TelegramPermissionError)
+    deleted, skipped = 0, []
+    for start in range(0, len(message_ids), BATCH):
+        batch = message_ids[start : start + BATCH]
+        try:
+            client.call(
+                "deleteMessages",
+                {"chat_id": chat_id, "message_ids": batch, "revoke": revoke},
+                allow_write=allow_write,
+                allow_destructive=allow_destructive,
+            )
+            deleted += len(batch)
+        except refusals as refused:
+            for mid in batch:
+                try:
+                    client.call(
+                        "deleteMessages",
+                        {"chat_id": chat_id, "message_ids": [mid], "revoke": revoke},
+                        allow_write=allow_write,
+                        allow_destructive=allow_destructive,
+                    )
+                    deleted += 1
+                except refusals:
+                    skipped.append(mid)
+            if deleted == 0:
+                raise refused from None
+        if on_batch is not None:
+            on_batch({"chat_id": chat_id, "deleted": deleted, "of": len(message_ids)})
+    return {"chat_id": chat_id, "deleted": deleted, "skipped": skipped, "revoked": revoke}
+
+
 def forward(
     client: TelegramClient,
     from_chat: str,
@@ -221,22 +348,30 @@ def pin(
     )
 
 
-def unpin(client: TelegramClient, chat_ref: str, *, allow_write: bool = False) -> dict[str, Any]:
+def unpin(
+    client: TelegramClient,
+    chat_ref: str,
+    message_id: int | None = None,
+    *,
+    allow_write: bool = False,
+    allow_destructive: bool = False,
+) -> dict[str, Any]:
+    """Unpin one message, or every pinned message when no id is given.
+
+    Unpinning everything is destructive -- the previous set is not recorded.
+    This used to send unpinChatMessage without the message_id it requires.
+    """
+    chat_id = resolve_id(client, chat_ref)
+    if message_id is None:
+        return client.call(
+            "unpinAllChatMessages",
+            {"chat_id": chat_id},
+            allow_write=allow_write,
+            allow_destructive=allow_destructive,
+        )
     return client.call(
-        "unpinChatMessage" if _has_unpin(client) else "unpinAllChatMessages",
-        {"chat_id": resolve_id(client, chat_ref)},
-        allow_write=allow_write,
+        "unpinChatMessage", {"chat_id": chat_id, "message_id": message_id}, allow_write=allow_write
     )
-
-
-def _has_unpin(client: TelegramClient) -> bool:
-    try:
-        from tdelegram import safety
-
-        safety.verdict("unpinChatMessage")
-        return True
-    except RuntimeError:
-        return False
 
 
 def link(client: TelegramClient, chat_ref: str, message_id: int) -> dict[str, Any]:
