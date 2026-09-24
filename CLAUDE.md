@@ -205,6 +205,18 @@ across every mutating command, that nothing reaches TDLib without `--yes`.
 
 Per CONTRIBUTING.md: mutating behavior needs a test proving the gate (preview without `--yes`).
 
+## Releases
+
+A version tag (`v0.2.0`) is a release; `RELEASING.md` has the procedure. The version is written only
+in `pyproject.toml` — `__version__` reads the installed metadata, so reinstall a dev checkout after
+a bump. `release.yml` publishes nothing until the suite passes and `scripts/release.py` accepts the
+tag: `v` plus the normalized version, with a dated `CHANGELOG.md` section that becomes the notes.
+The same script works out every Docker tag the release takes, and `docker.yml` only applies the
+list. Floating tags (`X.Y`, `X`, `latest`) move only to the newest release of their line and never
+to `main`, so a fix to an older line cannot take `latest` back. Change tagging rules in
+`docker_tags()` and its tests, not in the workflow. `tests/unit/test_release.py` also fails when the
+newest dated `CHANGELOG.md` section and `pyproject.toml` disagree: a release bumps both.
+
 ## Session data
 
 `~/.tdelegram/profiles/<profile>/` (overridable via `TDELEGRAM_HOME` or `--session-dir`)

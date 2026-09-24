@@ -263,6 +263,12 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
 - Removed the unreachable `cli/commands/` package.
 - Ship `py.typed`.
 - Added `CODE_OF_CONDUCT.md`, issue and pull request templates.
+- `latest` on `ghcr.io/bulanovdm/tdelegram` means the newest release. It
+  followed every push to `main`, so it could never be pinned to anything a
+  release had tested; `main` and `sha-<commit>` are the unreleased builds now.
+- `tdelegram.__version__` reads the installed package's version, so
+  `pyproject.toml` is the only place it is written. The second copy in
+  `__init__.py` had to be bumped by hand and nothing checked that it was.
 
 ### Added
 - Proxy commands that work before login: `proxy add <link>` takes a proxy in
@@ -313,3 +319,13 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
 - `FakeTransport` answers `close` with `authorizationStateClosed` as TDLib does,
   so `close()` no longer waits out a second per client and the suite runs in
   a quarter of the time.
+- Releases. A `v` tag runs the suite, is refused unless it names the version
+  in `pyproject.toml` and this file has a dated section for it, and then
+  publishes that version as a Docker image, to PyPI, and as a GitHub release
+  whose notes are that section. The image takes the version (`0.1.0`) and
+  whichever floating tags it is the newest release for: `0.1`, `1` from 1.0.0
+  on, and `latest`. A floating tag only moves forward, so a fix to an older
+  line cannot take `latest` back, and a pre-release takes none. Each
+  architecture is run before anything is tagged, so a broken image never
+  becomes `latest`; before, only amd64 was tried, after it was published.
+  `RELEASING.md` has the scheme.

@@ -1,15 +1,24 @@
 name: release
 
-# Publishes to PyPI when a version tag is pushed:
-#   git tag v0.1.0 && git push origin v0.1.0
+# A version tag is a release:
+#   git tag v0.2.0 && git push origin v0.2.0
 #
-# Authentication is PyPI Trusted Publishing (OIDC). There is no API token
+# Nothing is published until the suite passes on every supported interpreter
+# and the tag, pyproject.toml and CHANGELOG.md agree on the version. Then, one
+# after another, so that a failure stops everything after it: the wheel is
+# built and tried, the Docker image is built, tried and tagged, PyPI gets the
+# sdist and the wheel, and a GitHub release carries both files with the
+# version's CHANGELOG.md section as its notes. PyPI never accepts a version
+# twice, so it comes after everything that can still fail. RELEASING.md says
+# what to do when a step does.
+#
+# PyPI authentication is Trusted Publishing (OIDC). There is no API token
 # anywhere: no repository secret to leak, rotate, or scope wrongly. The
 # one-time setup is on PyPI, not here -- see RELEASING.md.
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["v[0-9]*"]
 
 permissions:
   contents: read
@@ -20,8 +29,39 @@ jobs:
   verify:
     uses: ./.github/workflows/ci.yml
 
+  # The tag must be "v" plus pyproject.toml's version, and CHANGELOG.md must
+  # have a dated section for it. Also decides, from every other release, which
+  # floating image tags this one takes and whether GitHub calls it "Latest".
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
+      latest: ${{ steps.release.outputs.latest }}
+      docker_tags: ${{ steps.release.outputs.docker_tags }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # every tag, to tell whether a newer release exists
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install packaging
+
+      - id: release
+        run: |
+          python scripts/release.py "$GITHUB_REF_NAME" \
+            --tags "$(git tag --list 'v*')" \
+            --image "ghcr.io/${GITHUB_REPOSITORY,,}" \
+            --notes "$RUNNER_TEMP/notes.md" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notes
+          path: ${{ runner.temp }}/notes.md
+
   build:
-    needs: verify
+    needs: [verify, check]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,26 +69,45 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fail if the tag disagrees with the package version
-        run: |
-          tag="${GITHUB_REF_NAME#v}"
-          pkg="$(python -c 'import tomllib,pathlib;print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')"
-          if [ "$tag" != "$pkg" ]; then
-            echo "tag $tag != pyproject version $pkg" >&2
-            exit 1
-          fi
-
       - run: pip install build twine
       - run: python -m build
       - run: python -m twine check dist/*
+
+      - name: Install the wheel somewhere clean and run it
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          python -m venv "$RUNNER_TEMP/relcheck"
+          "$RUNNER_TEMP/relcheck/bin/pip" install "dist/tdelegram-$VERSION-py3-none-any.whl"
+          reported="$("$RUNNER_TEMP/relcheck/bin/tdelegram" version)"
+          if [ "$reported" != "$VERSION" ]; then
+            echo "::error::the wheel reports $reported, not $VERSION" >&2
+            exit 1
+          fi
+          # methods.json must ship in the wheel: the write gate fails closed
+          # without it, so a wheel missing it refuses every call.
+          "$RUNNER_TEMP/relcheck/bin/python" -c \
+            "from tdelegram import safety; assert safety.verdict('sendMessage') == 'write'; print('gate ok')"
 
       - uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
 
-  publish:
-    needs: build
+  # Builds and tries the image on both architectures, then tags it. After the
+  # wheel, so a failure anywhere before this point leaves nothing published.
+  docker:
+    needs: [verify, check, build]
+    uses: ./.github/workflows/docker.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      version: ${{ needs.check.outputs.version }}
+      tags: ${{ needs.check.outputs.docker_tags }}
+
+  pypi:
+    needs: [build, docker]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -59,3 +118,38 @@ jobs:
           name: dist
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  # Last, so the release page never lists something that is not out yet.
+  github-release:
+    needs: [check, pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: actions/download-artifact@v4
+        with:
+          name: notes
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.check.outputs.version }}
+          PRERELEASE: ${{ needs.check.outputs.prerelease }}
+          LATEST: ${{ needs.check.outputs.latest }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            # A re-run after the release was made: only make sure the files are on it.
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* \
+              --verify-tag \
+              --title "TDelegram $VERSION" \
+              --notes-file notes.md \
+              --prerelease="$PRERELEASE" \
+              --latest="$LATEST"
+          fi

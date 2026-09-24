@@ -43,6 +43,9 @@ docker run --rm -i -v "$HOME/.tdelegram:/session" \
   ghcr.io/bulanovdm/tdelegram auth status
 ```
 
+Which tag to pull — a pinned release, the newest one, or unreleased `main` —
+and when each moves is in [RELEASING.md](RELEASING.md#docker-image-tags).
+
 Global flags such as `--yes` go before the command. One alias makes every
 command in this README work verbatim:
 
