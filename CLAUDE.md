@@ -69,7 +69,9 @@ cli/           Typer tree over api/ (main.py is the whole tree)
 schema.py      request shapes from schema.json; validate() and describe()
 ```
 
-Each `api/` module owns its own implementations. Several were once re-export shims over
+Each `api/` module owns its own implementations. `inbox` and `export` are read-only by
+construction — history reads only, never `openChat`/`viewMessages`, so senders see no
+read receipts — and their tests assert that. Several were once re-export shims over
 unrelated modules — stories living in `bots`, drafts and folders in `reactions` — so if a
 function seems missing, it was moved to the module its name implies, not deleted.
 
@@ -162,6 +164,13 @@ out-of-window item finishes its page, then ends the walk), and a cursor-didn't-a
   so the preview, `--yes` and the typed confirmation apply. Do not build TDLib requests in
   a command body: that is where most of the wrong parameter names lived.
 - Global options live on the Typer callback and are stashed in a module-level `Ctx`.
+  They are read only before the command. Keep it that way: hoisting `--yes` from
+  anywhere on the line would let a message text of `--yes` grant permission. `_Root`
+  in `cli/main.py` turns the resulting "No such option" into where the flag goes.
+- Commands that must work before login — the proxy commands, since a blocked network
+  needs the proxy before a login can get through — open the client with
+  `setup_session(ctx)`, which clears TDLib's parameters from stored credentials and
+  stops before the phone step. Never prompt there.
 - Commands taking a positional chat or user reference need
   `context_settings={"ignore_unknown_options": True}`, or a negative id like
   `-1001246902558` is parsed as a cluster of short options and the command exits 2.

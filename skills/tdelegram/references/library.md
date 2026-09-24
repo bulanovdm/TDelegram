@@ -84,7 +84,7 @@ Each module under `tdelegram.api` owns its own implementations:
 ```
 account  chats  messages  media  contacts  users  admin  topics
 folders  drafts reactions polls  search    updates bots   stories
-secret   proxies
+secret   proxies inbox    export
 ```
 
 Functions take the client first and thread permission through rather than

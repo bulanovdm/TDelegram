@@ -74,6 +74,8 @@ def test_a_first_export_takes_the_whole_history(
     state = json.loads((tmp_path / export.STATE).read_text())
     assert (state["newest_id"], state["oldest_id"]) == (7, 1)
     assert json.loads((tmp_path / export.CHAT).read_text())["title"] == "Archive me"
+    marking = {"openChat", "viewMessages", "readAllChatMentions", "readAllChatReactions"}
+    assert not marking & {req.get("@type") for _, req in transport.sent}, "exporting reads only"
 
 
 def test_a_rerun_fetches_only_what_is_new(

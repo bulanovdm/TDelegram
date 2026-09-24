@@ -115,7 +115,8 @@ it. `tdelegram describe <method>` shows the real parameters.
 - `auth.py` — 11-state machine with `CredentialProvider`
 - `safety.py` + `methods.json` — write gate + registry
 - `normalize.py` / `entities.py` / `dates.py` / `paging.py` / `files.py`
-- `api/` — account chats messages media contacts users admin topics folders drafts reactions polls search updates bots stories secret proxies
+- `api/` — account chats messages media contacts users admin topics folders drafts reactions polls search updates bots stories secret proxies inbox export
+- `schema.py` + `schema.json` — every TDLib request shape; what `call` and the tests check against
 - `cli/` — Typer tree, JSONL on stdout, diagnostics on stderr
 
 ## Session

@@ -234,17 +234,27 @@ Full options, and the gate verdict for each command, are in
 `references/commands.md`.
 
 ```
-auth      login logout status          account   info sessions
-inbox     (unread messages, marks nothing read)
+auth      login logout status
+account   info sessions
+inbox                                   unread messages; marks nothing read
+watch                                   new messages as they arrive, filtered
 chat      list info resolve history search export create join leave members
 msg       send get edit delete delete-mine forward react link search transcribe poll
-media     download upload              contact   list
-user      info                         admin     ban promote
-topic     list                         folder    list        draft set
-bot       press inline                 story     list        secret create
+media     download upload
+contact   list
+user      info
+admin     ban promote
+topic     list
+folder    list
+draft     set
+bot       press inline
+story     list
+secret    create
 proxy     list add enable disable remove ping check
-watch     (new messages, filtered)       updates   follow
-call      --request '<raw TDLib JSON>' describe <method|object|type>  version
+updates   follow
+call      --request '<raw TDLib JSON>'
+describe  <method|object|type>
+version
 ```
 
 `tdelegram call --request '{"@type":"...","..."}'` reaches any of the 1022
