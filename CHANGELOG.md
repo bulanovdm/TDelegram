@@ -260,3 +260,11 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   no `viewMessages` — so triaging an inbox sends no read receipts. Muted chats
   are left out unless they mention the account. `chat list --unread` lists the
   chats themselves.
+- `chat export`: a resumable export of one chat to a directory of JSON Lines,
+  with a checkpoint, so a re-run fetches only what is missing — new messages,
+  then whatever an interrupted run had not reached — in constant memory.
+  `--media` saves files alongside, except where the chat or message forbids
+  saving, which is recorded instead.
+- `FakeTransport` answers `close` with `authorizationStateClosed` as TDLib does,
+  so `close()` no longer waits out a second per client and the suite runs in
+  a quarter of the time.

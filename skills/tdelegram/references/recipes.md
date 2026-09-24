@@ -13,6 +13,7 @@ without asking anyone.
 - [Page a large history](#page-a-large-history)
 - [Watch for new messages](#watch-for-new-messages)
 - [Download a file](#download-a-file)
+- [Back up a chat](#back-up-a-chat)
 - [Shaping output for a report](#shaping-output-for-a-report)
 
 ## Triage an inbox
@@ -153,6 +154,26 @@ tdelegram chat history --chat somechat --limit 20 2>/dev/null \
 
 tdelegram media download 12345 2>/dev/null | jq -r '.path'
 ```
+
+## Back up a chat
+
+```bash
+tdelegram chat export --chat somechannel --out ~/backups/somechannel --media
+# {"written":5123,"exported":5123,"complete":true,"media_saved":812,...}
+
+# Later: only what is new is fetched.
+tdelegram chat export --chat somechannel --out ~/backups/somechannel --media
+
+# In date order, and as CSV for a spreadsheet:
+jq -s 'sort_by(.message_id)[]' ~/backups/somechannel/messages.jsonl \
+  | jq -r '[.date, .sender_name, .views, .text] | @csv' > somechannel.csv
+```
+
+A long history is rate-limited, and reads back off on their own. Stopping it —
+Ctrl-C, or `--limit 2000` per run — costs nothing: the next run resumes. Media a
+chat protects from saving are skipped with a note in the record, not
+downloaded. Under Docker, `--out` must be inside a mounted directory (`/work`
+in the alias), or the export stays in the container.
 
 ## Shaping output for a report
 

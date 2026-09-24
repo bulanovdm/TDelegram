@@ -1213,3 +1213,22 @@ def test_chat_list_can_show_only_unread_chats(cli: FakeTransport) -> None:
     _script_inbox(cli)
     result = runner.invoke(cli_main.app, ["chat", "list", "--unread", "--limit", "2"])
     assert [r["title"] for r in _lines(result)] == ["Friends", "Muted noise"]
+
+
+def test_chat_export_reports_the_run(cli: FakeTransport, tmp_path: Any) -> None:
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5, "title": "Kept"})
+    cli.add_response(
+        lambda r: r.get("@type") == "getChatHistory",
+        lambda r: {
+            "@type": "messages",
+            "messages": [_message_in(5, 2, "b"), _message_in(5, 1, "a")]
+            if r["from_message_id"] == 0
+            else [],
+        },
+    )
+    out = tmp_path / "kept"
+    result = runner.invoke(cli_main.app, ["chat", "export", "--chat", "kept", "--out", str(out)])
+    assert result.exit_code == 0
+    summary = _lines(result)[0]
+    assert summary["written"] == 2 and summary["complete"] is True
+    assert (out / "messages.jsonl").exists() and (out / "state.json").exists()

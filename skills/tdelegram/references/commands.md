@@ -52,10 +52,18 @@ Placed before the subcommand: `tdelegram --format json chat list`.
 | `chat resolve <chat>` | read | the raw TDLib chat object |
 | `chat history` | read | `--chat`, `--limit`, `--since`, `--until`, `--sender`, `--topic`, `--contains` |
 | `chat search` | read | `--chat`, `--query`, `--limit`, `--sender` — records shaped like `chat history` |
+| `chat export` | read | `--chat`, `--out DIR`, `--since`, `--media`, `--limit` — resumable; re-run to update |
 | `chat members <chat>` | read | `--limit` — one bounded page; supergroups, channels and basic groups |
 | `chat create <title>` | write | creates a supergroup |
 | `chat join <chat>` | write | |
 | `chat leave <chat>` | **destructive** | a private chat cannot be rejoined without a new invite |
+
+`chat export` writes `DIR/messages.jsonl`, `DIR/chat.json` and a
+`DIR/state.json` checkpoint. Running it again fetches only what is missing —
+newer messages, then whatever an earlier run did not reach — so it doubles as a
+backup you keep current and as a resumable download of a long history. Records
+are written as fetched, so sort on `message_id` when order matters. `--media`
+saves files to `DIR/media/`, except where the chat forbids saving content.
 
 Chat references accept `@handle`, a bare handle, a numeric id (negative for
 groups and channels), or `me` / `self` / `saved` for Saved Messages.

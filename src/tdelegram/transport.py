@@ -149,6 +149,15 @@ class FakeTransport:
         if "@extra" in req:
             fallback["@extra"] = req["@extra"]
         self._inbox.put(json.dumps(fallback))
+        if req.get("@type") == "close":
+            # As TDLib does. Without it close() waits out its timeout, a second
+            # per client, for an update that never comes.
+            closed = {
+                "@type": "updateAuthorizationState",
+                "@client_id": client_id,
+                "authorization_state": {"@type": "authorizationStateClosed"},
+            }
+            self._inbox.put(json.dumps(closed))
 
     def receive(self, timeout: float) -> str | None:
         try:

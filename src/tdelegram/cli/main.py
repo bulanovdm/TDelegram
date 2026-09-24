@@ -191,6 +191,28 @@ def chat_search(
         )
 
 
+@chat_app.command("export")
+@handle_errors
+def chat_export(
+    chat: str = typer.Option(..., "--chat"),
+    out: str = typer.Option(..., "--out", help="Export directory; running again resumes it"),
+    since: str | None = typer.Option(None, "--since", help="Go back no further than 7d, ISO..."),
+    media: bool = typer.Option(False, "--media", help="Also save each message's file"),
+    limit: int | None = typer.Option(
+        None, "--limit", help="Stop after this many messages; the next run carries on"
+    ),
+) -> None:
+    """Export a chat to OUT/messages.jsonl, resumably; only what is missing is fetched.
+
+    Re-run it to pick up new messages, or to finish an export that was stopped.
+    Media are saved to OUT/media only where the chat allows saving them.
+    """
+    from tdelegram.api import export
+
+    with session(_ctx()) as client:
+        _emit(export.export_chat(client, chat, out, since=since, media=media, maximum=limit))
+
+
 @chat_app.command("create", context_settings=REF_ARGS)
 @handle_errors
 def chat_create(title: str = typer.Argument(...)) -> None:
