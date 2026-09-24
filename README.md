@@ -52,8 +52,20 @@ alias tdelegram='docker run --rm -i -v "$HOME/.tdelegram:/session" \
   ghcr.io/bulanovdm/tdelegram'
 ```
 
-`auth login` and destructive commands are the exceptions — they prompt, so run
-those with `-it`.
+`auth login` and destructive commands are the exceptions — they prompt, and a
+destructive command takes its typed confirmation only from a terminal. A second
+alias gives them one:
+
+```bash
+alias tdelegram-tty='docker run --rm -it -v "$HOME/.tdelegram:/session" \
+  -v "$PWD:/work" -w /work -e TELEGRAM_API_ID -e TELEGRAM_API_HASH \
+  ghcr.io/bulanovdm/tdelegram'
+tdelegram-tty auth login
+```
+
+Keep `-t` out of the first alias: with a terminal attached, Docker merges
+stderr into stdout, which puts diagnostics in the JSON, and it refuses to start
+when its input is a pipe.
 
 ### Native
 

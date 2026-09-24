@@ -1732,6 +1732,28 @@ def test_watch_opens_the_chats_it_watches_and_closes_them(cli: FakeTransport) ->
     assert "viewMessages" not in sent, "watching marks nothing read"
 
 
+def test_watch_closes_what_it_opened_when_a_later_chat_fails_to_open(
+    cli: FakeTransport,
+) -> None:
+    """The chats opened before a failing one used to stay open for good."""
+    ids = {"first": -1002, "second": -1001}
+    channel = {"@type": "chatTypeSupergroup", "supergroup_id": 1, "is_channel": True}
+    cli.add_response(
+        lambda r: r.get("@type") == "searchPublicChat",
+        lambda r: {"@type": "chat", "id": ids[r["username"]], "title": "t", "type": channel},
+    )
+    cli.add_response(
+        lambda r: r.get("@type") == "openChat" and r.get("chat_id") == -1001,
+        {"@type": "error", "code": 400, "message": "Chat not found"},
+    )
+    result = runner.invoke(cli_main.app, ["watch", "--chat", "first", "--chat", "second"])
+    assert result.exit_code != 0 and "Chat not found" in result.output
+    opens =[req["chat_id"] for _, req in cli.sent if req.get("@type") == "openChat"]
+    closes = [req["chat_id"] for _, req in cli.sent if req.get("@type") == "closeChat"]
+    assert opens == [-1002, -1001]
+    assert closes == [-1002], "only the chat that opened is closed"
+
+
 # --- from the PR review ----------------------------------------------------
 
 
