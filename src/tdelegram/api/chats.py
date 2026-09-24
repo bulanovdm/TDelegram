@@ -215,15 +215,37 @@ def invite_link(
 def members(
     client: TelegramClient, chat_ref: str, *, limit: int = 100, offset: int = 0
 ) -> dict[str, Any]:
-    return client.call(
-        "getSupergroupMembers",
-        {
-            "supergroup_id": resolve_id(client, chat_ref),
-            "filter": {"@type": "supergroupMembersFilterRecent"},
-            "offset": offset,
-            "limit": limit,
-        },
-    )
+    """One bounded page of a group's members, most recently active first.
+
+    getSupergroupMembers takes the supergroup id from the chat's type, not the
+    chat id: -1001234567890 is supergroup 1234567890. Passing the chat id asked
+    for a supergroup that does not exist. A basic group lists its members in
+    its full info instead.
+    """
+    chat = resolve(client, chat_ref)
+    chat_type = chat.get("type") or {}
+    kind = chat_type.get("@type")
+    if kind == "chatTypeSupergroup":
+        return client.call(
+            "getSupergroupMembers",
+            {
+                "supergroup_id": chat_type.get("supergroup_id"),
+                "filter": {"@type": "supergroupMembersFilterRecent"},
+                "offset": offset,
+                "limit": limit,
+            },
+        )
+    if kind == "chatTypeBasicGroup":
+        info = client.call(
+            "getBasicGroupFullInfo", {"basic_group_id": chat_type.get("basic_group_id")}
+        )
+        found = info.get("members") or []
+        return {
+            "@type": "chatMembers",
+            "total_count": len(found),
+            "members": found[offset : offset + limit],
+        }
+    raise ValueError(f"{chat_ref!r} is not a group or channel, so it has no member list.")
 
 
 def iter_all(client: TelegramClient, *, scope: str = "main") -> Iterator[dict[str, Any]]:

@@ -27,3 +27,25 @@ def parse_date(value: str | None, *, end_of_day: bool = False) -> int | None:
     if end_of_day and len(text) == 10:
         parsed += timedelta(days=1) - timedelta(microseconds=1)
     return int(parsed.timestamp())
+
+
+_AHEAD_RE = re.compile(r"\+?(\d+(?:\.\d+)?)([mhdw])", re.IGNORECASE)
+_UNIT_SECONDS = {"m": 60, "h": 3600, "d": 86400, "w": 604800}
+
+
+def parse_future(value: str) -> int:
+    """A moment to schedule for: `30m`, `2h`, `1d` from now, or ISO-8601.
+
+    Offsets count forward here, unlike parse_date's `7d`, which reaches back
+    for a history window. A time already past is refused rather than sent now.
+    """
+    text = value.strip()
+    now = datetime.now(timezone.utc)
+    match = _AHEAD_RE.fullmatch(text)
+    if match:
+        seconds = float(match.group(1)) * _UNIT_SECONDS[match.group(2).lower()]
+        return int((now + timedelta(seconds=seconds)).timestamp())
+    moment = parse_date(text)
+    if moment is None or moment <= int(now.timestamp()):
+        raise ValueError(f"{value!r} is not in the future; use 30m, 2h, 1d, or ISO-8601.")
+    return moment

@@ -178,12 +178,7 @@ class NonInteractiveCredentialProvider(ConsoleCredentialProvider):
 
 # States the handshake can clear using only already-stored secrets. Anything
 # else (a login code, a 2FA password) needs a human, so reporting stops there.
-UNATTENDED_STATES = frozenset(
-    {
-        "authorizationStateWaitTdlibParameters",
-        "authorizationStateWaitEncryptionKey",
-    }
-)
+UNATTENDED_STATES = frozenset({"authorizationStateWaitTdlibParameters"})
 
 
 def current_state(
@@ -241,7 +236,6 @@ def _needed_for(state: str) -> str | None:
     return {
         "authorizationStateReady": None,
         "authorizationStateWaitTdlibParameters": "api_id and api_hash",
-        "authorizationStateWaitEncryptionKey": "the local database key",
         "authorizationStateWaitPhoneNumber": "a phone number",
         "authorizationStateWaitCode": "the login code",
         "authorizationStateWaitPassword": "the 2FA password",
@@ -301,10 +295,6 @@ def response_for_state(
             else "",
             use_test_dc=use_test_dc,
         )
-    if state == "authorizationStateWaitEncryptionKey":
-        key = provider.get_database_key()
-        encoded = base64.b64encode(key.encode("utf-8")).decode("ascii")
-        return {"@type": "checkDatabaseEncryptionKey", "encryption_key": encoded}
     if state == "authorizationStateWaitPhoneNumber":
         return {
             "@type": "setAuthenticationPhoneNumber",

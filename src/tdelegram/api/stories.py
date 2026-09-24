@@ -8,8 +8,9 @@ from tdelegram.api.chats import resolve_id
 from tdelegram.client import TelegramClient
 
 
-def can_post_story(client: TelegramClient) -> dict[str, Any]:
-    return client.call("canPostStory", {"chat_id": 0})
+def can_post_story(client: TelegramClient, chat_ref: str = "me") -> dict[str, Any]:
+    """Whether a story can be posted to a chat -- by default the account's own."""
+    return client.call("canPostStory", {"chat_id": resolve_id(client, chat_ref)})
 
 
 def list_archived_stories(
@@ -25,12 +26,14 @@ def delete_story(
     client: TelegramClient,
     story_id: int,
     *,
+    chat_ref: str = "me",
     allow_write: bool = False,
     allow_destructive: bool = False,
 ) -> dict[str, Any]:
+    """Delete a story. Story ids are per poster, so TDLib needs the chat too."""
     return client.call(
         "deleteStory",
-        {"story_id": story_id},
+        {"story_poster_chat_id": resolve_id(client, chat_ref), "story_id": story_id},
         allow_write=allow_write,
         allow_destructive=allow_destructive,
     )

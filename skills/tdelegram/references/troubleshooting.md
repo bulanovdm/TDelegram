@@ -135,6 +135,19 @@ Two reader threads on the global `td_receive`. Current versions key dispatch
 loops on the transport's receive domain so this should not happen; if it does,
 something is constructing loops directly. See `references/library.md`.
 
+### `Refused: TDLib would run <method> with these silently ignored`
+
+`call` checked the request against TDLib's schema and found a field the method
+does not have, or a value of the wrong JSON type. TDLib would not have refused
+it — it drops what it does not recognise and runs the call anyway — so this is
+the only warning you get. `tdelegram describe <method>` lists the real
+parameters; nested objects are named in the message (`sendMessage.input_message_content.photo`).
+
+### `TDLib did not report the chat folders`
+
+TDLib has no call that returns the folder list; it pushes it once after login.
+A session that never finished logging in has none to push — check `auth status`.
+
 ### Unknown method / `no registry verdict`
 
 The method is not in `methods.json`, so the gate refuses rather than running it

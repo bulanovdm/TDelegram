@@ -93,6 +93,10 @@ interactive terminal, so they never run from a script, a pipe or an agent's
 shell. The gate lives in `TelegramClient.call()` — including the raw `call`
 escape hatch. See `src/tdelegram/methods.json` for all 1022 verdicts.
 
+`call` also checks each request against TDLib's schema before sending it,
+because TDLib ignores a field it does not recognise and runs the call without
+it. `tdelegram describe <method>` shows the real parameters.
+
 ## Layout
 
 - `src/tdelegram/tdjson.py` — ctypes, modern C API only

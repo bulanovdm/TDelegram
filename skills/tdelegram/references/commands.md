@@ -51,8 +51,8 @@ Placed before the subcommand: `tdelegram --format json chat list`.
 | `chat info <chat>` | read | normalized record (title, type, `is_forum`, counts) |
 | `chat resolve <chat>` | read | the raw TDLib chat object |
 | `chat history` | read | `--chat`, `--limit`, `--since`, `--until`, `--sender`, `--topic`, `--contains` |
-| `chat search` | read | `--chat`, `--query`, `--limit` |
-| `chat members <chat>` | read | `--limit` |
+| `chat search` | read | `--chat`, `--query`, `--limit`, `--sender` — records shaped like `chat history` |
+| `chat members <chat>` | read | `--limit` — one bounded page; supergroups, channels and basic groups |
 | `chat create <title>` | write | creates a supergroup |
 | `chat join <chat>` | write | |
 | `chat leave <chat>` | **destructive** | a private chat cannot be rejoined without a new invite |
@@ -69,13 +69,13 @@ groups and channels), or `me` / `self` / `saved` for Saved Messages.
 |---|---|---|
 | `msg get` | read | `--chat`, `--id` |
 | `msg link` | read | `--chat`, `--id` — a t.me permalink |
-| `msg search` | read | `--query`, `--limit` — global, across chats |
-| `msg send` | write | `--chat`, `--text`, `--parse-mode markdown\|html`, `--reply-to` |
-| `msg edit` | write | `--chat`, `--id`, `--text` |
-| `msg forward` | write | `--from`, `--to`, `--id` |
+| `msg search` | read | `--query`, `--limit`, `--since`, `--until` — global, across chats |
+| `msg send` | write | `--chat`, `--text`, `--parse-mode markdown\|html`, `--reply-to`, `--topic`, `--silent`, `--schedule 2h\|ISO-8601` |
+| `msg edit` | write | `--chat`, `--id`, `--text`, `--parse-mode` |
+| `msg forward` | write | `--from`, `--to`, `--id` (repeatable) |
 | `msg react` | write | `--chat`, `--id`, `--emoji` |
-| `msg poll` | write | `--chat`, `--id`, `--option` — votes in a poll |
-| `msg delete` | **destructive** | `--chat`, `--id` |
+| `msg poll` | write | `--chat`, `--id`, `--option` (repeatable) — votes in a poll |
+| `msg delete` | **destructive** | `--chat`, `--id` (repeatable), `--only-for-me` — deletes for everyone by default |
 
 `--parse-mode markdown` is **MarkdownV2**: bold is `*bold*`, italic `_italic_`,
 underline `__underline__`, strikethrough `~struck~`, code `` `code` ``.
@@ -87,7 +87,7 @@ stripped and no formatting, silently. Use `html` if you want `<b>`/`<i>`.
 | Command | Gate | Notes |
 |---|---|---|
 | `media download <file_id>` | read | writes to local disk only, which is why it is a read |
-| `media upload` | write | `--chat`, `--path` — sends a file as a document |
+| `media upload` | write | `--chat`, `--path`, `--caption` — sends a file as a document |
 | `contact list` | read | |
 | `user info <user_id>` | read | numeric id, not a username |
 
@@ -96,9 +96,9 @@ stripped and no formatting, silently. Use `html` if you want `<b>`/`<i>`.
 | Command | Gate | Notes |
 |---|---|---|
 | `topic list <chat>` | read | forum topics; get `topic_id` here before reading a topic |
-| `folder list` | read | |
+| `folder list` | read | one record per folder, from the list TDLib pushes after login |
 | `draft set` | write | `--chat`, `--text` |
-| `admin promote` | **destructive** | `--chat`, `--user` |
+| `admin promote` | **destructive** | `--chat`, `--user`, `--right` (repeatable; default `manage_chat`), `--title` |
 | `admin ban` | **destructive** | `--chat`, `--user` |
 
 `admin promote` is destructive because it goes through `setChatMemberStatus`,
@@ -123,7 +123,8 @@ third-party bot, which can act on it.
 | Command | Gate | Notes |
 |---|---|---|
 | `updates follow` | read | `--types` comma-separated `@type` filter; streams until interrupted |
-| `call --request '<json>'` | per method | raw TDLib JSON through the same gate |
+| `call --request '<json>'` | per method | raw TDLib JSON through the same gate, checked against the schema first |
+| `describe <name>` | — | a function's parameters and verdict, an object's fields, or a type's objects |
 | `version` | — | prints the package version |
 
 `updates follow` runs until killed. Give it a bounded window or a filter rather
@@ -142,3 +143,17 @@ tdelegram call --request '{"@type":"getChatMember","chat_id":-100123,"member_id"
 Reaches any of the 1022 TDLib methods. It exists because no CLI surface covers
 all of them — not because it bypasses anything. Without `--yes` it previews and
 exits 2 exactly like a named command, and an unrecognized `@type` fails closed.
+
+Every request is checked against the TDLib schema the build was made from, and
+refused with exit 2 if a field is unknown or has the wrong JSON type. That is
+not pedantry: TDLib *ignores* a field it does not recognise and runs the call
+without it, so `"revoke_all": true` on `deleteMessages` would delete for you
+alone, silently. Look parameters up first:
+
+```bash
+tdelegram describe deleteMessages
+# {"kind":"function","name":"deleteMessages","params":{"chat_id":"int53","message_ids":"vector<int53>","revoke":"Bool"},"returns":"Ok","verdict":"destructive",...}
+tdelegram describe ReactionType     # the objects an abstract type accepts
+```
+
+`--no-validate` skips the check, for a TDLib newer than the pinned schema.

@@ -100,14 +100,32 @@ def history(client: TelegramClient, chat_ref: str, **kwargs: Any) -> list[dict[s
 
 
 def _input_text(client: TelegramClient, text: str, parse_mode: str | None) -> dict[str, Any]:
-    if parse_mode:
-        formatted = parse_entities(client.transport, text, parse_mode)
-        return {"@type": "inputMessageText", "text": formatted, "link_preview": None}
-    return {
-        "@type": "inputMessageText",
-        "text": {"@type": "formattedText", "text": text, "entities": []},
-        "link_preview": None,
-    }
+    formatted = (
+        parse_entities(client.transport, text, parse_mode)
+        if parse_mode
+        else {"@type": "formattedText", "text": text, "entities": []}
+    )
+    return {"@type": "inputMessageText", "text": formatted}
+
+
+def send_options(
+    *, schedule_date: int | None = None, silent: bool = False
+) -> dict[str, Any] | None:
+    """messageSendOptions, or None when every option is at its default.
+
+    Scheduling lives inside this object. It used to be passed at the top level
+    of sendMessage, which has no such field, so TDLib ignored it and a message
+    meant for later went out at once.
+    """
+    options: dict[str, Any] = {}
+    if silent:
+        options["disable_notification"] = True
+    if schedule_date is not None:
+        options["scheduling_state"] = {
+            "@type": "messageSchedulingStateSendAtDate",
+            "send_date": schedule_date,
+        }
+    return {"@type": "messageSendOptions", **options} if options else None
 
 
 def send(
@@ -118,18 +136,24 @@ def send(
     parse_mode: str | None = None,
     reply_to: int | None = None,
     schedule_date: int | None = None,
+    silent: bool = False,
+    topic_id: int | None = None,
     allow_write: bool = False,
 ) -> dict[str, Any]:
+    """Send a text message. `topic_id` names a forum topic; without it a forum
+    message lands in General."""
+    from tdelegram.api.topics import topic_object
+
     chat_id = resolve_id(client, chat_ref)
     content = _input_text(client, text, parse_mode)
     params: dict[str, Any] = {"chat_id": chat_id, "input_message_content": content}
+    if topic_id is not None:
+        params["topic_id"] = topic_object(topic_id, "forum")
     if reply_to is not None:
         params["reply_to"] = {"@type": "inputMessageReplyToMessage", "message_id": reply_to}
-    if schedule_date is not None:
-        params["scheduling_state"] = {
-            "@type": "messageSchedulingStateSendAtDate",
-            "send_date": schedule_date,
-        }
+    options = send_options(schedule_date=schedule_date, silent=silent)
+    if options is not None:
+        params["options"] = options
     return client.call("sendMessage", params, allow_write=allow_write)
 
 
@@ -221,22 +245,30 @@ def pin(
     )
 
 
-def unpin(client: TelegramClient, chat_ref: str, *, allow_write: bool = False) -> dict[str, Any]:
+def unpin(
+    client: TelegramClient,
+    chat_ref: str,
+    message_id: int | None = None,
+    *,
+    allow_write: bool = False,
+    allow_destructive: bool = False,
+) -> dict[str, Any]:
+    """Unpin one message, or every pinned message when no id is given.
+
+    Unpinning everything is destructive -- the previous set is not recorded.
+    This used to send unpinChatMessage without the message_id it requires.
+    """
+    chat_id = resolve_id(client, chat_ref)
+    if message_id is None:
+        return client.call(
+            "unpinAllChatMessages",
+            {"chat_id": chat_id},
+            allow_write=allow_write,
+            allow_destructive=allow_destructive,
+        )
     return client.call(
-        "unpinChatMessage" if _has_unpin(client) else "unpinAllChatMessages",
-        {"chat_id": resolve_id(client, chat_ref)},
-        allow_write=allow_write,
+        "unpinChatMessage", {"chat_id": chat_id, "message_id": message_id}, allow_write=allow_write
     )
-
-
-def _has_unpin(client: TelegramClient) -> bool:
-    try:
-        from tdelegram import safety
-
-        safety.verdict("unpinChatMessage")
-        return True
-    except RuntimeError:
-        return False
 
 
 def link(client: TelegramClient, chat_ref: str, message_id: int) -> dict[str, Any]:

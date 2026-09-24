@@ -8,6 +8,12 @@ Two schema sources are accepted, and both yield the same function set:
 - `td_api.tl` - the scheme file that header is generated from. It lives in
   the tdlib/td repository, so CI can fetch it at a pinned commit instead of
   building TDLib. See .github/workflows/ci.yml.
+
+From a `td_api.tl` it also emits schema.json: the parameters of every
+function and the fields of every object. TDLib ignores a field it does not
+know and defaults one that is missing, so a request built with the wrong
+names still runs -- with its arguments silently unset. schema.json is what
+`tdelegram.schema.validate()` checks requests against.
 """
 
 from __future__ import annotations
@@ -16,12 +22,19 @@ import argparse
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 CLASS_RE = re.compile(r"class (\w+) final : public Function")
 # In td_api.tl every function is one declaration below the ---functions---
 # marker: `name arg:Type ... = ReturnType;`, with // comment lines between.
 TL_FUNCTION_RE = re.compile(r"^([a-z][A-Za-z0-9]*)[ =]")
 TL_FUNCTIONS_MARKER = "---functions---"
+# The same declaration, with its fields and result captured.
+TL_DECLARATION_RE = re.compile(r"^([a-z][A-Za-z0-9]*)((?:\s+\w+:\S+)*)\s*=\s*([A-Za-z0-9<>]+);$")
+# The preamble declares TL's own primitives; they are not TDLib objects.
+TL_BUILTINS = frozenset(
+    {"double", "string", "int32", "int53", "int64", "bytes", "boolFalse", "boolTrue", "vector"}
+)
 
 SCHEMA_ENV = "TDELEGRAM_TD_API"
 
@@ -34,7 +47,6 @@ OVERRIDES: dict[str, tuple[str, str]] = {
     "checkAuthenticationCode": ("write", "advances the login state machine"),
     "checkAuthenticationPassword": ("write", "advances the login state machine"),
     "checkAuthenticationEmailCode": ("write", "advances the login state machine"),
-    "checkDatabaseEncryptionKey": ("write", "unlocks the local database"),
     "setAuthenticationPhoneNumber": ("write", "advances the login state machine"),
     "setAuthenticationEmailAddress": ("write", "advances the login state machine"),
     "setTdlibParameters": ("write", "configures the TDLib instance"),
@@ -47,7 +59,6 @@ OVERRIDES: dict[str, tuple[str, str]] = {
     "loadChats": ("read", "loads chat list into memory; local state only"),
     "getChats": ("read", "read-only chat list fetch"),
     "readAllChatReactions": ("read", "clears local reaction badges only"),
-    "markReactionsAsSeen": ("read", "clears local reaction badges only"),
     # Destructive: called out explicitly in the plan.
     "logOut": ("destructive", "ends the session on all devices state; requires re-login"),
     "deleteAccount": ("destructive", "irreversibly deletes the Telegram account"),
@@ -252,6 +263,49 @@ def parse_schema(path: Path) -> list[str]:
     return names
 
 
+def parse_shapes(text: str) -> dict[str, dict[str, dict[str, Any]]]:
+    """Every function's parameters and every object's fields, from td_api.tl.
+
+    Field order is the schema's, which is also the order TDLib documents them in.
+    """
+    types_part, marker, functions_part = text.partition(TL_FUNCTIONS_MARKER)
+    if not marker:
+        raise SystemExit(f"No {TL_FUNCTIONS_MARKER} section: is this really a td_api.tl?")
+
+    def _declarations(part: str) -> list[tuple[str, dict[str, str], str]]:
+        found = []
+        for line in part.splitlines():
+            match = TL_DECLARATION_RE.match(line.strip())
+            if match and match.group(1) not in TL_BUILTINS:
+                fields = dict(pair.split(":", 1) for pair in match.group(2).split())
+                found.append((match.group(1), fields, match.group(3)))
+        return found
+
+    return {
+        "constructors": {
+            name: {"type": result, "fields": fields}
+            for name, fields, result in _declarations(types_part)
+        },
+        "functions": {
+            name: {"returns": result, "params": fields}
+            for name, fields, result in _declarations(functions_part)
+        },
+    }
+
+
+def render_shapes(shapes: dict[str, dict[str, dict[str, Any]]]) -> str:
+    """JSON with one declaration per line, so a TDLib bump reviews as a diff."""
+    sections = []
+    for section in ("constructors", "functions"):
+        entries = shapes[section]
+        body = ",\n".join(
+            f"{json.dumps(name)}: {json.dumps(entries[name], separators=(',', ':'))}"
+            for name in sorted(entries)
+        )
+        sections.append(f'"{section}": {{\n{body}\n}}')
+    return "{\n" + ",\n".join(sections) + "\n}\n"
+
+
 def _dedup(names: list[str]) -> list[str]:
     """Preserve source order, drop repeats."""
     return list(dict.fromkeys(names))
@@ -298,6 +352,11 @@ def main() -> None:
     parser.add_argument("--schema", default="", help="Path to td_api.h or td_api.tl")
     parser.add_argument("--header", default="", help="Deprecated alias for --schema")
     parser.add_argument("--output", default="src/tdelegram/methods.json")
+    parser.add_argument(
+        "--shapes-output",
+        default="src/tdelegram/schema.json",
+        help="Where to write request shapes (needs td_api.tl)",
+    )
     args = parser.parse_args()
 
     schema = discover_schema(args.schema or args.header)
@@ -310,6 +369,20 @@ def main() -> None:
     for entry in registry.values():
         counts[entry["verdict"]] = counts.get(entry["verdict"], 0) + 1
     print(f"Parsed {schema}: {len(registry)} functions {counts}")
+
+    if schema.suffix != ".tl":
+        # The header carries the same shapes as C++ members; parsing C++ to get
+        # them back is fragile, and the .tl is one curl away. See CONTRIBUTING.
+        print(f"Request shapes need td_api.tl; {args.shapes_output} left as it was.")
+        return
+    shapes = parse_shapes(schema.read_text(encoding="utf-8", errors="replace"))
+    shapes_out = Path(args.shapes_output)
+    shapes_out.parent.mkdir(parents=True, exist_ok=True)
+    shapes_out.write_text(render_shapes(shapes), encoding="utf-8")
+    print(
+        f"Wrote {shapes_out}: {len(shapes['functions'])} functions, "
+        f"{len(shapes['constructors'])} objects"
+    )
 
 
 if __name__ == "__main__":

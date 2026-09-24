@@ -33,10 +33,10 @@ jobs:
             "https://raw.githubusercontent.com/tdlib/td/$TDLIB_COMMIT/td/generate/scheme/td_api.tl"
           echo "TDELEGRAM_TD_API=$RUNNER_TEMP/td_api.tl" >> "$GITHUB_ENV"
 
-      - name: Registry is in sync with the schema
+      - name: Registry and request shapes are in sync with the schema
         run: |
           python scripts/generate_method_registry.py --output src/tdelegram/methods.json
-          git diff --exit-code -- src/tdelegram/methods.json
+          git diff --exit-code -- src/tdelegram/methods.json src/tdelegram/schema.json
 
       - run: pytest -q
       - run: ruff check src tests scripts

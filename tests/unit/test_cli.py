@@ -45,7 +45,6 @@ def cli(monkeypatch: pytest.MonkeyPatch) -> Any:
             cli_context.ensure_login(client, ctx)
         return client, None
 
-    monkeypatch.setattr(cli_main, "make_client", _fake_make_client)
     monkeypatch.setattr(cli_context, "make_client", _fake_make_client)
     monkeypatch.setattr(client, "close", lambda: None)
     # The CLI keeps global option state on a module-level Ctx.
@@ -83,17 +82,18 @@ def test_account_info_emits_a_record(cli: FakeTransport) -> None:
 def test_data_command_performs_the_handshake(cli: FakeTransport) -> None:
     """Regression: TDLib params are per-process, so every command replays them.
 
-    Scripts a session that is not yet unlocked, so the handshake has to do
-    real work rather than answering "ready" on the first probe.
+    Scripts what a saved session looks like to a fresh process -- waiting for
+    its parameters -- so the handshake has to do real work rather than
+    answering "ready" on the first probe.
     """
     # FakeTransport matches the first rule that fits, so the fixture's
     # already-authorized answer has to go before a different one is scripted.
     cli._rules.clear()
     cli.add_simple_response(
-        "getAuthorizationState", {"@type": "authorizationStateWaitEncryptionKey"}
+        "getAuthorizationState", {"@type": "authorizationStateWaitTdlibParameters"}
     )
 
-    def _unlocked(request: dict[str, Any]) -> dict[str, Any]:
+    def _opened(request: dict[str, Any]) -> dict[str, Any]:
         cli.add_update(
             {
                 "@type": "updateAuthorizationState",
@@ -102,15 +102,15 @@ def test_data_command_performs_the_handshake(cli: FakeTransport) -> None:
         )
         return {"@type": "ok"}
 
-    cli.add_response(lambda r: r.get("@type") == "checkDatabaseEncryptionKey", _unlocked)
+    cli.add_response(lambda r: r.get("@type") == "setTdlibParameters", _opened)
     cli.add_simple_response("getMe", {"@type": "user", "id": 7})
 
     result = runner.invoke(cli_main.app, ["account", "info"])
     assert result.exit_code == 0
     sent = _sent(cli)
     assert sent[0] == "getAuthorizationState", "handshake must be probed before any call"
-    assert "checkDatabaseEncryptionKey" in sent, "handshake must actually be driven"
-    assert sent.index("checkDatabaseEncryptionKey") < sent.index("getMe")
+    assert "setTdlibParameters" in sent, "handshake must actually be driven"
+    assert sent.index("setTdlibParameters") < sent.index("getMe")
 
 
 def test_auth_status_reports_authorized(cli: FakeTransport) -> None:
@@ -491,7 +491,15 @@ def test_negative_chat_ids_are_accepted_positionally(
     ordinary identifier for a supergroup could not be passed at all without
     the `--` escape.
     """
-    cli.add_simple_response("getChat", {"@type": "chat", "id": -1001246902558, "title": "By id"})
+    cli.add_simple_response(
+        "getChat",
+        {
+            "@type": "chat",
+            "id": -1001246902558,
+            "title": "By id",
+            "type": {"@type": "chatTypeSupergroup", "supergroup_id": 1246902558},
+        },
+    )
     cli.add_simple_response("getSupergroupMembers", {"@type": "chatMembers", "total_count": 0})
     cli.add_simple_response("getForumTopics", {"@type": "forumTopics", "topics": []})
     result = runner.invoke(cli_main.app, argv)
@@ -512,25 +520,82 @@ def test_help_survives_the_permissive_parser(cli: FakeTransport) -> None:
     assert "Usage" in result.stdout
 
 
-def test_chat_search_emits_messages(cli: FakeTransport) -> None:
+def test_chat_search_emits_the_records_history_does(cli: FakeTransport) -> None:
+    """Regression: search emitted raw TDLib messages, history flat records.
+
+    The same message had two shapes depending on how it was found, so `.text`
+    was null on one of them -- the bug `msg get` had.
+    """
+    found = {
+        "@type": "message",
+        "id": 1,
+        "chat_id": 5,
+        "content": {"@type": "messageText", "text": {"@type": "formattedText", "text": "hi there"}},
+    }
     cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
-    cli.add_simple_response(
-        "searchChatMessages",
-        {"@type": "messages", "messages": [{"@type": "message", "id": 1, "chat_id": 5}]},
+    cli.add_response(
+        lambda r: r.get("@type") == "searchChatMessages",
+        lambda r: {
+            "@type": "foundChatMessages",
+            "messages": [] if r.get("from_message_id") else [found],
+            "next_from_message_id": 0,
+        },
     )
     result = runner.invoke(
-        cli_main.app, ["chat", "search", "--chat", "somechat", "--query", "hi"]
+        cli_main.app,
+        ["chat", "search", "--chat", "somechat", "--query", "hi", "--sender", "7"],
     )
     assert result.exit_code == 0
-    assert _lines(result)[0]["id"] == 1
+    record = _lines(result)[0]
+    assert record["message_id"] == 1 and record["text"] == "hi there"
+    call = next(req for _, req in cli.sent if req.get("@type") == "searchChatMessages")
+    assert call["sender_id"] == {"@type": "messageSenderUser", "user_id": 7}
 
 
-def test_chat_members_lists(cli: FakeTransport) -> None:
-    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+def test_chat_members_asks_for_the_supergroup_not_the_chat(cli: FakeTransport) -> None:
+    """Regression: the chat id went where TDLib wants the supergroup id.
+
+    -1001246902558 is supergroup 1246902558. The command passed the unresolved
+    reference itself, so neither a username nor a numeric id could work.
+    """
+    cli.add_simple_response(
+        "searchPublicChat",
+        {
+            "@type": "chat",
+            "id": -1001246902558,
+            "type": {"@type": "chatTypeSupergroup", "supergroup_id": 1246902558},
+        },
+    )
     cli.add_simple_response("getSupergroupMembers", {"@type": "chatMembers", "total_count": 2})
     result = runner.invoke(cli_main.app, ["chat", "members", "somechat"])
     assert result.exit_code == 0
     assert _lines(result)[0]["total_count"] == 2
+    call = next(req for _, req in cli.sent if req.get("@type") == "getSupergroupMembers")
+    assert call["supergroup_id"] == 1246902558
+
+
+def test_chat_members_reads_a_basic_group_from_its_full_info(cli: FakeTransport) -> None:
+    cli.add_simple_response(
+        "searchPublicChat",
+        {"@type": "chat", "id": -42, "type": {"@type": "chatTypeBasicGroup", "basic_group_id": 42}},
+    )
+    member = {"@type": "chatMember", "member_id": {"@type": "messageSenderUser", "user_id": 7}}
+    cli.add_simple_response(
+        "getBasicGroupFullInfo", {"@type": "basicGroupFullInfo", "members": [member, member]}
+    )
+    result = runner.invoke(cli_main.app, ["chat", "members", "somegroup", "--limit", "1"])
+    assert result.exit_code == 0
+    assert _lines(result)[0]["total_count"] == 2
+    assert len(_lines(result)[0]["members"]) == 1
+
+
+def test_chat_members_of_a_private_chat_is_a_clear_error(cli: FakeTransport) -> None:
+    cli.add_simple_response(
+        "searchPublicChat", {"@type": "chat", "id": 7, "type": {"@type": "chatTypePrivate"}}
+    )
+    result = runner.invoke(cli_main.app, ["chat", "members", "someone"])
+    assert result.exit_code == 1
+    assert "no member list" in _lines(result)[0]["error"]["message"]
 
 
 def test_msg_get_fetches_one(cli: FakeTransport) -> None:
@@ -741,3 +806,144 @@ def test_auth_status_names_the_secret_that_actually_blocked(cli: FakeTransport) 
     assert "hash" in (status["needs"] or "").lower(), (
         f"needs should name the credential that failed, got {status['needs']!r}"
     )
+
+
+# --- requests TDLib would have run with their arguments dropped -----------
+
+
+def _request(cli: FakeTransport, method: str) -> dict[str, Any]:
+    return next(req for _, req in cli.sent if req.get("@type") == method)
+
+
+def test_raw_call_refuses_what_tdlib_would_silently_drop(cli: FakeTransport) -> None:
+    """TDLib ignores an unknown field, so this would react with nothing."""
+    request = json.dumps(
+        {"@type": "addMessageReaction", "chat_id": 1, "message_id": 5, "emoji": "👍"}
+    )
+    result = runner.invoke(cli_main.app, ["--yes", "call", "--request", request])
+    assert result.exit_code == 2
+    assert "addMessageReaction" not in _sent(cli)
+    assert "reaction_type" in result.stderr, "the refusal should say what the fields are"
+
+
+def test_raw_call_validation_can_be_waived_for_a_newer_tdlib(cli: FakeTransport) -> None:
+    request = json.dumps({"@type": "getChat", "chat_id": 1, "future_field": True})
+    cli.add_simple_response("getChat", {"@type": "chat", "id": 1})
+    refused = runner.invoke(cli_main.app, ["call", "--request", request])
+    assert refused.exit_code == 2
+    # The fake still records the field as unknown to the pinned schema, so
+    # only the transport-level check is switched off here.
+    cli._validate = False
+    waived = runner.invoke(cli_main.app, ["call", "--no-validate", "--request", request])
+    assert waived.exit_code == 0
+    assert _lines(waived)[0]["id"] == 1
+
+
+def test_describe_shows_parameters_and_the_verdict(cli: FakeTransport) -> None:
+    result = runner.invoke(cli_main.app, ["describe", "deleteMessages"])
+    assert result.exit_code == 0
+    entry = _lines(result)[0]
+    assert entry["params"] == {"chat_id": "int53", "message_ids": "vector<int53>", "revoke": "Bool"}
+    assert entry["verdict"] == "destructive"
+    assert cli.sent == [], "describe reads the schema, not TDLib"
+
+
+def test_describe_suggests_close_names(cli: FakeTransport) -> None:
+    result = runner.invoke(cli_main.app, ["describe", "getChatFolders"])
+    assert result.exit_code == 1
+    assert "getChatFolder" in _lines(result)[0]["error"]["message"]
+
+
+def test_scheduling_goes_inside_the_send_options(cli: FakeTransport) -> None:
+    """Regression: scheduling_state sat at the top level of sendMessage.
+
+    sendMessage has no such field there, so TDLib ignored it and a message
+    meant for tomorrow went out at once.
+    """
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_simple_response("sendMessage", {"@type": "message", "id": 9})
+    argv = ["--yes", "msg", "send", "--chat", "somechat", "--text", "later"]
+    result = runner.invoke(cli_main.app, [*argv, "--schedule", "2h", "--silent"])
+    assert result.exit_code == 0
+    call = _request(cli, "sendMessage")
+    assert "scheduling_state" not in call
+    options = call["options"]
+    assert options["scheduling_state"]["@type"] == "messageSchedulingStateSendAtDate"
+    assert options["disable_notification"] is True
+
+
+def test_a_schedule_in_the_past_is_refused(cli: FakeTransport) -> None:
+    argv = ["--yes", "msg", "send", "--chat", "somechat", "--text", "x"]
+    result = runner.invoke(cli_main.app, [*argv, "--schedule", "2001-01-01"])
+    assert result.exit_code == 1
+    assert "sendMessage" not in _sent(cli)
+
+
+def test_msg_delete_deletes_for_everyone_unless_told_otherwise(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: revoke was never set, so a private chat kept every message."""
+    _scripted_delete(cli)
+    monkeypatch.setattr(cli_context, "interactive", lambda: True)
+    argv = ["--yes", *DELETE, "--id", "6"]
+    result = runner.invoke(cli_main.app, argv, input="deleteMessages\n")
+    assert result.exit_code == 0
+    call = _request(cli, "deleteMessages")
+    assert call["revoke"] is True and call["message_ids"] == [5, 6]
+    cli.sent.clear()
+    result = runner.invoke(cli_main.app, [*argv, "--only-for-me"], input="deleteMessages\n")
+    assert _request(cli, "deleteMessages")["revoke"] is False
+
+
+def test_promote_grants_the_rights_asked_for(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: the status carried a title and no rights, granting nothing."""
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": -100123})
+    monkeypatch.setattr(cli_context, "interactive", lambda: True)
+    argv = ["--yes", "admin", "promote", "--chat", "somechat", "--user", "2"]
+    result = runner.invoke(
+        cli_main.app,
+        [*argv, "--right", "delete_messages", "--right", "can_pin_messages", "--title", "Mod"],
+        input="setChatMemberStatus\n",
+    )
+    assert result.exit_code == 0
+    rights = _request(cli, "setChatMemberStatus")["status"]["rights"]
+    assert rights["can_delete_messages"] is True and rights["can_pin_messages"] is True
+    assert "can_promote_members" not in rights, "only what was asked for"
+    assert _request(cli, "setChatMemberTag")["tag"] == "Mod"
+
+
+def test_promote_rejects_a_misspelled_right_before_anything_is_sent(cli: FakeTransport) -> None:
+    argv = ["--yes", "admin", "promote", "--chat", "x", "--user", "2", "--right", "delete_msgs"]
+    result = runner.invoke(cli_main.app, argv)
+    assert result.exit_code == 1
+    assert "delete_messages" in _lines(result)[0]["error"]["message"]
+    assert cli.sent == []
+
+
+def test_folder_list_reads_the_update_tdlib_pushes(cli: FakeTransport) -> None:
+    """Regression: it asked for getChatFolders, which TDLib does not have."""
+    cli.add_update(
+        {
+            "@type": "updateChatFolders",
+            "chat_folders": [
+                {"@type": "chatFolderInfo", "id": 2, "name": {"text": {"text": "News"}}},
+                {"@type": "chatFolderInfo", "id": 3, "name": {"text": {"text": "Work"}}},
+            ],
+        }
+    )
+    result = runner.invoke(cli_main.app, ["folder", "list"])
+    assert result.exit_code == 0
+    assert [(r["folder_id"], r["name"]) for r in _lines(result)] == [(2, "News"), (3, "Work")]
+
+
+def test_a_preview_flags_a_request_tdlib_would_not_honour(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from tdelegram.errors import WriteConfirmationRequired
+
+    request = {"@type": "addMessageReaction", "emoji": "x"}
+    cli_context.show_preview(WriteConfirmationRequired("addMessageReaction", request))
+    body = json.loads(capsys.readouterr().err)["confirmation_required"]
+    assert body["schema_problems"], "approving the preview would approve a different call"

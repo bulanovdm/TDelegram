@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from tdelegram.auth import (
     ConsoleCredentialProvider,
@@ -21,9 +23,10 @@ from tdelegram.errors import (
     ConfirmationRequired,
     DestructiveConfirmationRequired,
     TelegramError,
-    WriteConfirmationRequired,
 )
 from tdelegram.transport import TdJsonTransport
+
+T = TypeVar("T")
 
 
 @dataclass
@@ -165,6 +168,69 @@ def confirm_destructive(method: str) -> bool:
     return True
 
 
+@contextmanager
+def session(ctx: Ctx, *, login: bool = True) -> Iterator[TelegramClient]:
+    """A client for this profile, holding its lock until the block ends."""
+    client, lock = make_client(ctx, login=login)
+    try:
+        yield client
+    finally:
+        try:
+            client.close()
+        finally:
+            if lock is not None:
+                lock.release()
+
+
+def show_preview(exc: ConfirmationRequired) -> None:
+    """Put what a gated call would do on stderr, for a human to judge.
+
+    A request that does not match TDLib's schema is flagged here too, because
+    TDLib would run it with the unmatched fields silently dropped: approving
+    the preview would approve something other than what it shows.
+    """
+    from tdelegram import safety, schema
+
+    body: dict[str, Any] = {
+        "method": exc.method,
+        "verdict": exc.verdict,
+        "reason": safety.reason(exc.method),
+        "preview": exc.preview,
+    }
+    try:
+        problems = schema.validate(exc.preview)
+    except RuntimeError:
+        problems = []
+    if problems:
+        body["schema_problems"] = problems
+    warn(json.dumps({"confirmation_required": body}, indent=2, ensure_ascii=False))
+
+
+def perform(ctx: Ctx, action: Callable[[bool, bool], T]) -> T:
+    """Run `action(allow_write, allow_destructive)` under the CLI's gate rules.
+
+    Without --yes, the first gated call raises: its preview goes to stderr and
+    the command exits 2. With --yes, writes run and a destructive call stops
+    once more for its method name at a terminal; confirmed, the action runs
+    again with both permissions. Whatever it read before the gated call is
+    simply read again.
+
+    A `write` needs --yes. A `destructive` needs --yes *and* its typed name.
+    The name used to be an alternative to --yes rather than an addition, so
+    neither layer was actually required.
+    """
+    try:
+        return action(ctx.yes, False)
+    except ConfirmationRequired as exc:
+        show_preview(exc)
+        if not ctx.yes:
+            warn("Preview only: re-run with --yes to perform.")
+            raise SystemExit(2) from None
+        if isinstance(exc, DestructiveConfirmationRequired) and confirm_destructive(exc.method):
+            return action(True, True)
+        raise SystemExit(2) from None
+
+
 def run_call(
     ctx: Ctx,
     method: str,
@@ -178,38 +244,16 @@ def run_call(
     There is deliberately no per-call-site "this is a write" flag: the
     registry decides, so forgetting to annotate a command cannot open a
     hole in the gate.
-
-    A `write` needs --yes. A `destructive` needs --yes *and* its method name
-    typed at a terminal. The typed name used to be an alternative to --yes
-    rather than an addition: --yes alone performed any destructive call, and a
-    terminal without --yes could perform one by typing, so neither layer was
-    actually required.
     """
-    own = client is None
-    lock: SessionLock | None = None
-    if own:
-        client, lock = make_client(ctx, login=login)
-        assert client is not None
-    try:
-        assert client is not None
-        try:
-            return client.call(method, params, allow_write=ctx.yes, allow_destructive=False)
-        except (WriteConfirmationRequired, DestructiveConfirmationRequired) as exc:
-            preview = {"preview": exc.preview, "verdict": exc.verdict, "method": method}
-            warn(json.dumps({"confirmation_required": preview}, indent=2))
-            if not ctx.yes:
-                warn("Preview only: re-run with --yes to perform.")
-                raise SystemExit(2) from None
-            if isinstance(exc, DestructiveConfirmationRequired) and confirm_destructive(method):
-                return client.call(method, params, allow_write=True, allow_destructive=True)
-            raise SystemExit(2) from None
-    finally:
-        if own and client is not None:
-            try:
-                client.close()
-            finally:
-                if lock is not None:
-                    lock.release()
+    if client is not None:
+        active = client
+        return perform(
+            ctx, lambda w, d: active.call(method, params, allow_write=w, allow_destructive=d)
+        )
+    with session(ctx, login=login) as own:
+        return perform(
+            ctx, lambda w, d: own.call(method, params, allow_write=w, allow_destructive=d)
+        )
 
 
 def handle_errors(func: Any) -> Any:

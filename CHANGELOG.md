@@ -102,6 +102,47 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
 
 ### Fixed
 
+- **Requests are checked against TDLib's schema.** TDLib ignores a field it does
+  not recognise and defaults a missing one, so a request built with the wrong
+  parameter names runs with its arguments silently unset, and `FakeTransport`
+  answered anything. The generator now also emits `schema.json` (every
+  function's parameters, every object's fields) from the pinned `td_api.tl`;
+  the fake refuses a request that does not match, the test suite fails on one,
+  and `tdelegram call` refuses one before sending. It found these, each broken
+  against the TDLib the Docker image runs:
+  - Every media send: TDLib now wraps the file in `inputPhoto`,
+    `inputDocument` and friends, so `media upload`, `send_photo`,
+    `send_video`, `send_voice` and `send_sticker` were all refused.
+  - `msg edit`, `msg react`, `draft set`, `admin ban` and `admin promote` built
+    their own requests with field names TDLib does not have (`text`, `emoji`,
+    `user_id`), so each ran with its main argument unset. They now go through
+    the `api/` functions, which were right — except `promote`, which granted
+    no rights at all and now takes `--right` and `--title`.
+  - `msg search` sent `offset: 0` where TDLib wants a string cursor and was
+    refused outright; it pages by `next_offset` now and takes `--since` and
+    `--until`.
+  - `chat members` passed the chat reference where TDLib wants the supergroup
+    id; it now reads the id from the chat's type, and lists basic groups too.
+  - `folder list` asked for `getChatFolders`, which TDLib does not have, and
+    failed closed on every run. The folder list only arrives as an update, so
+    the client now remembers the latest `updateChatFolders`.
+  - Scheduling sat outside `messageSendOptions`, so a message meant for later
+    went out at once. `msg send` takes `--schedule`, `--silent` and `--topic`.
+  - Forum topics sent `topic_id` for `forum_topic_id`, so editing, closing or
+    deleting a topic addressed topic 0; drafts used a field TDLib removed; the
+    proxy calls, `addContact`, `importContacts`, `deleteStory`,
+    `sendInlineQueryResultMessage` and `unpinChatMessage` all sent shapes
+    TDLib does not take.
+- `msg delete` deleted only for the account itself: TDLib revokes nothing
+  unless told to, and the command never said, so in a private chat the other
+  side kept every "deleted" message. It deletes for everyone now, takes
+  several `--id`s, and `--only-for-me` keeps the old behaviour.
+- `chat search` emitted raw TDLib messages while `chat history` emitted
+  records, the same two-shapes bug `msg get` had. It emits records, and takes
+  `--sender`.
+- Removed the handling for `authorizationStateWaitEncryptionKey`, a state
+  TDLib no longer has, and two registry overrides for functions it no longer
+  has. A contract test now fails on an override naming a missing function.
 - A second `TelegramClient` aborted the process. `td_receive` is global to the
   loaded library, but dispatch loops were keyed on `id(transport)`, so a second
   `TdJsonTransport` started a second reader thread and libtdjson killed the
@@ -165,6 +206,9 @@ Initial release-quality cut: library + CLI over the TDLib modern C API.
   QEMU takes hours.
 
 ### Changed
+- `tdelegram describe <name>` shows what the schema says about a function (its
+  parameters and the gate's verdict), an object or an abstract type, for
+  building `call` requests from the schema instead of from memory.
 - `errors.PermissionError` and `errors.TimeoutError` are now
   `TelegramPermissionError` and `TelegramTimeoutError`; the old names shadowed
   builtins for anyone importing them.

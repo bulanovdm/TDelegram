@@ -233,12 +233,14 @@ user      info                         admin     ban promote
 topic     list                         folder    list        draft set
 bot       callback inline              story     list        secret create
 proxy     list                         updates   follow
-call      --request '<raw TDLib JSON>' version
+call      --request '<raw TDLib JSON>' describe <method|object|type>  version
 ```
 
 `tdelegram call --request '{"@type":"...","..."}'` reaches any of the 1022
 methods directly and goes through the identical gate — it is an escape hatch for
-coverage, not for permission.
+coverage, not for permission. Build the request from `tdelegram describe
+<method>`, not from memory: TDLib silently ignores a field it does not know, so
+`call` refuses one rather than let the request run without it.
 
 Global flags: `--profile`, `--session-dir`, `--format`, `--output`, `--yes`,
 `--verbose`, `--no-retry`.

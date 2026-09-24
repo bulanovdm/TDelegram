@@ -22,13 +22,14 @@ def add_contact(
     return client.call(
         "addContact",
         {
+            "user_id": user_id,
             "contact": {
-                "@type": "contact",
+                "@type": "importedContact",
                 "phone_number": "",
                 "first_name": first_name,
                 "last_name": last_name,
-                "user_id": user_id,
-            }
+            },
+            "share_phone_number": False,
         },
         allow_write=allow_write,
     )
@@ -41,13 +42,7 @@ def import_contacts(
         "importContacts",
         {
             "contacts": [
-                {
-                    "@type": "contact",
-                    "phone_number": p,
-                    "first_name": p,
-                    "last_name": "",
-                    "user_id": 0,
-                }
+                {"@type": "importedContact", "phone_number": p, "first_name": p, "last_name": ""}
                 for p in phones
             ]
         },

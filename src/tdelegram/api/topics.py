@@ -36,7 +36,7 @@ def list_topics(
             "query": "",
             "offset_date": offset_date,
             "offset_message_id": offset_message_id,
-            "offset_topic_id": offset_topic_id,
+            "offset_forum_topic_id": offset_topic_id,
             "limit": limit,
         },
     )
@@ -76,7 +76,7 @@ def iter_topics(client: TelegramClient, chat_ref: str) -> Iterator[dict[str, Any
                 "query": "",
                 "offset_date": offset_date,
                 "offset_message_id": offset_message_id,
-                "offset_topic_id": offset_topic_id,
+                "offset_forum_topic_id": offset_topic_id,
                 "limit": 100,
             },
         )
@@ -121,7 +121,7 @@ def edit_topic(
 
     return client.call(
         "editForumTopic",
-        {"chat_id": resolve_id(client, chat_ref), "topic_id": topic_id, "name": name},
+        {"chat_id": resolve_id(client, chat_ref), "forum_topic_id": topic_id, "name": name},
         allow_write=allow_write,
     )
 
@@ -138,7 +138,7 @@ def close_topic(
 
     return client.call(
         "toggleForumTopicIsClosed",
-        {"chat_id": resolve_id(client, chat_ref), "topic_id": topic_id, "is_closed": closed},
+        {"chat_id": resolve_id(client, chat_ref), "forum_topic_id": topic_id, "is_closed": closed},
         allow_write=allow_write,
     )
 
@@ -155,7 +155,7 @@ def delete_topic(
 
     return client.call(
         "deleteForumTopic",
-        {"chat_id": resolve_id(client, chat_ref), "topic_id": topic_id},
+        {"chat_id": resolve_id(client, chat_ref), "forum_topic_id": topic_id},
         allow_write=allow_write,
         allow_destructive=allow_destructive,
     )

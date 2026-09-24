@@ -37,7 +37,7 @@ def search_secret(
         {
             "chat_id": resolve_id(client, chat_ref),
             "query": query,
-            "from_search_id": 0,
+            "offset": "",
             "limit": limit,
         },
     )

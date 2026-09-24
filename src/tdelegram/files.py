@@ -58,7 +58,10 @@ def send_file(
     local_path = str(Path(path).expanduser())
     content = {
         "@type": "inputMessageDocument",
-        "document": {"@type": "inputFileLocal", "path": local_path},
+        "document": {
+            "@type": "inputDocument",
+            "document": {"@type": "inputFileLocal", "path": local_path},
+        },
         "caption": {"@type": "formattedText", "text": caption, "entities": []},
     }
     return client.call(

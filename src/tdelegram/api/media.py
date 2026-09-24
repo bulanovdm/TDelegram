@@ -101,6 +101,17 @@ def upload(
     return wait_for_send(client, int(mid or 0), chat_id)
 
 
+def local_file(path: str | Path) -> dict[str, Any]:
+    """An InputFile for a path on this machine.
+
+    TDLib wraps it once more per media kind, in an input object that also
+    carries the thumbnail and dimensions: inputMessagePhoto takes an
+    inputPhoto, not an InputFile. The bare file is what older TDLib wanted,
+    and the pinned one refuses every media send built that way.
+    """
+    return {"@type": "inputFileLocal", "path": str(Path(path).expanduser())}
+
+
 def send_photo(
     client: TelegramClient,
     chat_ref: str,
@@ -115,7 +126,7 @@ def send_photo(
             "chat_id": resolve_id(client, chat_ref),
             "input_message_content": {
                 "@type": "inputMessagePhoto",
-                "photo": {"@type": "inputFileLocal", "path": str(path)},
+                "photo": {"@type": "inputPhoto", "photo": local_file(path)},
                 "caption": {"@type": "formattedText", "text": caption, "entities": []},
             },
         },
@@ -137,7 +148,7 @@ def send_video(
             "chat_id": resolve_id(client, chat_ref),
             "input_message_content": {
                 "@type": "inputMessageVideo",
-                "video": {"@type": "inputFileLocal", "path": str(path)},
+                "video": {"@type": "inputVideo", "video": local_file(path)},
                 "caption": {"@type": "formattedText", "text": caption, "entities": []},
             },
         },
@@ -159,7 +170,7 @@ def send_voice(
             "chat_id": resolve_id(client, chat_ref),
             "input_message_content": {
                 "@type": "inputMessageVoiceNote",
-                "voice_note": {"@type": "inputFileLocal", "path": str(path)},
+                "voice_note": {"@type": "inputVoiceNote", "voice_note": local_file(path)},
                 "caption": {"@type": "formattedText", "text": caption, "entities": []},
             },
         },
@@ -176,7 +187,12 @@ def send_sticker(
             "chat_id": resolve_id(client, chat_ref),
             "input_message_content": {
                 "@type": "inputMessageSticker",
-                "sticker": {"@type": "inputFileRemote", "id": sticker_file_id},
+                # A numeric file id is a local one; inputFileRemote takes the
+                # string remote id.
+                "sticker": {
+                    "@type": "inputSticker",
+                    "sticker": {"@type": "inputFileId", "id": sticker_file_id},
+                },
             },
         },
         allow_write=allow_write,

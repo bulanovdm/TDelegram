@@ -155,7 +155,8 @@ def test_config_discovery(tmp_path: Path, monkeypatch: Any) -> None:
 def test_transport_fake_details() -> None:
     from tdelegram.transport import FakeTransport
 
-    transport = FakeTransport()
+    # Transport mechanics, with method names that are deliberately not TDLib's.
+    transport = FakeTransport(validate=False)
     assert transport.create_client_id() != transport.create_client_id()
     assert transport.receive(timeout=0.01) is None
     # callable response + matcher exception tolerance
@@ -462,7 +463,12 @@ def test_api_chats() -> None:
 
     client, _ = _client_with(
         getChats={"@type": "chats", "chat_ids": [1, 1, 2]},
-        getChat={"@type": "chat", "id": 1, "title": "t"},
+        getChat={
+            "@type": "chat",
+            "id": 1,
+            "title": "t",
+            "type": {"@type": "chatTypeSupergroup", "supergroup_id": 1},
+        },
         searchPublicChat={"@type": "chat", "id": 3, "title": "u"},
         createNewSupergroupChat={"@type": "chat", "id": 9},
         createNewBasicGroupChat={"@type": "chat", "id": 8},
@@ -508,7 +514,10 @@ def test_api_chats() -> None:
 
 
 def test_api_messages() -> None:
+    import pytest
+
     from tdelegram.api import messages
+    from tdelegram.errors import DestructiveConfirmationRequired
 
     client, _ = _client_with(
         getChat={"@type": "chat", "id": 1},
@@ -529,6 +538,7 @@ def test_api_messages() -> None:
         forwardMessages={"@type": "messages", "messages": []},
         pinChatMessage={"@type": "ok"},
         unpinChatMessage={"@type": "ok"},
+        unpinAllChatMessages={"@type": "ok"},
         getMessageLink={"@type": "messageLink", "link": "https://t.me/x"},
         addMessageReaction={"@type": "ok"},
     )
@@ -554,7 +564,13 @@ def test_api_messages() -> None:
         )
         assert messages.forward(client, "1", "1", [5], allow_write=True)["@type"] == "messages"
         assert messages.pin(client, "1", 5, allow_write=True)["@type"] == "ok"
-        assert messages.unpin(client, "1", allow_write=True)["@type"] == "ok"
+        assert messages.unpin(client, "1", 5, allow_write=True)["@type"] == "ok"
+        # Without an id it unpins everything, which is destructive.
+        with pytest.raises(DestructiveConfirmationRequired):
+            messages.unpin(client, "1", allow_write=True)
+        assert (
+            messages.unpin(client, "1", allow_write=True, allow_destructive=True)["@type"] == "ok"
+        )
         assert messages.link(client, "1", 5)["@type"] == "messageLink"
         assert messages.react(client, "1", 5, "👍", allow_write=True)["@type"] == "ok"
         # filtered history
@@ -645,7 +661,7 @@ def test_api_admin_account_topics_reactions() -> None:
     from tdelegram.api import account, admin, drafts, folders, polls, topics
     from tdelegram.api import reactions as rx
 
-    client, _ = _client_with(
+    client, transport = _client_with(
         getChat={"@type": "chat", "id": 1},
         setChatMemberStatus={"@type": "ok"},
         banChatMember={"@type": "ok"},
@@ -673,7 +689,6 @@ def test_api_admin_account_topics_reactions() -> None:
         getPollVoters={"@type": "messageSenders", "senders": []},
         setChatDraftMessage={"@type": "ok"},
         clearAllDraftMessages={"@type": "ok"},
-        getChatFolders={"@type": "chatFolders"},
         getChatFolder={"@type": "chatFolder"},
         createChatFolder={"@type": "chatFolderInfo"},
         deleteChatFolder={"@type": "ok"},
@@ -725,7 +740,23 @@ def test_api_admin_account_topics_reactions() -> None:
         assert drafts.set_draft(client, "1", "hi", allow_write=True)["@type"] == "ok"
         cleared = drafts.clear_drafts(client, allow_write=True, allow_destructive=True)
         assert cleared["@type"] == "ok"
-        assert folders.list_folders(client)["@type"] in ("chatFolders", "chatFolder", "ok")
+        transport.add_update(
+            {
+                "@type": "updateChatFolders",
+                "chat_folders": [
+                    {
+                        "@type": "chatFolderInfo",
+                        "id": 3,
+                        "name": {"@type": "chatFolderName", "text": {"text": "Work"}},
+                        "icon": {"name": "Work"},
+                    }
+                ],
+            },
+            client_id=client.client_id,
+        )
+        listed = folders.list_folders(client, timeout=3.0)
+        assert listed[0]["folder_id"] == 3 and listed[0]["name"] == "Work"
+        assert folders.get_folder(client, 3)["@type"] == "chatFolder"
         created = folders.create_folder(client, "f", [1], allow_write=True)
         assert created["@type"] == "chatFolderInfo"
         assert (
@@ -755,14 +786,30 @@ def test_api_bots_proxies_updates_files() -> None:
         sendInlineQueryResultMessage={"@type": "ok"},
         answerCallbackQuery={"@type": "ok"},
         answerInlineQuery={"@type": "ok"},
+        getMe={"@type": "user", "id": 1},
         canPostStory={"@type": "ok"},
         getChatArchivedStories={"@type": "stories"},
         deleteStory={"@type": "ok"},
         createNewSecretChat={"@type": "secretChat"},
         closeSecretChat={"@type": "ok"},
         searchSecretMessages={"@type": "foundChatMessages"},
-        getProxies={"@type": "proxies"},
-        addProxy={"@type": "proxy"},
+        getProxies={
+            "@type": "addedProxies",
+            "proxies": [
+                {
+                    "@type": "addedProxy",
+                    "id": 1,
+                    "proxy": {
+                        "@type": "proxy",
+                        "server": "127.0.0.1",
+                        "port": 9050,
+                        "type": {"@type": "proxyTypeSocks5"},
+                    },
+                }
+            ],
+        },
+        addProxy={"@type": "addedProxy", "id": 2},
+        testProxy={"@type": "ok"},
         enableProxy={"@type": "ok"},
         disableProxy={"@type": "ok"},
         pingProxy={"@type": "seconds"},
@@ -777,7 +824,7 @@ def test_api_bots_proxies_updates_files() -> None:
         assert bots.start_bot(client, "2", "1", allow_write=True)["@type"] == "ok"
         inline = bots.inline_results(client, 2, "q", allow_write=True)
         assert inline["@type"] == "inlineQueryResults"
-        assert bots.send_inline_result(client, "1", "r1", allow_write=True)["@type"] == "ok"
+        assert bots.send_inline_result(client, "1", 77, "r1", allow_write=True)["@type"] == "ok"
         assert bots.answer_callback(client, 9, allow_write=True)["@type"] == "ok"
         assert bots.answer_inline(client, 9, [], allow_write=True)["@type"] == "ok"
         assert stories.can_post_story(client)["@type"] == "ok"
@@ -792,8 +839,15 @@ def test_api_bots_proxies_updates_files() -> None:
             == "ok"
         )
         assert secret.search_secret(client, "1", "q")["@type"] == "foundChatMessages"
-        assert proxies.list_proxies(client)["@type"] == "proxies"
-        assert proxies.add_proxy(client, "127.0.0.1", 1080, allow_write=True)["@type"] == "proxy"
+        assert proxies.list_proxies(client)["@type"] == "addedProxies"
+        added = proxies.add_proxy(client, "127.0.0.1", 1080, allow_write=True)
+        assert added["@type"] == "addedProxy"
+        link = "tg://proxy?server=1.2.3.4&port=443&secret=dd00"
+        assert proxies.add_proxy_link(client, link, allow_write=True)["id"] == 2
+        assert proxies.check_proxy(client, 1)["@type"] == "ok"
+        assert proxies.ping_proxy(client)["@type"] == "seconds"
+        with pytest.raises(ValueError, match="No stored proxy"):
+            proxies.ping_proxy(client, 99)
         assert proxies.enable_proxy(client, 1, allow_write=True)["@type"] == "ok"
         assert proxies.disable_proxy(client, allow_write=True)["@type"] == "ok"
         assert proxies.ping_proxy(client, 1)["@type"] == "seconds"

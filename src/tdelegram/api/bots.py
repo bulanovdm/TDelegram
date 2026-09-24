@@ -42,11 +42,17 @@ def inline_results(
 
 
 def send_inline_result(
-    client: TelegramClient, chat_ref: str, result_id: str, *, allow_write: bool = False
+    client: TelegramClient,
+    chat_ref: str,
+    query_id: int | str,
+    result_id: str,
+    *,
+    allow_write: bool = False,
 ) -> dict[str, Any]:
+    """Send one result of an inline query. `query_id` comes from inline_results()."""
     return client.call(
         "sendInlineQueryResultMessage",
-        {"chat_id": resolve_id(client, chat_ref), "result_id": result_id},
+        {"chat_id": resolve_id(client, chat_ref), "query_id": query_id, "result_id": result_id},
         allow_write=allow_write,
     )
 
