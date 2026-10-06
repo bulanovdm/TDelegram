@@ -1,8 +1,8 @@
 ---
 name: tdelegram
 description: >-
-  Drive a real Telegram account from the command line or Python through
-  TDelegram, a TDLib-backed client where all 1022 API methods are pre-classified
+  Drive a real Telegram account from the command line, Python or an MCP server
+  through TDelegram, a TDLib-backed client where all 1022 API methods are pre-classified
   read/write/destructive and every mutating call is gated behind an explicit
   --yes. Use this skill whenever the user mentions Telegram, a @handle, a t.me
   link, a channel, group, chat or forum topic; wants to read, search, quote,
@@ -21,12 +21,14 @@ TDelegram speaks to Telegram as **the user's own account**, not a bot. Everythin
 you read is their real inbox, and everything you write is attributed to them and
 visible to other people. That single fact shapes every rule below.
 
-Two ways in, and you will almost always want the first:
+Three ways in. If `tdelegram` MCP tools are already connected to you, use them and
+read `references/mcp.md`; otherwise you will almost always want the CLI:
 
 | Layer | What it is |
 |---|---|
 | `tdelegram` CLI | JSON Lines on stdout, diagnostics on stderr. Built to be piped into `jq`. |
 | `tdelegram` Python package | `TelegramClient` plus domain modules, for writing code against it. See `references/library.md`. |
+| `tdelegram mcp` server | The same account and the same gate as typed tools for an MCP client; `confirm=true` stands in for `--yes`. See `references/mcp.md`. |
 
 Check it is installed with `tdelegram version`. If that fails, TDelegram is not
 set up on this machine — follow `references/setup.md` rather than improvising
@@ -287,4 +289,6 @@ you — which means handing it back to the user.
   quoting verbatim, forum topics, live updates, large histories
 - `references/library.md` — the Python API: `TelegramClient`, `allow_write`,
   paging generators, normalization, the transport seam
+- `references/mcp.md` — the MCP server: the gate as tool calls, what the launch
+  flags offer, results to expect, and setting it up for the user
 - `references/troubleshooting.md` — failure modes and what they mean

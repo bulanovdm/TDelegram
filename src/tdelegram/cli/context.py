@@ -199,26 +199,10 @@ def session(ctx: Ctx, *, login: bool = True) -> Iterator[TelegramClient]:
 
 
 def show_preview(exc: ConfirmationRequired) -> None:
-    """Put what a gated call would do on stderr, for a human to judge.
+    """Put what a gated call would do on stderr, for a human to judge."""
+    from tdelegram import safety
 
-    A request that does not match TDLib's schema is flagged here too, because
-    TDLib would run it with the unmatched fields silently dropped: approving
-    the preview would approve something other than what it shows.
-    """
-    from tdelegram import safety, schema
-
-    body: dict[str, Any] = {
-        "method": exc.method,
-        "verdict": exc.verdict,
-        "reason": safety.reason(exc.method),
-        "preview": exc.preview,
-    }
-    try:
-        problems = schema.validate(exc.preview)
-    except RuntimeError:
-        problems = []
-    if problems:
-        body["schema_problems"] = problems
+    body = safety.confirmation_body(exc)
     warn(json.dumps({"confirmation_required": body}, indent=2, ensure_ascii=False))
 
 

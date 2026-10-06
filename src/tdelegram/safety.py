@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
+
+from tdelegram.errors import ConfirmationRequired
 
 
 @lru_cache(maxsize=1)
@@ -41,3 +44,29 @@ def is_destructive(method: str) -> bool:
 
 def preview_request(method: str, params: dict[str, object]) -> dict[str, object]:
     return {"@type": method, "verdict": verdict(method), "reason": reason(method), "params": params}
+
+
+def confirmation_body(exc: ConfirmationRequired) -> dict[str, Any]:
+    """What a gated call would do, for a person to judge before approving it.
+
+    The CLI prints this to stderr and an MCP tool returns it as its result, so
+    both show the same thing. A request that does not match TDLib's schema is
+    flagged, because TDLib would run it with the unmatched fields silently
+    dropped: approving the preview would approve something other than what it
+    shows.
+    """
+    from tdelegram import schema
+
+    body: dict[str, Any] = {
+        "method": exc.method,
+        "verdict": exc.verdict,
+        "reason": reason(exc.method),
+        "preview": exc.preview,
+    }
+    try:
+        problems = schema.validate(exc.preview)
+    except RuntimeError:
+        problems = []
+    if problems:
+        body["schema_problems"] = problems
+    return body

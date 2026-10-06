@@ -43,7 +43,9 @@ RUN ldconfig
 WORKDIR /app
 COPY pyproject.toml README.md LICENSE NOTICE ./
 COPY src ./src
-RUN pip install --no-cache-dir . && rm -rf /root/.cache
+# [mcp]: the image is the default install, and an MCP client launches the server as
+# `docker run -i ... mcp`, so the SDK has to be in it.
+RUN pip install --no-cache-dir ".[mcp]" && rm -rf /root/.cache
 
 # The session lives here and is mounted from the host, so a login survives the
 # container. It is full account access; see SECURITY.md.

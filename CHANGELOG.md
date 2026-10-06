@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.0 — 2026-10-06
+
+### Added
+- MCP server: `tdelegram mcp` serves the account over stdio as typed tools, for MCP
+  clients. Install with `pip install 'tdelegram[mcp]'`; the Docker image includes it.
+  Read-only by default; `--allow-write` and `--allow-destructive` are the user's grant,
+  given at launch where the agent cannot change them. Every write still previews until
+  the call passes `confirm=true`, and a destructive one also needs `confirm_method`. The
+  gate is the one in `TelegramClient.call()`, and a raw `tdelegram_call` / `tdelegram_describe`
+  pair reaches all 1022 methods through it. Read receipts, story views and ad impressions
+  count as writes here even though the registry calls them reads.
+
+### Changed
+- `describe` and the confirmation preview now share their body with the MCP server
+  (`schema.explain`, `safety.confirmation_body`); their output is unchanged.
+- The GitHub release is published once the Docker image is out, without waiting for
+  PyPI, and is built as a draft and published last. A tag whose PyPI upload failed (the
+  publisher not set up yet, an approval pending) used to leave a tag under Tags and no
+  release under Releases, as `v0.1.0` did; PyPI and the release no longer wait on each
+  other.
+
 ## 0.1.0 — 2026-09-24
 
 Initial release-quality cut: library + CLI over the TDLib modern C API.
