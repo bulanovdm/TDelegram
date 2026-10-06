@@ -28,6 +28,7 @@ do step 1, then hand over with the exact commands. Do not loop retrying a login
 - [Log in](#log-in-human-only)
 - [Where Telegram is blocked](#where-telegram-is-blocked)
 - [Verify](#verify)
+- [Connect an MCP client](#connect-an-mcp-client-optional)
 - [Where secrets live](#where-secrets-live)
 
 ## Docker (recommended)
@@ -202,6 +203,22 @@ Then confirm a real read works:
 ```bash
 tdelegram chat list --limit 3
 ```
+
+## Connect an MCP client (optional)
+
+Only if the user wants Telegram as tools in an MCP client rather than through the CLI.
+It needs a profile that is already logged in, because the server never prompts. The
+Docker image includes the server; natively add the extra with
+`pip install 'tdelegram[mcp]'`.
+
+```bash
+claude mcp add tdelegram -- tdelegram mcp
+```
+
+That is read-only, which is the right default. Whether to allow writes
+(`--allow-write`, and separately `--allow-destructive`) is the user's call and is
+made in the client's config, not by you. `references/mcp.md` has the Docker form, what
+each flag offers, and how the preview-then-`confirm=true` step works.
 
 ## Where secrets live
 

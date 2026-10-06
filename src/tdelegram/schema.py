@@ -108,6 +108,25 @@ def suggest(name: str, *, limit: int = 10) -> list[str]:
     return list(dict.fromkeys([*close, *containing]))[:limit]
 
 
+def explain(name: str) -> dict[str, Any]:
+    """`describe()` plus, for a function, the gate's verdict and the reason for it.
+
+    Raises ValueError, naming the closest matches, when the schema does not know
+    `name`. `tdelegram describe` and the MCP `tdelegram_describe` tool share it.
+    """
+    from tdelegram import safety
+
+    entry = describe(name)
+    if entry is None:
+        close = suggest(name)
+        hint = f" Did you mean: {', '.join(close)}?" if close else ""
+        raise ValueError(f"{name!r} is not in the TDLib schema.{hint}")
+    if entry["kind"] == "function":
+        entry["verdict"] = safety.verdict(name)
+        entry["reason"] = safety.reason(name)
+    return entry
+
+
 def validate(request: dict[str, Any]) -> list[str]:
     """Every way `request` departs from the schema. Empty when it conforms.
 

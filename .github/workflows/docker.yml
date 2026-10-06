@@ -136,6 +136,11 @@ jobs:
           # without it, so an image missing methods.json refuses every call.
           docker run --rm --entrypoint python "$IMAGE@$DIGEST" \
             -c "from tdelegram import safety; assert safety.verdict('sendMessage') == 'write'; print('gate ok')"
+          # An MCP client launches the server as `docker run -i ... mcp`, so the SDK has to
+          # be in the image and the command has to exist.
+          docker run --rm --entrypoint python "$IMAGE@$DIGEST" \
+            -c "from tdelegram import mcp_server; print('mcp sdk ok')"
+          docker run --rm "$IMAGE@$DIGEST" mcp --help > /dev/null
 
       - name: Export the digest
         # The filename is the bare hex: upload-artifact rejects a colon, so the

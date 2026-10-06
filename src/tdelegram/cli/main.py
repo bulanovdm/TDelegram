@@ -1024,15 +1024,50 @@ def describe(name: str = typer.Argument(..., help="A TDLib function, object or t
     """
     from tdelegram import schema
 
-    entry = schema.describe(name)
-    if entry is None:
-        close = schema.suggest(name)
-        hint = f" Did you mean: {', '.join(close)}?" if close else ""
-        raise ValueError(f"{name!r} is not in the TDLib schema.{hint}")
-    if entry["kind"] == "function":
-        entry["verdict"] = safety.verdict(name)
-        entry["reason"] = safety.reason(name)
-    _emit(entry)
+    _emit(schema.explain(name))
+
+
+@app.command("mcp")
+def mcp(
+    allow_write: bool = typer.Option(
+        False, "--allow-write", help="Also offer tools that send, edit, forward, react and pin"
+    ),
+    allow_destructive: bool = typer.Option(
+        False, "--allow-destructive", help="Also offer delete and leave (needs --allow-write)"
+    ),
+) -> None:
+    """Serve this account to an MCP client over stdio.
+
+    Meant to be launched by the client, from its config. Read-only unless told
+    otherwise: the flags are the user's grant, set where the agent cannot reach
+    them. Even then every write previews until the call passes confirm=true.
+
+    stdout carries the protocol and nothing else; diagnostics go to stderr.
+    """
+    import sys
+
+    ctx = _ctx()
+    if ctx.yes:
+        warn(
+            "--yes has no effect on `mcp`. Allow writes with --allow-write; each call still "
+            "previews until it passes confirm=true."
+        )
+        raise SystemExit(2)
+    if allow_destructive and not allow_write:
+        warn("--allow-destructive also needs --allow-write.")
+        raise SystemExit(2)
+    try:
+        from tdelegram import mcp_server
+    except ModuleNotFoundError as exc:
+        if (exc.name or "").partition(".")[0] != "mcp":
+            raise
+        warn("MCP support is not installed. Install it with: pip install 'tdelegram[mcp]'")
+        raise SystemExit(1) from None
+    if sys.stdin.isatty():
+        warn("tdelegram mcp speaks MCP over stdio; an MCP client is meant to launch it.")
+    mcp_server.serve(
+        ctx, mcp_server.Policy(allow_write=allow_write, allow_destructive=allow_destructive)
+    )
 
 
 @app.command("version")

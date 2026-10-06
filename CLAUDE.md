@@ -67,6 +67,7 @@ client.py      TelegramClient facade — the safety chokepoint
 api/*.py       domain modules over TelegramClient
 cli/           Typer tree over api/ (main.py is the whole tree)
 schema.py      request shapes from schema.json; validate() and describe()
+mcp_server.py  MCP tools over api/, a sibling of cli/; the only module that imports the SDK
 ```
 
 Each `api/` module owns its own implementations. `inbox` and `export` are read-only by
@@ -149,6 +150,30 @@ through `entities.parse_entities()`, which uses synchronous `td_execute(parseTex
 `paginate()` enforces per-walk dedup, stop-on-no-fresh-items, `stop_after_page` (an
 out-of-window item finishes its page, then ends the walk), and a cursor-didn't-advance guard.
 
+**MCP server** (`mcp_server.py`, `tdelegram mcp`, extra `tdelegram[mcp]`) serves tools over
+stdio. The SDK is optional and imported lazily, so the base install and the CLI never need
+it. Four rules keep it from becoming a second, weaker gate:
+
+- The gate is still `TelegramClient.call()`. Tools pass `allow_write=confirm` down and turn
+  `ConfirmationRequired` into a preview *result*. Never reuse `perform` / `run_call` /
+  `confirm_destructive`: they exit the process and read stdin, which belongs to the client.
+- What exists is decided by the launch flags (`Policy`): write tools register only under
+  `--allow-write`, destructive ones only with `--allow-destructive` as well. `confirm` and
+  `confirm_method` guard against accident; an agent can pass any argument, so the flags
+  are the boundary.
+- stdout is the protocol. Nothing in the module prints or prompts, and a profile that is not
+  logged in is reported (`NotAuthorized`), never logged into.
+- `VISIBLE_READS` are methods the registry calls reads whose effect other people can see
+  (read receipts, story views, ad impressions). The gate will not stop them, so
+  `mark_chat_read` and the raw `tdelegram_call` check them by hand. A new tool that calls
+  one must do the same.
+
+The module has no `from __future__ import annotations`: the SDK reads each tool's signature
+at runtime and the tools are closures. Tools are plain `def`, which the SDK runs on a worker
+thread; `call()` is thread-safe, but every update consumer shares one queue, so
+`wait_for_messages` runs one at a time. The profile lock is taken at the first tool call
+and held until exit.
+
 ## CLI conventions
 
 - Data goes to stdout as JSONL; diagnostics, previews, and warnings go to stderr (`cli/output.py`).
@@ -202,6 +227,12 @@ Two `FakeTransport` behaviours make tests lie if you forget them:
 transport. Its fixture sets `TELEGRAM_*` env vars, without which the credential chain
 falls through to an interactive prompt and the suite blocks on stdin. It also asserts,
 across every mutating command, that nothing reaches TDLib without `--yes`.
+
+`tests/unit/test_mcp.py` drives the server in-process (`mcp.Client(server)` under
+`asyncio.run`, so no pytest-asyncio) over a `FakeTransport` client injected through
+`ClientSession(opener=...)`, plus one subprocess test that checks stdout carries only
+JSON-RPC. It proves the gate per tool the way `test_cli.py` does per command: without
+`confirm` the method is absent from `transport.sent`.
 
 Per CONTRIBUTING.md: mutating behavior needs a test proving the gate (preview without `--yes`).
 
