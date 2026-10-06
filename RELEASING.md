@@ -23,7 +23,7 @@ the version it was installed at; reinstall after a bump.
 
 ## What a tag does
 
-Each step starts only once the one before has passed, so a failure stops
+Each step starts only once the ones it needs have passed, so a failure stops
 everything after it:
 
 1. **verify** — the full suite on 3.10–3.13 (`ci.yml`).
@@ -42,7 +42,13 @@ everything after it:
    OIDC token.
 6. **github-release** — `TDelegram 0.2.0`, with both files attached, the
    changelog section as notes, and pre-release / "Latest" set to match the
-   image tags.
+   image tags. Built as a draft and published last, so a failed upload leaves
+   nothing on the Releases page.
+
+Steps 5 and 6 both follow the image and do not wait on each other. A tag alone
+shows up under Tags only; the release is what appears under Releases, so it must
+not depend on PyPI, whose publisher is configured outside this repository and
+whose environment may hold the run for an approval.
 
 ## Docker image tags
 
@@ -137,11 +143,15 @@ A pre-release is the same, as `0.3.0rc1`, with its own dated section.
   git push origin :refs/tags/v0.2.0 && git tag -f v0.2.0 && git push origin v0.2.0
   ```
 
-- **At `pypi` or `github-release`**: the image is out; the rest is not. When
-  the cause is outside the code — the publisher not set up yet, an approval
+- **At `pypi` or `github-release`**: the image is out; the rest may not be.
+  The two are independent, so one can pass while the other fails. When the
+  cause is outside the code — the publisher not set up yet, an approval
   declined, a network error — fix that and use **Re-run failed jobs** on the
-  run. When it takes a code change and PyPI does not have the version yet, the
-  tag can still move as above; the image is rebuilt and retagged with it.
+  run. Re-running `github-release` after the release is published only makes
+  sure the files are on it, and replaces a draft an earlier attempt left. When
+  it takes a code change and PyPI does not have the version yet, the tag can
+  still move as above, but only while no release exists for it: delete the
+  release first, or it keeps pointing at the old build.
 - **After PyPI has the version**, it is spent. PyPI never accepts the same
   version twice, even deleted, so a mistake found now is fixed by a patch
   release, never by moving the tag.
