@@ -6,11 +6,14 @@ name: release
 # Nothing is published until the suite passes on every supported interpreter
 # and the tag, pyproject.toml and CHANGELOG.md agree on the version. Then, one
 # after another, so that a failure stops everything after it: the wheel is
-# built and tried, the Docker image is built, tried and tagged, PyPI gets the
-# sdist and the wheel, and a GitHub release carries both files with the
-# version's CHANGELOG.md section as its notes. PyPI never accepts a version
-# twice, so it comes after everything that can still fail. RELEASING.md says
-# what to do when a step does.
+# built and tried, and the Docker image is built, tried and tagged. Once the
+# image is out, PyPI gets the sdist and the wheel and a GitHub release carries
+# both files with the version's CHANGELOG.md section as its notes. Those two
+# do not wait on each other: a PyPI publisher that is not set up, or an
+# approval that is still pending, must not keep the release off the Releases
+# page, and a failed release must not stop PyPI. PyPI never accepts a version
+# twice, so it still comes after everything that can fail before it.
+# RELEASING.md says what to do when a step does.
 #
 # PyPI authentication is Trusted Publishing (OIDC). There is no API token
 # anywhere: no repository secret to leak, rotate, or scope wrongly. The
@@ -119,9 +122,15 @@ jobs:
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
 
-  # Last, so the release page never lists something that is not out yet.
+  # A tag alone is listed under Tags, not Releases. This is the release: both
+  # files, the changelog section as its notes, "Latest" and pre-release set to
+  # match the image tags. It waits for the image, not for PyPI, so it exists
+  # whenever the version has shipped from this repository.
+  #
+  # Built as a draft and published last, so a failure while the files upload
+  # leaves nothing on the Releases page that is missing them.
   github-release:
-    needs: [check, pypi]
+    needs: [check, build, docker]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -142,14 +151,21 @@ jobs:
           PRERELEASE: ${{ needs.check.outputs.prerelease }}
           LATEST: ${{ needs.check.outputs.latest }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            # A re-run after the release was made: only make sure the files are on it.
-            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
-          else
-            gh release create "$GITHUB_REF_NAME" dist/* \
-              --verify-tag \
-              --title "TDelegram $VERSION" \
-              --notes-file notes.md \
-              --prerelease="$PRERELEASE" \
-              --latest="$LATEST"
+          set -euo pipefail
+          if draft=$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [ "$draft" = "false" ]; then
+              # A re-run after the release was published: only make sure the files are on it.
+              gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+              exit 0
+            fi
+            # A draft an earlier attempt left behind; start it over.
+            gh release delete "$GITHUB_REF_NAME" --yes
           fi
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --draft \
+            --verify-tag \
+            --title "TDelegram $VERSION" \
+            --notes-file notes.md \
+            --prerelease="$PRERELEASE"
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest="$LATEST"
+          echo "Published $(gh release view "$GITHUB_REF_NAME" --json url --jq .url)" >> "$GITHUB_STEP_SUMMARY"
