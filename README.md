@@ -1,6 +1,7 @@
 # TDelegram — Telegram for AI agents, with a gate on every write
 
 [![ci](https://github.com/bulanovdm/TDelegram/actions/workflows/ci.yml/badge.svg)](https://github.com/bulanovdm/TDelegram/actions/workflows/ci.yml)
+[![pypi](https://img.shields.io/pypi/v/tdelegram)](https://pypi.org/project/tdelegram/)
 [![python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://github.com/bulanovdm/TDelegram/blob/main/pyproject.toml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-green)](https://github.com/bulanovdm/TDelegram/blob/main/LICENSE)
 [![image](https://img.shields.io/badge/ghcr.io-tdelegram-blue)](https://github.com/bulanovdm/TDelegram/pkgs/container/tdelegram)
@@ -77,17 +78,31 @@ is what the CLI printed when run against a scripted transport.
 
 `skills/tdelegram/` is an agent skill covering the CLI, the gate and the
 discipline it implies, reading recipes, the Python API, troubleshooting and
-installation from scratch. To give it to Claude Code:
+installation from scratch. It is listed on
+[skills.sh](https://skills.sh/bulanovdm/TDelegram/tdelegram), and the
+[`skills`](https://github.com/vercel-labs/skills) CLI installs it for Claude
+Code, Cursor, Copilot and the other agents it supports:
+
+```bash
+npx skills add bulanovdm/TDelegram        # into this project
+npx skills add bulanovdm/TDelegram -g     # for every project
+```
+
+It asks which agents to install for; `-a claude-code` answers that up front. The
+CLI reports anonymous install counts to skills.sh, and `DISABLE_TELEMETRY=1`
+turns that off.
+
+Without Node, copy the directory by hand. For Claude Code:
 
 ```bash
 git clone https://github.com/bulanovdm/TDelegram
 cp -r TDelegram/skills/tdelegram ~/.claude/skills/
 ```
 
-For another agent, copy the directory into its skills directory, or point it at
-`skills/tdelegram/SKILL.md`. The skill drives the `tdelegram` CLI, so that has to
-be installed too — see [Install](#install) below; the skill walks an agent
-through it as well.
+For another agent, copy it into that agent's skills directory, or point it at
+`skills/tdelegram/SKILL.md`. Either way the skill drives the `tdelegram` CLI, so
+that has to be installed too — see [Install](#install) below; the skill walks an
+agent through it as well.
 
 What it makes the agent do:
 

@@ -126,7 +126,7 @@ export TDELEGRAM_TDJSON=/path/to/libtdjson.so   # .dylib on macOS, .dll on Windo
 ```bash
 python3 -m venv ~/.venvs/tdelegram
 ~/.venvs/tdelegram/bin/pip install tdelegram
-~/.venvs/tdelegram/bin/tdelegram version     # 0.1.0
+~/.venvs/tdelegram/bin/tdelegram version     # prints the installed version
 ```
 
 `version` answers before libtdjson is present — it does not load the library —
