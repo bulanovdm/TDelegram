@@ -164,6 +164,12 @@ def open_authorized_client(ctx: Ctx) -> tuple[TelegramClient, Callable[[], None]
         state = open_profile(ctx, client)
         if not state.get("authorized"):
             raise NotAuthorized(state)
+        # The first tool call would otherwise read the database as the last
+        # process left it. Once caught up, the open client stays current. Not
+        # getting there in time is not an error, and the CLI's warning would
+        # be printed, so the result is not used.
+        if ctx.sync:
+            client.wait_until_synced(ctx.timeout)
     except BaseException:
         release()
         raise

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import queue
+import threading
 import time
 from collections.abc import Callable
 from typing import Any
@@ -59,6 +60,7 @@ class TelegramClient:
         self._closed = False
         self._no_retry = False
         self._latest: dict[str, dict[str, Any]] = {}
+        self._synced = threading.Event()
         # A dormant TDLib instance emits nothing until its first request, so
         # registering here cannot miss an update.
         self._subscriber.handlers.append(self._remember)
@@ -163,10 +165,28 @@ class TelegramClient:
         kind = event.get("@type")
         if kind in REMEMBERED_UPDATES:
             self._latest[str(kind)] = event
+        if kind == "updateConnectionState":
+            if event.get("state", {}).get("@type") == "connectionStateReady":
+                self._synced.set()
+            else:
+                self._synced.clear()
 
     def latest_update(self, kind: str) -> dict[str, Any] | None:
         """The most recent update of a kind in REMEMBERED_UPDATES, if one came."""
         return self._latest.get(kind)
+
+    def wait_until_synced(self, timeout: float) -> bool:
+        """Wait for TDLib to report `connectionStateReady`. False if it did not in time.
+
+        A new process starts from the local database and answers reads from it
+        at once, but only fetches what it missed while offline once it has
+        connected. Until then a history read is as old as the last process that
+        stayed connected. Ready means connected and caught up.
+
+        Reads nothing from the update queue, so a caller streaming updates
+        afterwards loses none that arrived during the wait.
+        """
+        return self._synced.wait(timeout)
 
     # -- lifecycle -----------------------------------------------------
     def close(self) -> None:

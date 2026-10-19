@@ -14,6 +14,7 @@ without `--yes`, or a malformed request.
 
 - [The session is not usable](#the-session-is-not-usable)
 - [Nothing happens, or it hangs](#nothing-happens-or-it-hangs)
+- [Results are out of date, or time out](#results-are-out-of-date-or-time-out)
 - [Rate limits](#rate-limits)
 - [Chat and message errors](#chat-and-message-errors)
 - [Formatting comes out wrong](#formatting-comes-out-wrong)
@@ -50,7 +51,8 @@ TDLib allows one client per database directory, so the profile takes an
 exclusive lock. Something else is using the session — another `tdelegram`, a
 `updates follow` you left streaming, or a crashed process. Find and stop it
 rather than deleting the lock file; use `--profile other` if you genuinely need
-a second session.
+a second session. The lock is a file in the profile directory, so it also holds
+between Docker containers that mount the same one.
 
 ### `Initialization parameters are needed: call setTdlibParameters first`
 
@@ -70,6 +72,31 @@ you are using the library directly and skipped `run_auth` — see
 - **A destructive command sits there** — it wants the method name typed on a
   TTY. Non-interactively it cannot complete, deliberately. Hand the exact
   command to the user.
+
+## Results are out of date, or time out
+
+### Recent messages are missing, or *"TDLib had not caught up"*
+
+Every command is a new TDLib process, and under Docker a new container. TDLib
+answers reads from its local database at once, but fetches what it missed while
+nothing was connected only after it connects. So each command first waits for
+TDLib to say it has caught up. When that takes longer than `--timeout` (30s by
+default), the command runs anyway and stderr says so, naming how far it got:
+
+- `connectionStateWaitingForNetwork`, `connectionStateConnecting`: no route to
+  Telegram. Check the network, or whether it needs a `proxy`.
+- `connectionStateConnectingToProxy`: the proxy is not answering.
+- `connectionStateUpdating`: connected and still fetching. A long time offline is
+  a lot to fetch; retry with `--timeout 120`.
+
+`--no-sync` skips the wait, so reads can be as old as the last run that stayed
+connected long enough to catch up.
+
+### `Timed out waiting for <method>`
+
+TDLib did not answer within `--timeout` (30s by default). Searches, public chat
+lookups and the session list go to the server; give them longer:
+`tdelegram --timeout 90 account sessions`.
 
 ## Rate limits
 

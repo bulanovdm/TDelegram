@@ -22,7 +22,17 @@ from tdelegram.cli.context import (
 from tdelegram.cli.output import FORMATS, emit, emit_many, warn
 
 GLOBAL_FLAGS = frozenset(
-    {"--yes", "--profile", "--session-dir", "--format", "--output", "--verbose", "--no-retry"}
+    {
+        "--yes",
+        "--profile",
+        "--session-dir",
+        "--format",
+        "--output",
+        "--verbose",
+        "--no-retry",
+        "--timeout",
+        "--no-sync",
+    }
 )
 
 
@@ -72,9 +82,17 @@ def _global(
     yes: bool = typer.Option(False, "--yes", help="Perform mutating operations"),
     verbose: bool = typer.Option(False, "--verbose", help="Verbose diagnostics on stderr"),
     no_retry: bool = typer.Option(False, "--no-retry", help="Disable FloodWait auto-retry"),
+    timeout: float = typer.Option(
+        30.0, "--timeout", help="Seconds to wait for each TDLib reply, and for catching up"
+    ),
+    no_sync: bool = typer.Option(
+        False, "--no-sync", help="Do not wait for TDLib to fetch what it missed; reads may be stale"
+    ),
 ) -> None:
     if fmt not in FORMATS:
         raise typer.BadParameter(f"--format must be {'|'.join(FORMATS)}")
+    if timeout <= 0:
+        raise typer.BadParameter("--timeout must be more than 0 seconds")
     _state.profile = profile
     _state.session_dir = session_dir
     _state.fmt = fmt
@@ -82,6 +100,8 @@ def _global(
     _state.yes = yes
     _state.verbose = verbose
     _state.no_retry = no_retry
+    _state.timeout = timeout
+    _state.sync = not no_sync
 
 
 def _ctx() -> Ctx:

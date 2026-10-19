@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.2.1 — 2026-10-19
+
+### Fixed
+- Reads came back days out of date. Every command is a new TDLib process, and under
+  Docker a new container. TDLib answers reads from its local database at once, but
+  fetches what it missed while nothing was connected only after it connects, and a
+  command used to exit before then. History, `inbox` and `getChatHistory` (even with
+  `only_local: false`) stayed behind the phone however often they ran. Every logged-in
+  command now waits, between the login handshake and its own work, until TDLib reports
+  `connectionStateReady`: connected, with missed updates fetched. If that has not
+  happened within `--timeout`, the command still runs, and stderr says its results may
+  be stale and how far TDLib got. `--no-sync` skips the wait. The MCP server waits
+  once, when it opens the profile; its client stays open, so later tool calls stay
+  current. Library code can do the same with `TelegramClient.wait_until_synced()`.
+
+### Added
+- `--timeout SECONDS` (global, default 30): how long to wait for each TDLib reply, and
+  for TDLib to catch up. Server round-trips such as `searchPublicChat` or
+  `getActiveSessions` used to fail at a fixed 30s.
+- `--no-sync` (global): skip the wait for TDLib to catch up.
+
+### Docs
+- The Docker examples run the container as the host user
+  (`--user "$(id -u):$(id -g)"`). Without it, the session and downloaded media belong
+  to root, and a Linux host user cannot read them. A session created that way needs
+  `sudo chown -R "$(id -u):$(id -g)" ~/.tdelegram` once.
+- The session lock already refuses a second client on a profile, including one in
+  another container that mounts the same directory. The troubleshooting guide now
+  says so.
+
 ## 0.2.0 — 2026-10-06
 
 ### Added

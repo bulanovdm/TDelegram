@@ -603,18 +603,76 @@ def test_a_profile_that_is_not_logged_in_gives_back_its_lock(
     assert lock.released, "a person could not log in from a terminal while the server held it"
 
 
+def _connection(state: str) -> dict[str, Any]:
+    return {"@type": "updateConnectionState", "state": {"@type": state}}
+
+
+def _opens_logged_in(transport: FakeTransport, *states: str) -> Any:
+    """Stands in for the handshake, which wakes TDLib; then TDLib reports `states`."""
+
+    def _open_profile(ctx: Ctx, c: TelegramClient) -> dict[str, Any]:
+        for state in states:
+            transport.add_update(_connection(state))
+        return {"@type": "x", "authorized": True}
+
+    return _open_profile
+
+
 def test_a_logged_in_profile_keeps_its_lock_until_released(
-    monkeypatch: pytest.MonkeyPatch, client: TelegramClient
+    monkeypatch: pytest.MonkeyPatch, client: TelegramClient, transport: FakeTransport
 ) -> None:
     lock = _Lock()
     monkeypatch.setattr(mcp_server, "make_client", lambda ctx, login: (client, lock))
     monkeypatch.setattr(
-        mcp_server, "open_profile", lambda ctx, c: {"@type": "x", "authorized": True}
+        mcp_server, "open_profile", _opens_logged_in(transport, "connectionStateReady")
     )
     opened, release = mcp_server.open_authorized_client(Ctx())
     assert opened is client and not lock.released
     release()
     assert lock.released
+
+
+def test_the_first_tool_call_waits_for_tdlib_to_catch_up(
+    monkeypatch: pytest.MonkeyPatch, client: TelegramClient, transport: FakeTransport
+) -> None:
+    """Regression: a fresh process reads the database as the last one left it.
+
+    Until TDLib has fetched what it missed, history is days old. The server
+    holds its client open, so waiting once, when it opens, is enough.
+    """
+    monkeypatch.setattr(mcp_server, "make_client", lambda ctx, login: (client, None))
+    monkeypatch.setattr(
+        mcp_server, "open_profile", _opens_logged_in(transport, "connectionStateUpdating")
+    )
+    later = threading.Timer(0.3, transport.add_update, [_connection("connectionStateReady")])
+    later.start()
+    try:
+        opened, _ = mcp_server.open_authorized_client(Ctx(timeout=5.0))
+    finally:
+        later.join()
+    state = opened.latest_update("updateConnectionState")
+    assert state is not None and state["state"]["@type"] == "connectionStateReady"
+
+
+def test_the_server_opens_anyway_when_tdlib_does_not_catch_up_in_time(
+    monkeypatch: pytest.MonkeyPatch, client: TelegramClient, transport: FakeTransport
+) -> None:
+    monkeypatch.setattr(mcp_server, "make_client", lambda ctx, login: (client, None))
+    monkeypatch.setattr(
+        mcp_server, "open_profile", _opens_logged_in(transport, "connectionStateConnecting")
+    )
+    opened, _ = mcp_server.open_authorized_client(Ctx(timeout=0.2))
+    assert opened is client
+
+
+def test_no_sync_opens_without_waiting(
+    monkeypatch: pytest.MonkeyPatch, client: TelegramClient, transport: FakeTransport
+) -> None:
+    monkeypatch.setattr(mcp_server, "make_client", lambda ctx, login: (client, None))
+    monkeypatch.setattr(mcp_server, "open_profile", _opens_logged_in(transport))
+    started = time.monotonic()
+    mcp_server.open_authorized_client(Ctx(sync=False, timeout=30.0))
+    assert time.monotonic() - started < 5.0
 
 
 def test_serve_releases_the_session_when_the_client_goes_away(

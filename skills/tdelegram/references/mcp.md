@@ -82,7 +82,9 @@ claude mcp add tdelegram -- tdelegram mcp --allow-write   # may draft and send, 
 ```
 
 For Docker, the client's config runs
-`docker run --rm -i -v <absolute path to ~/.tdelegram>:/session -e TELEGRAM_API_ID
--e TELEGRAM_API_HASH ghcr.io/bulanovdm/tdelegram mcp`. Use `-i`, never `-t`: a
-terminal merges stderr into the protocol stream. Do not add `--allow-write` on the
+`docker run --rm -i --user <uid>:<gid> -v <absolute path to ~/.tdelegram>:/session
+-e TELEGRAM_API_ID -e TELEGRAM_API_HASH ghcr.io/bulanovdm/tdelegram mcp`, with the
+numbers from `id -u` and `id -g`: the config is not run by a shell, so `$(id -u)`
+would stay literal. Use `-i`, never `-t`: a terminal merges stderr into the
+protocol stream. Do not add `--allow-write` on the
 user's behalf; whether an agent may write is their decision.

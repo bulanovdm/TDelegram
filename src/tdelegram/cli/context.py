@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -38,6 +39,8 @@ class Ctx:
     yes: bool = False
     verbose: bool = False
     no_retry: bool = False
+    timeout: float = 30.0
+    sync: bool = True
 
 
 def base_dir(ctx: Ctx) -> Path:
@@ -78,17 +81,20 @@ def make_client(
         warn(f"Using libtdjson: {library}")
         warn(f"Profile dir: {profile_dir}")
     transport = TdJsonTransport(library)
-    client = TelegramClient(transport)
+    client = TelegramClient(transport, default_timeout=ctx.timeout)
     if ctx.no_retry:
         client.disable_retry()
     # Store dirs for auth.
     client._profile_dir = profile_dir  # type: ignore[attr-defined]
     client._base_dir = base  # type: ignore[attr-defined]
     # TDLib parameters live on the client instance, not in the database:
-    # every process must replay the handshake before any call works.
+    # every process must replay the handshake before any call works. And a
+    # new process answers reads from its local database until it has fetched
+    # what it missed while offline, so it waits for that too.
     if login:
         try:
             ensure_login(client, ctx)
+            catch_up(client, ctx)
         except Exception:
             client.close()
             if lock is not None:
@@ -110,6 +116,30 @@ def ensure_login(client: TelegramClient, ctx: Ctx) -> None:
         provider,
         database_directory=str(db_dir),
         files_directory=str(files_dir),
+    )
+
+
+def catch_up(client: TelegramClient, ctx: Ctx) -> None:
+    """Wait for TDLib to fetch what it missed while no process was connected.
+
+    Every command is a new process, and under Docker a new container. Without
+    this, TDLib answered a history read from its database straight away and the
+    process exited before it ever fetched newer messages, so reads stayed days
+    behind the phone. Running out of time is a warning, not a failure: the
+    command still runs, and says its results may be stale.
+    """
+    if not ctx.sync:
+        return
+    started = time.monotonic()
+    if client.wait_until_synced(ctx.timeout):
+        if ctx.verbose:
+            warn(f"Caught up with Telegram in {time.monotonic() - started:.1f}s")
+        return
+    event = client.latest_update("updateConnectionState") or {}
+    state = event.get("state", {}).get("@type") or "no connection state yet"
+    warn(
+        f"TDLib had not caught up with Telegram after {ctx.timeout:g}s ({state}), "
+        "so recent messages may be missing. Raise --timeout to wait longer."
     )
 
 
