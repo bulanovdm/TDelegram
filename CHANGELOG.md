@@ -11,9 +11,12 @@
   command now waits, between the login handshake and its own work, until TDLib reports
   `connectionStateReady`: connected, with missed updates fetched. If that has not
   happened within `--timeout`, the command still runs, and stderr says its results may
-  be stale and how far TDLib got. `--no-sync` skips the wait. The MCP server waits
-  once, when it opens the profile; its client stays open, so later tool calls stay
-  current. Library code can do the same with `TelegramClient.wait_until_synced()`.
+  be stale and how far TDLib got. `--no-sync` skips the wait. `watch` and
+  `updates follow` start at once, since what TDLib fetches arrives as updates for them
+  to consume, and waiting would let the bounded update queue drop the oldest. The MCP
+  server waits once, when it opens the profile; its client stays open, so later tool
+  calls stay current. Library code can do the same with
+  `TelegramClient.wait_until_synced()`.
 
 ### Added
 - `--timeout SECONDS` (global, default 30): how long to wait for each TDLib reply, and

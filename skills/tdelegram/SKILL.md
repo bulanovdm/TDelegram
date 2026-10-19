@@ -108,8 +108,8 @@ Backgrounding several, or leaving an `updates follow` streaming while you run
 something else, produces `Another tdelegram process holds ... .lock` rather than
 speed.
 
-Each command also waits, up to `--timeout` (30s), for TDLib to fetch what it
-missed since the last run. If stderr says it *had not caught up*, recent messages
+Each command except `watch` and `updates follow` also waits, up to `--timeout`
+(30s), for TDLib to fetch what it missed since the last run. If stderr says it *had not caught up*, recent messages
 may be missing: say so, or retry with a longer `--timeout`, rather than reporting
 the gap as fact.
 

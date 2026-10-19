@@ -80,7 +80,8 @@ you are using the library directly and skipped `run_auth` — see
 Every command is a new TDLib process, and under Docker a new container. TDLib
 answers reads from its local database at once, but fetches what it missed while
 nothing was connected only after it connects. So each command first waits for
-TDLib to say it has caught up. When that takes longer than `--timeout` (30s by
+TDLib to say it has caught up; only `watch` and `updates follow` start at once,
+taking what arrives as it comes. When that takes longer than `--timeout` (30s by
 default), the command runs anyway and stderr says so, naming how far it got:
 
 - `connectionStateWaitingForNetwork`, `connectionStateConnecting`: no route to

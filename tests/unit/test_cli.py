@@ -542,6 +542,29 @@ def test_no_sync_does_not_wait(cli: FakeTransport) -> None:
     assert "caught up" not in result.stderr
 
 
+@pytest.mark.parametrize(
+    "argv", [["watch", "--for", "1s"], ["updates", "follow", "--types", "updateNewMessage"]]
+)
+def test_a_stream_starts_without_waiting_to_catch_up(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch, argv: list[str]
+) -> None:
+    """From the PR review: waiting first let the bounded queue drop updates.
+
+    What TDLib fetches while catching up arrives as updates. A stream that
+    waited for Ready before consuming any left them to pile up past the
+    queue's 1000, losing the oldest.
+    """
+    from tdelegram.api import updates as updates_api
+
+    monkeypatch.setattr(updates_api, "follow", lambda client, **kwargs: iter(()))
+    _probe_reports(cli, "connectionStateUpdating")
+    started = time.monotonic()
+    result = runner.invoke(cli_main.app, argv)
+    assert result.exit_code == 0
+    assert time.monotonic() - started < 5.0, "the stream waited out the timeout"
+    assert "had not caught up" not in result.stderr
+
+
 def test_verbose_says_how_long_catching_up_took(cli: FakeTransport) -> None:
     cli.add_simple_response("getMe", {"@type": "user", "id": 7})
     result = runner.invoke(cli_main.app, ["--verbose", "account", "info"])

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from collections.abc import Iterable
 from typing import Any
@@ -106,6 +107,17 @@ def _global(
 
 def _ctx() -> Ctx:
     return _state
+
+
+def _streaming() -> Ctx:
+    """The context for a command that streams updates instead of reading.
+
+    It skips the wait to catch up. A stream reads no cache: what TDLib fetches
+    while catching up arrives as updates, and the stream takes them as they
+    come. Waiting first would leave them in the bounded update queue, which
+    drops the oldest past 1000, and a long time offline easily fetches more.
+    """
+    return dataclasses.replace(_state, sync=False)
 
 
 def _emit(record: dict[str, Any]) -> None:
@@ -931,7 +943,7 @@ def updates_follow(types: str = typer.Option("", help="Comma-separated @type fil
     from tdelegram.api import updates as updates_api
 
     wanted = [t.strip() for t in types.split(",") if t.strip()]
-    with session(_ctx()) as client:
+    with session(_streaming()) as client:
         _emit_many(updates_api.follow_filtered(client, wanted))
 
 
@@ -962,7 +974,7 @@ def watch(
             _re.compile(match)
         except _re.error as exc:
             raise ValueError(f"Invalid --match pattern: {exc}") from None
-    with session(_ctx()) as client:
+    with session(_streaming()) as client:
         wanted = {chats_api.resolve_id(client, ref) for ref in chats} or None
         _emit_many(
             updates_api.watch_messages(
