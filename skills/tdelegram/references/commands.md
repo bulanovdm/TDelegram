@@ -33,6 +33,8 @@ Placed before the subcommand: `tdelegram --format json chat list`.
 | `--yes` | perform mutating operations rather than previewing |
 | `--verbose` | extra diagnostics on stderr (library path, profile dir) |
 | `--no-retry` | disable automatic `FloodWait` retry on reads |
+| `--timeout SECONDS` | how long to wait for each TDLib reply, and for TDLib to catch up before the command (default 30) |
+| `--no-sync` | do not wait for TDLib to fetch what it missed since the last run; faster, but reads may be stale |
 
 ## auth, account
 

@@ -222,7 +222,7 @@ Published for `linux/amd64` and `linux/arm64`:
 docker pull ghcr.io/bulanovdm/tdelegram:latest
 
 # The session lives in /session; mount it or every run starts logged out.
-docker run --rm -i -v "$HOME/.tdelegram:/session" \
+docker run --rm -i --user "$(id -u):$(id -g)" -v "$HOME/.tdelegram:/session" \
   ghcr.io/bulanovdm/tdelegram auth status
 ```
 
@@ -233,7 +233,7 @@ Global flags such as `--yes` go before the command. One alias makes every
 command in this README work verbatim:
 
 ```bash
-alias tdelegram='docker run --rm -i -v "$HOME/.tdelegram:/session" \
+alias tdelegram='docker run --rm -i --user "$(id -u):$(id -g)" -v "$HOME/.tdelegram:/session" \
   -v "$PWD:/work" -w /work -e TELEGRAM_API_ID -e TELEGRAM_API_HASH \
   ghcr.io/bulanovdm/tdelegram'
 ```
@@ -243,7 +243,7 @@ destructive command takes its typed confirmation only from a terminal. A second
 alias gives them one:
 
 ```bash
-alias tdelegram-tty='docker run --rm -it -v "$HOME/.tdelegram:/session" \
+alias tdelegram-tty='docker run --rm -it --user "$(id -u):$(id -g)" -v "$HOME/.tdelegram:/session" \
   -v "$PWD:/work" -w /work -e TELEGRAM_API_ID -e TELEGRAM_API_HASH \
   ghcr.io/bulanovdm/tdelegram'
 tdelegram-tty auth login
@@ -252,6 +252,15 @@ tdelegram-tty auth login
 Keep `-t` out of the first alias: with a terminal attached, Docker merges
 stderr into stdout, which puts diagnostics in the JSON, and it refuses to start
 when its input is a pipe.
+
+`--user` makes the session and downloaded media yours rather than root's. On
+Linux, a session that an alias without it created belongs to root; hand it over
+once with `sudo chown -R "$(id -u):$(id -g)" ~/.tdelegram`.
+
+Each `docker run` is a new TDLib process, so a command first waits for TDLib to
+fetch what it missed since the last one — up to `--timeout` (30s), or not at
+all with `--no-sync`. For many calls in a row, an MCP client keeps one process
+open for the whole session instead.
 
 ### Native
 

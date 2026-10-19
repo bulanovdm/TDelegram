@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from collections.abc import Iterable
 from typing import Any
@@ -22,7 +23,17 @@ from tdelegram.cli.context import (
 from tdelegram.cli.output import FORMATS, emit, emit_many, warn
 
 GLOBAL_FLAGS = frozenset(
-    {"--yes", "--profile", "--session-dir", "--format", "--output", "--verbose", "--no-retry"}
+    {
+        "--yes",
+        "--profile",
+        "--session-dir",
+        "--format",
+        "--output",
+        "--verbose",
+        "--no-retry",
+        "--timeout",
+        "--no-sync",
+    }
 )
 
 
@@ -72,9 +83,17 @@ def _global(
     yes: bool = typer.Option(False, "--yes", help="Perform mutating operations"),
     verbose: bool = typer.Option(False, "--verbose", help="Verbose diagnostics on stderr"),
     no_retry: bool = typer.Option(False, "--no-retry", help="Disable FloodWait auto-retry"),
+    timeout: float = typer.Option(
+        30.0, "--timeout", help="Seconds to wait for each TDLib reply, and for catching up"
+    ),
+    no_sync: bool = typer.Option(
+        False, "--no-sync", help="Do not wait for TDLib to fetch what it missed; reads may be stale"
+    ),
 ) -> None:
     if fmt not in FORMATS:
         raise typer.BadParameter(f"--format must be {'|'.join(FORMATS)}")
+    if timeout <= 0:
+        raise typer.BadParameter("--timeout must be more than 0 seconds")
     _state.profile = profile
     _state.session_dir = session_dir
     _state.fmt = fmt
@@ -82,10 +101,23 @@ def _global(
     _state.yes = yes
     _state.verbose = verbose
     _state.no_retry = no_retry
+    _state.timeout = timeout
+    _state.sync = not no_sync
 
 
 def _ctx() -> Ctx:
     return _state
+
+
+def _streaming() -> Ctx:
+    """The context for a command that streams updates instead of reading.
+
+    It skips the wait to catch up. A stream reads no cache: what TDLib fetches
+    while catching up arrives as updates, and the stream takes them as they
+    come. Waiting first would leave them in the bounded update queue, which
+    drops the oldest past 1000, and a long time offline easily fetches more.
+    """
+    return dataclasses.replace(_state, sync=False)
 
 
 def _emit(record: dict[str, Any]) -> None:
@@ -911,7 +943,7 @@ def updates_follow(types: str = typer.Option("", help="Comma-separated @type fil
     from tdelegram.api import updates as updates_api
 
     wanted = [t.strip() for t in types.split(",") if t.strip()]
-    with session(_ctx()) as client:
+    with session(_streaming()) as client:
         _emit_many(updates_api.follow_filtered(client, wanted))
 
 
@@ -942,7 +974,7 @@ def watch(
             _re.compile(match)
         except _re.error as exc:
             raise ValueError(f"Invalid --match pattern: {exc}") from None
-    with session(_ctx()) as client:
+    with session(_streaming()) as client:
         wanted = {chats_api.resolve_id(client, ref) for ref in chats} or None
         _emit_many(
             updates_api.watch_messages(

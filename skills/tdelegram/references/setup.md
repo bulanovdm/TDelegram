@@ -50,7 +50,7 @@ The container keeps its session in `/session`, so mount a host directory there
 or every run starts logged out:
 
 ```bash
-docker run --rm -i -v "$HOME/.tdelegram:/session" \
+docker run --rm -i --user "$(id -u):$(id -g)" -v "$HOME/.tdelegram:/session" \
   ghcr.io/bulanovdm/tdelegram auth status
 ```
 
@@ -61,6 +61,7 @@ makes those work unchanged, which is worth more than it looks:
 
 ```bash
 alias tdelegram='docker run --rm -i \
+  --user "$(id -u):$(id -g)" \
   -v "$HOME/.tdelegram:/session" \
   -v "$PWD:/work" -w /work \
   -e TELEGRAM_API_ID -e TELEGRAM_API_HASH \
@@ -71,7 +72,7 @@ Mounting `$PWD` matters for anything touching files: `media upload --path
 ./cv.pdf` resolves inside the container, so a host path the container cannot
 see fails with a confusing "file not found".
 
-Two container-specific wrinkles:
+Four container-specific wrinkles:
 
 - **`auth login` needs `-it`**, not `-i`. It prompts. The alias above uses `-i`
   because that is right for every other command; run the login by hand once.
@@ -79,9 +80,17 @@ Two container-specific wrinkles:
   human runs those with `-it` as well. Under `-i` alone they refuse, by design.
 - **stdout stays clean** with `-i`; `-t` allocates a TTY and can interleave
   stderr into it, which breaks JSON parsing. Keep `-t` for the login only.
+- **`--user` keeps the files yours.** Without it the container writes the
+  session and downloaded media as root, which a Linux host user cannot read.
+  A session created that way needs `sudo chown -R "$(id -u):$(id -g)"
+  ~/.tdelegram` once.
+- **Every run is a cold start.** A new container is a new TDLib process, so
+  each command first waits until TDLib has fetched what it missed since the
+  last one: up to `--timeout` (30s by default). Without that wait, history came
+  back days behind the phone. `--no-sync` skips it, for when stale is fine.
 
 ```bash
-docker run --rm -it -v "$HOME/.tdelegram:/session" \
+docker run --rm -it --user "$(id -u):$(id -g)" -v "$HOME/.tdelegram:/session" \
   -e TELEGRAM_API_ID -e TELEGRAM_API_HASH \
   ghcr.io/bulanovdm/tdelegram auth login
 ```

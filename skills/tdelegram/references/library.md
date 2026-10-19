@@ -37,6 +37,15 @@ run_auth(
 the saved session, so a fresh process must replay the handshake before any call
 works — skip it and every call returns *"Initialization parameters are needed"*.
 
+A fresh process also answers reads from its local database until TDLib has
+fetched what it missed while offline. Before reads that must be current, wait
+for it, as every CLI command does:
+
+```python
+if not client.wait_until_synced(30):
+    ...  # still connecting or fetching: what you read next may be stale
+```
+
 To ask whether a session is usable without prompting for anything:
 
 ```python

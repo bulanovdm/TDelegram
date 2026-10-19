@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 import re
+import threading
+import time
 from typing import Any
 
 import pytest
@@ -22,6 +24,23 @@ from tdelegram.loop import reset_loops
 from tdelegram.transport import FakeTransport
 
 runner = CliRunner()
+
+CONNECTION_READY = {"@type": "updateConnectionState", "state": {"@type": "connectionStateReady"}}
+
+
+def answer_probe(transport: FakeTransport, state: dict[str, Any]) -> Any:
+    """Answer the handshake probe with `state`, as a TDLib that then catches up.
+
+    A woken TDLib connects and reports `connectionStateReady` once it has
+    fetched what it missed, and every logged-in command waits for that. A test
+    that re-scripts the probe without it sits out the whole --timeout.
+    """
+
+    def _answer(request: dict[str, Any]) -> dict[str, Any]:
+        transport.add_update(CONNECTION_READY)
+        return state
+
+    return _answer
 
 
 @pytest.fixture
@@ -37,12 +56,16 @@ def cli(monkeypatch: pytest.MonkeyPatch) -> Any:
 
     transport = FakeTransport()
     # An authorized session answers the handshake probe immediately.
-    transport.add_simple_response("getAuthorizationState", {"@type": "authorizationStateReady"})
+    transport.add_response(
+        lambda r: r.get("@type") == "getAuthorizationState",
+        answer_probe(transport, {"@type": "authorizationStateReady"}),
+    )
     client = TelegramClient(transport)
 
     def _fake_make_client(ctx: Any, **kwargs: Any) -> tuple[TelegramClient, None]:
         if kwargs.get("login", True):
             cli_context.ensure_login(client, ctx)
+            cli_context.catch_up(client, ctx)
         return client, None
 
     monkeypatch.setattr(cli_context, "make_client", _fake_make_client)
@@ -100,6 +123,7 @@ def test_data_command_performs_the_handshake(cli: FakeTransport) -> None:
                 "authorization_state": {"@type": "authorizationStateReady"},
             }
         )
+        cli.add_update(CONNECTION_READY)
         return {"@type": "ok"}
 
     cli.add_response(lambda r: r.get("@type") == "setTdlibParameters", _opened)
@@ -452,6 +476,152 @@ def run_call_ok(ctx: Any) -> bool:
     from tdelegram.cli.context import run_call
 
     return run_call(ctx, "sendMessage", {"chat_id": 1})["@type"] == "message"
+
+
+# --- catching up with what TDLib missed while no process ran -------------
+
+
+def _probe_reports(cli: FakeTransport, *states: str) -> None:
+    """A logged-in session whose TDLib, once woken, reports these connection states."""
+    cli._rules.clear()
+
+    def _answer(request: dict[str, Any]) -> dict[str, Any]:
+        for state in states:
+            cli.add_update({"@type": "updateConnectionState", "state": {"@type": state}})
+        return {"@type": "authorizationStateReady"}
+
+    cli.add_response(lambda r: r.get("@type") == "getAuthorizationState", _answer)
+
+
+def test_a_command_waits_for_tdlib_to_catch_up(cli: FakeTransport) -> None:
+    """Regression: every command answered from the database the last process left.
+
+    TDLib fetches what it missed only once connected, and a command used to
+    exit before that, so history stayed days behind the phone however often it
+    was read. The command's own request must wait for connectionStateReady.
+    """
+    _probe_reports(cli, "connectionStateConnecting", "connectionStateUpdating")
+    caught_up = threading.Event()
+
+    def _ready() -> None:
+        caught_up.set()
+        cli.add_update(CONNECTION_READY)
+
+    cli.add_response(
+        lambda r: r.get("@type") == "getMe",
+        lambda r: {"@type": "user", "id": 7 if caught_up.is_set() else 0},
+    )
+    later = threading.Timer(0.3, _ready)
+    later.start()
+    try:
+        result = runner.invoke(cli_main.app, ["account", "info"])
+    finally:
+        later.join()
+    assert result.exit_code == 0
+    assert _lines(result)[0]["id"] == 7, "getMe ran before TDLib had caught up"
+    assert "had not caught up" not in result.stderr
+
+
+def test_a_command_that_cannot_catch_up_still_runs_and_says_so(cli: FakeTransport) -> None:
+    _probe_reports(cli, "connectionStateUpdating")
+    cli.add_simple_response("getMe", {"@type": "user", "id": 7})
+    result = runner.invoke(cli_main.app, ["--timeout", "0.2", "account", "info"])
+    assert result.exit_code == 0
+    assert _lines(result)[0]["id"] == 7
+    assert "had not caught up with Telegram after 0.2s" in result.stderr
+    assert "connectionStateUpdating" in result.stderr, "the warning should say how far it got"
+
+
+def test_no_sync_does_not_wait(cli: FakeTransport) -> None:
+    _probe_reports(cli)
+    cli.add_simple_response("getMe", {"@type": "user", "id": 7})
+    started = time.monotonic()
+    result = runner.invoke(cli_main.app, ["--no-sync", "account", "info"])
+    assert result.exit_code == 0
+    assert time.monotonic() - started < 5.0, "--no-sync waited out the timeout"
+    assert "caught up" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    "argv", [["watch", "--for", "1s"], ["updates", "follow", "--types", "updateNewMessage"]]
+)
+def test_a_stream_starts_without_waiting_to_catch_up(
+    cli: FakeTransport, monkeypatch: pytest.MonkeyPatch, argv: list[str]
+) -> None:
+    """From the PR review: waiting first let the bounded queue drop updates.
+
+    What TDLib fetches while catching up arrives as updates. A stream that
+    waited for Ready before consuming any left them to pile up past the
+    queue's 1000, losing the oldest.
+    """
+    from tdelegram.api import updates as updates_api
+
+    monkeypatch.setattr(updates_api, "follow", lambda client, **kwargs: iter(()))
+    _probe_reports(cli, "connectionStateUpdating")
+    started = time.monotonic()
+    result = runner.invoke(cli_main.app, argv)
+    assert result.exit_code == 0
+    assert time.monotonic() - started < 5.0, "the stream waited out the timeout"
+    assert "had not caught up" not in result.stderr
+
+
+def test_verbose_says_how_long_catching_up_took(cli: FakeTransport) -> None:
+    cli.add_simple_response("getMe", {"@type": "user", "id": 7})
+    result = runner.invoke(cli_main.app, ["--verbose", "account", "info"])
+    assert result.exit_code == 0
+    assert "Caught up with Telegram in" in result.stderr
+
+
+def test_auth_status_does_not_wait_to_catch_up(cli: FakeTransport) -> None:
+    """It only reports the state, and a session that is not logged in never catches up."""
+    _probe_reports(cli)
+    started = time.monotonic()
+    result = runner.invoke(cli_main.app, ["auth", "status"])
+    assert result.exit_code == 0
+    assert time.monotonic() - started < 5.0
+
+
+@pytest.mark.parametrize("value", ["0", "-1"])
+def test_timeout_must_be_positive(cli: FakeTransport, value: str) -> None:
+    result = runner.invoke(cli_main.app, ["--timeout", value, "account", "info"])
+    assert result.exit_code == 2
+    assert cli.sent == []
+
+
+def test_timeout_bounds_every_request(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """--timeout reaches the client the real make_client builds.
+
+    Server round-trips such as getActiveSessions failed at a fixed 30s.
+    """
+
+    class Unanswered(FakeTransport):
+        """Never answers getMe, as a server that is slow to reply."""
+
+        def send(self, client_id: int, request: str) -> None:
+            if json.loads(request).get("@type") != "getMe":
+                super().send(client_id, request)
+
+    transport = Unanswered()
+    transport.add_response(
+        lambda r: r.get("@type") == "getAuthorizationState",
+        answer_probe(transport, {"@type": "authorizationStateReady"}),
+    )
+    monkeypatch.setattr(cli_context, "discover_library", lambda: "libtdjson")
+    monkeypatch.setattr(cli_context, "TdJsonTransport", lambda library: transport)
+    monkeypatch.setattr(cli_main, "_state", cli_main.Ctx())
+    started = time.monotonic()
+    try:
+        result = runner.invoke(
+            cli_main.app,
+            ["--session-dir", str(tmp_path), "--timeout", "0.5", "account", "info"],
+        )
+    finally:
+        reset_loops()
+    assert result.exit_code == 1
+    assert "Timed out waiting for getMe" in result.stdout
+    assert time.monotonic() - started < 10.0
 
 
 # --- read commands that were never exercised ------------------------------
@@ -1371,6 +1541,8 @@ def test_watch_rejects_a_broken_pattern_up_front(cli: FakeTransport) -> None:
     [
         ["msg", "send", "--chat", "me", "--text", "hi", "--yes"],
         ["chat", "list", "--format", "json"],
+        ["account", "info", "--timeout", "5"],
+        ["chat", "list", "--no-sync"],
     ],
 )
 def test_a_late_global_flag_says_where_it_goes(cli: FakeTransport, argv: list[str]) -> None:

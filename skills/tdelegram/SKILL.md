@@ -108,6 +108,11 @@ Backgrounding several, or leaving an `updates follow` streaming while you run
 something else, produces `Another tdelegram process holds ... .lock` rather than
 speed.
 
+Each command except `watch` and `updates follow` also waits, up to `--timeout`
+(30s), for TDLib to fetch what it missed since the last run. If stderr says it *had not caught up*, recent messages
+may be missing: say so, or retry with a longer `--timeout`, rather than reporting
+the gap as fact.
+
 The `destructive` verdict adds a typed confirmation on an interactive terminal.
 You will not have a TTY, so destructive commands cannot be completed by you
 alone — that is deliberate. Do not work around it: no `script`, `expect` or
@@ -267,7 +272,7 @@ coverage, not for permission. Build the request from `tdelegram describe
 `call` refuses one rather than let the request run without it.
 
 Global flags: `--profile`, `--session-dir`, `--format`, `--output`, `--yes`,
-`--verbose`, `--no-retry`.
+`--verbose`, `--no-retry`, `--timeout`, `--no-sync`.
 
 ## When something fails
 
