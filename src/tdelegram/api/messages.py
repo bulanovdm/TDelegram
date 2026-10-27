@@ -10,6 +10,7 @@ from tdelegram.api.chats import resolve_id
 from tdelegram.client import TelegramClient
 from tdelegram.dates import parse_date
 from tdelegram.entities import parse_entities
+from tdelegram.files import confirmed_message, send_and_wait
 from tdelegram.paging import paginate
 
 
@@ -145,10 +146,20 @@ def send(
     schedule_date: int | None = None,
     silent: bool = False,
     topic_id: int | None = None,
+    wait: bool = True,
+    timeout: float = 30.0,
     allow_write: bool = False,
 ) -> dict[str, Any]:
     """Send a text message. `topic_id` names a forum topic; without it a forum
-    message lands in General."""
+    message lands in General.
+
+    TDLib answers at once with a pending message and delivers it in the
+    background, so a caller that returns and closes the client straight away can
+    abandon the send. With `wait` this returns the message as sent, under its
+    final id, once Telegram has it, and raises if it was refused or `timeout`
+    seconds passed without word. `wait=False` returns the pending message, for a
+    caller whose client stays open.
+    """
     from tdelegram.api.topics import topic_object
 
     chat_id = resolve_id(client, chat_ref)
@@ -161,7 +172,13 @@ def send(
     options = send_options(schedule_date=schedule_date, silent=silent)
     if options is not None:
         params["options"] = options
-    return client.call("sendMessage", params, allow_write=allow_write)
+
+    def make() -> dict[str, Any]:
+        return client.call("sendMessage", params, allow_write=allow_write)
+
+    if not wait:
+        return make()
+    return confirmed_message(send_and_wait(client, chat_id, make, timeout=timeout), timeout=timeout)
 
 
 def reply(

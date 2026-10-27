@@ -8,13 +8,18 @@ the upload, so a PDF stayed unsent. These tests script the late outcome.
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from typing import Any
 
+import pytest
+
 from tdelegram.api import media as media_api
 from tdelegram.client import TelegramClient
+from tdelegram.errors import TelegramTimeoutError
 from tdelegram.files import uploaded_file_id, wait_for_send
+from tdelegram.loop import reset_loops
 from tdelegram.transport import FakeTransport
 
 CHAT_ID = 1
@@ -22,11 +27,11 @@ PENDING_ID = 4242
 FILE_ID = 77
 
 
-def pending_message() -> dict[str, Any]:
+def pending_message(message_id: int = PENDING_ID) -> dict[str, Any]:
     """What sendMessage answers for a document: the message, not yet sent."""
     return {
         "@type": "message",
-        "id": PENDING_ID,
+        "id": message_id,
         "chat_id": CHAT_ID,
         "sending_state": {"@type": "messageSendingStatePending"},
         "content": {
@@ -213,3 +218,122 @@ def test_uploaded_file_id() -> None:
     assert uploaded_file_id({"message": pending_message()}) == FILE_ID
     assert uploaded_file_id({"@type": "message", "content": {"@type": "messageText"}}) is None
     assert uploaded_file_id({}) is None
+
+
+def test_overlapping_uploads_do_not_take_each_others_updates(
+    client: TelegramClient, transport: FakeTransport
+) -> None:
+    """Regression: uploads on one client read one shared queue, so one could swallow
+    the other's result and the other report "pending" for a file that was sent."""
+    ids = iter([PENDING_ID, PENDING_ID + 1])
+    placed = threading.Semaphore(0)
+
+    def _answer(request: dict[str, Any]) -> dict[str, Any]:
+        placed.release()
+        return pending_message(next(ids))
+
+    transport.add_simple_response("getChat", {"@type": "chat", "id": CHAT_ID})
+    transport.add_response(lambda r: r.get("@type") == "sendMessage", _answer)
+    results: dict[str, dict[str, Any]] = {}
+
+    def upload(name: str) -> None:
+        results[name] = media_api.upload(client, "1", "/tmp/cv.pdf", timeout=3.0, allow_write=True)
+
+    first = threading.Thread(target=upload, args=("first",))
+    first.start()
+    assert placed.acquire(timeout=5)
+    second = threading.Thread(target=upload, args=("second",))
+    second.start()
+    assert placed.acquire(timeout=5)
+    time.sleep(0.3)  # both are waiting now, the first for longer
+    # The second upload's result comes first, to the one waiting longest. Given a
+    # moment to act on it, the first now waits behind the second, which then
+    # meets the first one's result. Sharing a queue, each throws away the other's.
+    transport.add_update(succeeded(PENDING_ID + 1, 101), client_id=client.client_id)
+    time.sleep(0.2)
+    transport.add_update(succeeded(PENDING_ID, 100), client_id=client.client_id)
+    first.join(5)
+    second.join(5)
+    assert results["first"]["message"]["id"] == 100
+    assert results["second"]["message"]["id"] == 101
+
+
+def test_the_first_answer_is_bounded_by_the_clients_own_timeout(
+    transport: FakeTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """sendMessage used to wait a fixed minute whatever the caller had asked for."""
+    transport.add_simple_response("getChat", {"@type": "chat", "id": CHAT_ID})
+    real_send = transport.send
+
+    def silent_about_sendmessage(client_id: int, request: str) -> None:
+        if json.loads(request).get("@type") != "sendMessage":
+            real_send(client_id, request)
+
+    monkeypatch.setattr(transport, "send", silent_about_sendmessage)
+    quick = TelegramClient(transport, default_timeout=0.3)
+    try:
+        started = time.monotonic()
+        with pytest.raises(TelegramTimeoutError):
+            media_api.upload(quick, "1", "/tmp/cv.pdf", allow_write=True)
+        assert time.monotonic() - started < 5
+    finally:
+        quick.close()
+        reset_loops()
+
+
+def never_delivered() -> list[dict[str, Any]]:
+    """The newest messages of a chat: one pending PDF, one failed, one delivered."""
+    stuck = pending_message()
+    stuck["is_outgoing"] = True
+    failed_out = {
+        "@type": "message",
+        "id": 4000,
+        "is_outgoing": True,
+        "sending_state": {
+            "@type": "messageSendingStateFailed",
+            "error": {"@type": "error", "code": 400, "message": "Message is too old"},
+            "can_retry": True,
+            "retry_after": 0.0,
+        },
+        "content": {"@type": "messageText", "text": {"text": "hi", "entities": []}},
+    }
+    delivered = {"@type": "message", "id": 3, "is_outgoing": True, "content": {}}
+    received = {**pending_message(5), "is_outgoing": False}
+    return [stuck, failed_out, delivered, received]
+
+
+def test_unsent_lists_what_never_went_out(client: TelegramClient, transport: FakeTransport) -> None:
+    transport.add_simple_response("getChat", {"@type": "chat", "id": CHAT_ID})
+    transport.add_simple_response(
+        "getChatHistory", {"@type": "messages", "messages": never_delivered()}
+    )
+    found = media_api.unsent(client, "1")
+    assert [m["message_id"] for m in found] == [PENDING_ID, 4000]
+    assert found[0]["file_name"] == "cv.pdf"
+    assert found[0]["sending_state"] == {"state": "pending"}
+    assert found[1]["sending_state"]["state"] == "failed"
+    history = [r for _, r in transport.sent if r.get("@type") == "getChatHistory"]
+    assert history[0]["only_local"] is True, "this is a courtesy check, not a trip to the server"
+
+
+def test_unsent_is_empty_when_nothing_is_stuck(
+    client: TelegramClient, transport: FakeTransport
+) -> None:
+    transport.add_simple_response("getChat", {"@type": "chat", "id": CHAT_ID})
+    transport.add_simple_response(
+        "getChatHistory", {"@type": "messages", "messages": never_delivered()[2:]}
+    )
+    assert media_api.unsent(client, "1") == []
+
+
+def test_a_chat_that_cannot_be_read_is_no_news(
+    client: TelegramClient, transport: FakeTransport
+) -> None:
+    """The check must never be the reason an upload does not happen."""
+    transport.add_simple_response("getChat", {"@type": "chat", "id": CHAT_ID})
+    transport.add_simple_response(
+        "getChatHistory", {"@type": "error", "code": 500, "message": "database is locked"}
+    )
+    assert media_api.unsent(client, "1") == []
+    transport.add_simple_response("searchPublicChat", {"@type": "chat"})
+    assert media_api.unsent(client, "nobody") == []

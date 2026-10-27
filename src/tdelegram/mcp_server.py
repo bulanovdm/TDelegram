@@ -696,6 +696,8 @@ def _register_writes(server: MCPServer, session: ClientSession) -> None:
                 reply_to=reply_to,
                 topic_id=topic_id,
                 silent=silent,
+                # The server's client stays open, so the send finishes without being waited on.
+                wait=False,
                 allow_write=confirm,
             )
         )

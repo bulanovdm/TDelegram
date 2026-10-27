@@ -1054,14 +1054,39 @@ def test_describe_suggests_close_names(cli: FakeTransport) -> None:
     assert "getChatFolder" in _lines(result)[0]["error"]["message"]
 
 
+def _text_sent(old_id: int = 9, new_id: int = 10) -> dict[str, Any]:
+    return {
+        "@type": "updateMessageSendSucceeded",
+        "old_message_id": old_id,
+        "message": {"@type": "message", "id": new_id, "chat_id": 5},
+    }
+
+
+def _scripted_text_send(cli: FakeTransport, *later: dict[str, Any], old_id: int = 9) -> None:
+    """sendMessage answers with a pending text message; TDLib reports `later` after it."""
+    pending = {
+        "@type": "message",
+        "id": old_id,
+        "chat_id": 5,
+        "sending_state": {"@type": "messageSendingStatePending"},
+    }
+
+    def _answer(request: dict[str, Any]) -> dict[str, Any]:
+        for update in later:
+            cli.add_update(update)
+        return pending
+
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_response(lambda r: r.get("@type") == "sendMessage", _answer)
+
+
 def test_scheduling_goes_inside_the_send_options(cli: FakeTransport) -> None:
     """Regression: scheduling_state sat at the top level of sendMessage.
 
     sendMessage has no such field there, so TDLib ignored it and a message
     meant for tomorrow went out at once.
     """
-    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
-    cli.add_simple_response("sendMessage", {"@type": "message", "id": 9})
+    _scripted_text_send(cli, _text_sent())
     argv = ["--yes", "msg", "send", "--chat", "somechat", "--text", "later"]
     result = runner.invoke(cli_main.app, [*argv, "--schedule", "2h", "--silent"])
     assert result.exit_code == 0
@@ -2055,4 +2080,85 @@ def test_upload_needs_a_timeout_that_can_wait(cli: FakeTransport) -> None:
     _scripted_upload(cli)
     result = runner.invoke(cli_main.app, [*UPLOAD, "--timeout", "0"])
     assert result.exit_code == 2
+    assert "sendMessage" not in _sent(cli)
+
+
+SEND = ["--yes", "msg", "send", "--chat", "somechat", "--text", "hi"]
+
+
+def test_msg_send_prints_the_message_as_sent(cli: FakeTransport) -> None:
+    """Regression: the command returned on the pending message and closed TDLib."""
+    _scripted_text_send(cli, _text_sent())
+    result = runner.invoke(cli_main.app, SEND)
+    assert result.exit_code == 0
+    assert _lines(result)[0]["id"] == 10, "the id after sending, not the local pending one (9)"
+
+
+def test_msg_send_exits_1_when_telegram_refuses_it(cli: FakeTransport) -> None:
+    refused = {
+        "@type": "updateMessageSendFailed",
+        "old_message_id": 9,
+        "message": {"@type": "message", "id": 9, "chat_id": 5},
+        "error": {"@type": "error", "code": 400, "message": "CHAT_WRITE_FORBIDDEN"},
+    }
+    _scripted_text_send(cli, refused)
+    result = runner.invoke(cli_main.app, SEND)
+    assert result.exit_code == 1
+    assert _lines(result)[0]["error"]["message"] == "CHAT_WRITE_FORBIDDEN"
+
+
+def test_msg_send_exits_1_when_nothing_confirms_it(cli: FakeTransport) -> None:
+    _scripted_text_send(cli)
+    result = runner.invoke(cli_main.app, [*SEND, "--timeout", "0.3"])
+    assert result.exit_code == 1
+    assert "did not confirm" in _lines(result)[0]["error"]["message"]
+
+
+def test_msg_send_without_yes_still_only_previews(cli: FakeTransport) -> None:
+    _scripted_text_send(cli, _text_sent())
+    result = runner.invoke(cli_main.app, SEND[1:])
+    assert result.exit_code == 2
+    assert "sendMessage" not in _sent(cli)
+
+
+def _earlier_unsent(cli: FakeTransport) -> None:
+    """Chat 5 holds a PDF that an earlier run never delivered."""
+    stuck = {
+        "@type": "message",
+        "id": 4000,
+        "is_outgoing": True,
+        "sending_state": {"@type": "messageSendingStatePending"},
+        "content": {
+            "@type": "messageDocument",
+            "document": {"@type": "document", "file_name": "cv.pdf", "document": {"id": 70}},
+        },
+    }
+    cli.add_simple_response("getChatHistory", {"@type": "messages", "messages": [stuck]})
+
+
+def test_upload_warns_about_an_earlier_send_that_never_went_out(cli: FakeTransport) -> None:
+    """TDLib sends it again by itself, so the same file now may arrive twice."""
+    _earlier_unsent(cli)
+    _scripted_upload(
+        cli,
+        {
+            "@type": "updateMessageSendSucceeded",
+            "old_message_id": 4242,
+            "message": {"@type": "message", "id": 99, "chat_id": 5},
+        },
+    )
+    result = runner.invoke(cli_main.app, UPLOAD)
+    assert result.exit_code == 0, "a warning, not a refusal"
+    assert "never delivered" in result.stderr and "4000" in result.stderr
+    assert _lines(result)[0]["status"] == "sent"
+    assert "never delivered" not in result.stdout, "stdout stays data"
+
+
+def test_the_warning_comes_before_the_preview(cli: FakeTransport) -> None:
+    """It is what someone needs when deciding whether to add --yes."""
+    _earlier_unsent(cli)
+    _scripted_upload(cli)
+    result = runner.invoke(cli_main.app, UPLOAD[1:])
+    assert result.exit_code == 2
+    assert "never delivered" in result.stderr
     assert "sendMessage" not in _sent(cli)

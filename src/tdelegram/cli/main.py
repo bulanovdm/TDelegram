@@ -363,7 +363,14 @@ def msg_send(
     schedule: str | None = typer.Option(
         None, "--schedule", help="Send later: 30m, 2h, 1d from now, or ISO-8601"
     ),
+    timeout: float = typer.Option(
+        30.0, "--timeout", min=0.1, help="Seconds to wait for Telegram to confirm the message"
+    ),
 ) -> None:
+    """Send a text message, and wait until Telegram has it.
+
+    Prints the message as sent. Exits 1 if it was refused or not confirmed in time.
+    """
     from tdelegram.api import messages
     from tdelegram.dates import parse_future
 
@@ -381,6 +388,7 @@ def msg_send(
                     topic_id=topic,
                     silent=silent,
                     schedule_date=schedule_date,
+                    timeout=timeout,
                     allow_write=w,
                 ),
             )
@@ -646,6 +654,15 @@ def media_upload(
     from tdelegram.api import media as media_api
 
     with session(_ctx()) as client:
+        earlier = media_api.unsent(client, chat)
+        if earlier:
+            ids = ", ".join(str(m["message_id"]) for m in earlier)
+            warn(
+                f"This chat has {len(earlier)} earlier message(s) that were never delivered "
+                f"(ids {ids}). TDLib sends them again itself when it runs, so this file may "
+                "arrive twice. `chat history` shows them under sending_state; "
+                "`msg delete` removes one."
+            )
         result = perform(
             _ctx(),
             lambda w, d: media_api.upload(

@@ -370,3 +370,34 @@ def test_captions_still_win_when_there_is_no_text() -> None:
         }
     }
     assert normalize.message_text(message) == "see attached"
+
+
+def test_an_undelivered_message_says_so() -> None:
+    """A record without sending_state reads a stuck message as a sent one."""
+    from tdelegram import normalize
+
+    pending = {"id": 4242, "sending_state": {"@type": "messageSendingStatePending"}}
+    assert normalize.message_record(pending)["sending_state"] == {"state": "pending"}
+
+    failed = {
+        "id": 4000,
+        "sending_state": {
+            "@type": "messageSendingStateFailed",
+            "error": {"@type": "error", "code": 400, "message": "Message is too old"},
+            "can_retry": True,
+            "retry_after": 0.0,
+        },
+    }
+    assert normalize.message_record(failed)["sending_state"] == {
+        "state": "failed",
+        "error": {"code": 400, "message": "Message is too old"},
+        "can_retry": True,
+        "retry_after": 0.0,
+    }
+
+
+def test_a_delivered_message_has_no_sending_state() -> None:
+    from tdelegram import normalize
+
+    assert normalize.message_record({"id": 5})["sending_state"] is None
+    assert normalize.message_record({"id": 5, "sending_state": None})["sending_state"] is None
