@@ -379,3 +379,13 @@ def test_unsent_looks_at_no_more_than_the_newest_fifty(
     assert media_api.unsent(client, "1") == []
     asked = [r for _, r in transport.sent if r.get("@type") == "getChatHistory"]
     assert len(asked) == requests, "a scan of fifty messages, not the whole history"
+
+
+def test_a_chat_tdlib_refuses_to_resolve_is_no_news_either(
+    client: TelegramClient, transport: FakeTransport
+) -> None:
+    """The upload reports that itself; the courtesy check must not fail first."""
+    transport.add_simple_response(
+        "getChat", {"@type": "error", "code": 400, "message": "Chat not found"}
+    )
+    assert media_api.unsent(client, "7") == []

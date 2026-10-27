@@ -7,6 +7,7 @@ from typing import Any
 
 from tdelegram.api.chats import resolve_id
 from tdelegram.client import TelegramClient
+from tdelegram.errors import TelegramError
 from tdelegram.files import download as _download
 from tdelegram.files import send_and_wait, unsent_in_chat
 from tdelegram.files import send_file as _send_file
@@ -70,7 +71,7 @@ def unsent(client: TelegramClient, chat_ref: str) -> list[dict[str, Any]]:
     """
     try:
         return unsent_in_chat(client, resolve_id(client, chat_ref))
-    except ValueError:
+    except (TelegramError, ValueError):
         return []
 
 
