@@ -633,16 +633,37 @@ def media_upload(
     chat: str = typer.Option(..., "--chat"),
     path: str = typer.Option(..., "--path"),
     caption: str = typer.Option("", "--caption"),
+    timeout: float = typer.Option(
+        60.0, "--timeout", min=0.1, help="Seconds without the upload advancing before giving up"
+    ),
 ) -> None:
+    """Send a file as a document, and wait until Telegram has it.
+
+    Exits 1 if the message was not sent. TDLib uploads in the background, and
+    closing it mid-upload leaves the message unsent, so the command does not
+    return before the outcome is known.
+    """
     from tdelegram.api import media as media_api
 
     with session(_ctx()) as client:
-        _emit(
-            perform(
-                _ctx(),
-                lambda w, d: media_api.upload(client, chat, path, caption=caption, allow_write=w),
-            )
+        result = perform(
+            _ctx(),
+            lambda w, d: media_api.upload(
+                client, chat, path, caption=caption, timeout=timeout, allow_write=w
+            ),
         )
+        _emit(result)
+    status = result.get("status")
+    if status == "failed":
+        error = result.get("error") or {}
+        warn(f"Not sent: {error.get('message', 'Telegram refused the file')}.")
+    elif status != "sent":
+        warn(
+            f"Not confirmed: the upload made no progress for {timeout:g}s, so it was "
+            "abandoned when the client closed. Raise --timeout on a slow link."
+        )
+    if status != "sent":
+        raise SystemExit(1)
 
 
 # -- contact / user -----------------------------------------------------

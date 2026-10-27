@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.2 — 2026-10-27
+
+### Fixed
+- `media upload` left the file unsent. TDLib answers `sendMessage` at once with a pending
+  message and uploads in the background, and the command returned on that answer: closing
+  TDLib then cut the upload off, so a PDF sat unsent. It now waits for Telegram to confirm
+  the message and exits 1 if it was refused or the upload stalled. `--timeout SECONDS`
+  (default 60) is how long the upload may go without advancing, not a cap on the whole
+  send, so a large file on a slow link is not given up on while it is still going up.
+- `files.wait_for_send` reported a send as done when any message left the same chat; it now
+  matches the message it was asked about. `media.upload()` waits by default (`wait=True`).
+
 ## 0.2.1 — 2026-10-19
 
 ### Fixed

@@ -628,7 +628,8 @@ def test_api_media_users_misc() -> None:
         assert media_api.send_sticker(client, "1", 9, allow_write=True)["id"] == 6
         with pytest.raises(WriteConfirmationRequired):
             media_api.upload(client, "1", "/tmp/x.jpg")
-        assert media_api.upload(client, "1", "/tmp/x.jpg", allow_write=True)["status"] == "pending"
+        sent = media_api.upload(client, "1", "/tmp/x.jpg", wait=False, allow_write=True)
+        assert sent["status"] == "pending"
         assert users.get_user(client, 2)["user_id"] == 2
         assert users.me(client)["user_id"] == 1
         assert users.full_info(client, 2)["@type"] == "userFullInfo"
