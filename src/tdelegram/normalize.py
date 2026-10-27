@@ -252,6 +252,27 @@ def _button_kind(tdlib_type: str) -> str:
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower() if name else "unknown"
 
 
+def sending_state_of(message: dict[str, Any]) -> dict[str, Any] | None:
+    """Where an outgoing message stands in being sent, or None once it is sent.
+
+    TDLib keeps a message it has not delivered in the chat like any other, with
+    this on it. A record without it reads a pending or failed message as sent.
+    """
+    state = message.get("sending_state") or {}
+    kind = state.get("@type")
+    if kind == "messageSendingStatePending":
+        return {"state": "pending"}
+    if kind == "messageSendingStateFailed":
+        error = state.get("error") or {}
+        return {
+            "state": "failed",
+            "error": {"code": error.get("code"), "message": error.get("message")},
+            "can_retry": state.get("can_retry"),
+            "retry_after": state.get("retry_after"),
+        }
+    return None
+
+
 def message_record(message: dict[str, Any], *, include_raw: bool = False) -> dict[str, Any]:
     content = message.get("content") or {}
     media = media_of(message)
@@ -272,6 +293,7 @@ def message_record(message: dict[str, Any], *, include_raw: bool = False) -> dic
         "file_name": (media or {}).get("file_name"),
         "is_channel_post": message.get("is_channel_post"),
         "is_outgoing": message.get("is_outgoing"),
+        "sending_state": sending_state_of(message),
         "reply_to": (message.get("reply_to") or {}).get("message_id"),
         "forwarded_from": forward_origin_of(message),
         "album_id": None if album == "0" else album,

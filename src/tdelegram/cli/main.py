@@ -5,6 +5,7 @@ from __future__ import annotations
 import dataclasses
 import json
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any
 
 import typer
@@ -363,7 +364,14 @@ def msg_send(
     schedule: str | None = typer.Option(
         None, "--schedule", help="Send later: 30m, 2h, 1d from now, or ISO-8601"
     ),
+    timeout: float = typer.Option(
+        30.0, "--timeout", min=0.1, help="Seconds to wait for Telegram to confirm the message"
+    ),
 ) -> None:
+    """Send a text message, and wait until Telegram has it.
+
+    Prints the message as sent. Exits 1 if it was refused or not confirmed in time.
+    """
     from tdelegram.api import messages
     from tdelegram.dates import parse_future
 
@@ -381,6 +389,7 @@ def msg_send(
                     topic_id=topic,
                     silent=silent,
                     schedule_date=schedule_date,
+                    timeout=timeout,
                     allow_write=w,
                 ),
             )
@@ -627,6 +636,40 @@ def media_download(file_id: int = typer.Argument(...)) -> None:
         _emit(normalize.file_record(media_api.download(client, file_id)))
 
 
+def _unsent_warning(earlier: list[dict[str, Any]], file_name: str) -> str:
+    """What to tell someone about to upload to a chat that holds undelivered sends.
+
+    Only a pending message is started again by TDLib; a failed one stays failed.
+    "This file may arrive twice" is said only when a pending message is that very
+    file: for any other leftover there is no evidence of a copy.
+    """
+
+    def of_state(kind: str) -> list[dict[str, Any]]:
+        return [m for m in earlier if m["sending_state"]["state"] == kind]
+
+    def listed(messages: list[dict[str, Any]]) -> str:
+        return f"{len(messages)} (ids {', '.join(str(m['message_id']) for m in messages)})"
+
+    lines = []
+    pending, failed = of_state("pending"), of_state("failed")
+    if pending:
+        lines.append(
+            f"This chat has {listed(pending)} earlier message(s) still pending. "
+            "TDLib sends such a message again itself when it runs."
+        )
+    if failed:
+        lines.append(
+            f"This chat has {listed(failed)} earlier message(s) that failed to send "
+            "and stay failed until they are deleted."
+        )
+    if any(m["file_name"] == file_name for m in pending):
+        lines.append(
+            f"One of the pending ones is a {file_name}: it may arrive as well as this one."
+        )
+    lines.append("`chat history` shows them under sending_state; `msg delete` removes one.")
+    return "\n".join(lines)
+
+
 @media_app.command("upload")
 @handle_errors
 def media_upload(
@@ -646,6 +689,9 @@ def media_upload(
     from tdelegram.api import media as media_api
 
     with session(_ctx()) as client:
+        earlier = media_api.unsent(client, chat)
+        if earlier:
+            warn(_unsent_warning(earlier, Path(path).name))
         result = perform(
             _ctx(),
             lambda w, d: media_api.upload(

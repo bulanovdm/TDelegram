@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.2.3 — 2026-10-27
+
+### Fixed
+- `msg send` had the flaw `media upload` had in 0.2.2: it returned on TDLib's first
+  answer, a message still pending, and closing TDLib could take the send with it. It now
+  waits for Telegram to confirm and prints the message as sent, under its final id rather
+  than the local pending one. It exits 1 if the message was refused or not confirmed within
+  `--timeout` (default 30). The MCP server's `send_message` is unchanged: its client stays
+  open. In the library, `messages.send()` waits by default; `wait=False` does not.
+- Two sends waiting on one client could take each other's updates, so one reported
+  "pending" for a message that had gone out. Each send now listens on a watch of its own
+  (`files.SendWatch`), opened before the message is sent.
+- `media upload` waited a fixed minute for TDLib's first answer to `sendMessage`, whatever
+  the caller had asked for. That answer comes at once, so it now follows the global
+  `--timeout`, the client's own. `media upload --timeout` stays the time without upload
+  progress; the two are kept apart because a write that times out may still have been made.
+
+### Added
+- Message records carry `sending_state`: `{"state": "pending"}`, or `{"state": "failed",
+  "error": ..., "can_retry": ...}` for an outgoing message TDLib has not delivered, and
+  `null` once it is. A send cut off before 0.2.2 sat in the chat looking like any other.
+- `media upload` warns, before its preview or its send, about earlier messages in the chat
+  that never went out, among the newest 50 it has locally. A pending one is sent again by
+  TDLib itself the next time it runs, if it is under a day old; if it is the same file, the
+  warning says it may arrive as well as this one. A failed one stays failed, and the warning
+  says that instead. The troubleshooting guide covers what TDLib does with each and how to
+  remove it.
+
 ## 0.2.2 — 2026-10-27
 
 ### Fixed

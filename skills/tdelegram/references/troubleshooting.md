@@ -126,6 +126,30 @@ Reading a very large history in one pass is the usual cause. Narrow with
 Message ids are unique **per chat**, so an id from one chat means nothing in
 another. Always carry `chat_id` alongside `message_id`.
 
+### A message stays unsent
+
+TDLib answers a send at once and delivers it in the background, so a client that
+closes before that finishes takes the send down with it. `msg send` and `media
+upload` therefore wait for Telegram to confirm, and exit 1 if it refuses or says
+nothing within `--timeout`. A send cut short by an older version, or by killing
+the process, is left in TDLib's log.
+
+`chat history` and `msg get` show it as `sending_state` on the outgoing message:
+`{"state": "pending"}`, or `{"state": "failed", "error": ..., "can_retry": ...}`.
+A delivered message has `null`. What TDLib does with one:
+
+- **Under a day old:** it sends it again the next time it runs, by itself, in
+  whatever command that is. A command that exits at once cuts it off again.
+- **Older than that**, outside Saved Messages: it fails with *Message is too old
+  to be re-sent automatically*, and stays as `failed`.
+
+A message that is already `failed` is not sent again by itself. So sending the
+same file or text again can leave two copies when the earlier one is still
+pending. `media upload` says what the chat holds before it sends, and names the
+file when a pending one is the same. To get rid of a leftover, remove it
+with `msg delete --chat <chat> --id <message_id>`; to let it go out, run
+something that stays up (`watch`) until `sending_state` is `null`.
+
 Forum groups split into topics. Reading a forum without `--topic` mixes every
 topic together; list them first with `tdelegram topic list <chat>`.
 

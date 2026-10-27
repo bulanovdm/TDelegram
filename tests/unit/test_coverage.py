@@ -545,14 +545,21 @@ def test_api_messages() -> None:
     try:
         assert messages.get(client, "1", 5)["message_id"] == 5
         assert len(messages.history(client, "1", maximum=5)) == 1
-        assert messages.send(client, "1", "hi", allow_write=True)["id"] == 6
+        # These check what is sent; waiting for the outcome has tests of its own.
+        assert messages.send(client, "1", "hi", wait=False, allow_write=True)["id"] == 6
         assert (
             messages.send(
-                client, "1", "**hi**", parse_mode="markdown", reply_to=5, allow_write=True
+                client,
+                "1",
+                "**hi**",
+                parse_mode="markdown",
+                reply_to=5,
+                wait=False,
+                allow_write=True,
             )["id"]
             == 6
         )
-        assert messages.reply(client, "1", 5, "yo", allow_write=True)["id"] == 6
+        assert messages.reply(client, "1", 5, "yo", wait=False, allow_write=True)["id"] == 6
         assert messages.edit(client, "1", 5, "new", allow_write=True)["id"] == 5
         assert (
             messages.edit(client, "1", 5, "**n**", parse_mode="markdown", allow_write=True)["id"]

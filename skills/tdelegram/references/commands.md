@@ -93,7 +93,7 @@ mention the account.
 | `msg get` | read | `--chat`, `--id` |
 | `msg link` | read | `--chat`, `--id` — a t.me permalink |
 | `msg search` | read | `--query`, `--limit`, `--since`, `--until` — global, across chats |
-| `msg send` | write | `--chat`, `--text`, `--parse-mode markdown\|html`, `--reply-to`, `--topic`, `--silent`, `--schedule 2h\|ISO-8601` |
+| `msg send` | write | `--chat`, `--text`, `--parse-mode markdown\|html`, `--reply-to`, `--topic`, `--silent`, `--schedule 2h\|ISO-8601`, `--timeout` — waits for Telegram to confirm and prints the message as sent; exit 1 if it was refused or not confirmed within `--timeout` seconds (default 30) |
 | `msg edit` | write | `--chat`, `--id`, `--text`, `--parse-mode` |
 | `msg forward` | write | `--from`, `--to`, `--id` (repeatable) |
 | `msg react` | write | `--chat`, `--id`, `--emoji` |
@@ -127,7 +127,7 @@ stripped and no formatting, silently. Use `html` if you want `<b>`/`<i>`.
 | Command | Gate | Notes |
 |---|---|---|
 | `media download <file_id>` | read | writes to local disk only, which is why it is a read |
-| `media upload` | write | `--chat`, `--path`, `--caption`, `--timeout` — sends a file as a document and waits for Telegram to confirm it; exit 1 if it was refused or the upload stalled for `--timeout` seconds (default 60) |
+| `media upload` | write | `--chat`, `--path`, `--caption`, `--timeout` — sends a file as a document and waits for Telegram to confirm it; exit 1 if it was refused or the upload stalled for `--timeout` seconds (default 60). Warns first if the chat holds an earlier send that never went out (see *A message stays unsent* in troubleshooting) |
 | `contact list` | read | one user record per contact |
 | `user info <user>` | read | a user id, `@username`, or `me` |
 

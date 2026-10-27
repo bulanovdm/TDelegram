@@ -7,9 +7,10 @@ from typing import Any
 
 from tdelegram.api.chats import resolve_id
 from tdelegram.client import TelegramClient
+from tdelegram.errors import TelegramError
 from tdelegram.files import download as _download
+from tdelegram.files import send_and_wait, unsent_in_chat
 from tdelegram.files import send_file as _send_file
-from tdelegram.files import uploaded_file_id, wait_for_send
 
 
 def download(client: TelegramClient, file_id: int, *, timeout: float = 300.0) -> dict[str, Any]:
@@ -49,17 +50,29 @@ def upload(
     stays open to see the outcome.
     """
     chat_id = resolve_id(client, chat_ref)
-    pending = _send_file(client, chat_id, path, caption=caption, allow_write=allow_write)
+
+    def send() -> dict[str, Any]:
+        return _send_file(client, chat_id, path, caption=caption, allow_write=allow_write)
+
     if not wait:
         return {
             "status": "pending",
-            "pending_message": pending,
+            "pending_message": send(),
             "note": "delivery not confirmed; the upload is abandoned if the client closes now",
         }
-    mid = (pending.get("message") or pending).get("id", 0)
-    return wait_for_send(
-        client, int(mid or 0), chat_id, timeout=timeout, file_id=uploaded_file_id(pending)
-    )
+    return send_and_wait(client, chat_id, send, timeout=timeout)
+
+
+def unsent(client: TelegramClient, chat_ref: str) -> list[dict[str, Any]]:
+    """Earlier sends to a chat that never went out, for a caller about to send again.
+
+    TDLib starts such a send again itself the next time it runs, so the same file
+    sent now may arrive twice. Empty when there is none, or the chat cannot be read.
+    """
+    try:
+        return unsent_in_chat(client, resolve_id(client, chat_ref))
+    except (TelegramError, ValueError):
+        return []
 
 
 def local_file(path: str | Path) -> dict[str, Any]:

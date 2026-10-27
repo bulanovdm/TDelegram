@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import queue
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from tdelegram.client import TelegramClient
+from tdelegram.errors import TelegramError, TelegramTimeoutError, from_td_error
+from tdelegram.normalize import media_of, sending_state_of
+from tdelegram.paging import history_pages, paginate
 
 
 def download(
@@ -46,10 +51,15 @@ def send_file(
     path: str | Path,
     *,
     caption: str = "",
-    timeout: float = 60.0,
+    timeout: float | None = None,
     allow_write: bool = False,
 ) -> dict[str, Any]:
     """Upload a file as a document. Returns the pending message (delivery unconfirmed).
+
+    `timeout` bounds TDLib's answer to sendMessage, which comes at once while the
+    upload carries on in the background; left out, it is the client's own. It is
+    not how long the upload may take, and a short one is a risk of its own: a
+    write that times out may have been made, and a retry would send it twice.
 
     This used to pass allow_write=True itself, so `media upload` sent the file
     to whatever chat it was pointed at without --yes: the one mutating command
@@ -80,6 +90,41 @@ def uploaded_file_id(pending: dict[str, Any]) -> int | None:
     return file_id if isinstance(file_id, int) else None
 
 
+class SendWatch:
+    """The updates that say how sends end, collected from before a send is made.
+
+    The client's own update queue has one reader at a time: two uploads waiting
+    on it take each other's updates, and one reports "pending" for a message
+    that was sent. A watch belongs to its caller alone. It is opened before
+    sendMessage so that an update arriving ahead of the answer is not missed.
+    """
+
+    KINDS = frozenset({"updateMessageSendSucceeded", "updateMessageSendFailed", "updateFile"})
+
+    def __init__(self, client: TelegramClient) -> None:
+        self._events: queue.Queue[dict[str, Any]] = queue.Queue()
+        self._subscription = client.on_update(self._offer)
+
+    def _offer(self, event: dict[str, Any]) -> None:
+        if event.get("@type") in self.KINDS:
+            self._events.put(event)
+
+    def next(self, timeout: float) -> dict[str, Any] | None:
+        try:
+            return self._events.get(timeout=timeout)
+        except queue.Empty:
+            return None
+
+    def close(self) -> None:
+        self._subscription.unsubscribe()
+
+    def __enter__(self) -> SendWatch:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.close()
+
+
 def _is_ours(event: dict[str, Any], pending_message_id: int, chat_id: int) -> bool:
     """Whether a send update is about the message we sent, not another one's.
 
@@ -100,17 +145,23 @@ def wait_for_send(
     *,
     timeout: float = 60.0,
     file_id: int | None = None,
+    watch: SendWatch | None = None,
 ) -> dict[str, Any]:
     """Block until updateMessageSendSucceeded/Failed for a pending send.
 
     `timeout` is how long to go without news, not a cap on the whole send: a
     large file on a slow link is still being uploaded, and an `updateFile` for
     `file_id` showing more of it gone up starts the clock again.
+
+    Without a `watch` this reads the client's shared update queue, which only
+    one waiter at a time can do. Callers that may overlap open a `SendWatch`
+    before sending and pass it in.
     """
+    next_event = watch.next if watch is not None else client.next_update
     deadline = time.monotonic() + timeout
     uploaded = 0
     while (remaining := deadline - time.monotonic()) > 0:
-        event = client.next_update(timeout=min(1.0, remaining))
+        event = next_event(min(1.0, remaining))
         if event is None:
             continue
         etype = event.get("@type")
@@ -125,3 +176,71 @@ def wait_for_send(
                 uploaded = so_far
                 deadline = time.monotonic() + timeout
     return {"status": "pending", "message_id": pending_message_id}
+
+
+def send_and_wait(
+    client: TelegramClient,
+    chat_id: int,
+    send: Callable[[], dict[str, Any]],
+    *,
+    timeout: float,
+) -> dict[str, Any]:
+    """Make a send and wait for how it ends: `status` sent, failed or pending.
+
+    TDLib answers a send at once with a pending message and delivers it in the
+    background, so a caller that returns on the answer, and closes the client,
+    abandons the send. `send` is the sendMessage call; the watch is open before
+    it is made. For `timeout`, see wait_for_send.
+    """
+    with SendWatch(client) as watch:
+        pending = send()
+        message = pending.get("message") or pending
+        return wait_for_send(
+            client,
+            int(message.get("id") or 0),
+            chat_id,
+            timeout=timeout,
+            file_id=uploaded_file_id(pending),
+            watch=watch,
+        )
+
+
+def confirmed_message(outcome: dict[str, Any], *, timeout: float) -> dict[str, Any]:
+    """The sent message, or the error that says why there is none."""
+    if outcome["status"] == "sent":
+        message: dict[str, Any] = outcome["message"]
+        return message
+    if outcome["status"] == "failed":
+        raise from_td_error(outcome.get("error") or {}, "sendMessage")
+    raise TelegramTimeoutError(
+        f"Telegram did not confirm the message within {timeout:g}s. It is still pending, "
+        "and is abandoned if the client closes now. Wait longer with a larger timeout."
+    )
+
+
+def unsent_in_chat(client: TelegramClient, chat_id: int, *, scan: int = 50) -> list[dict[str, Any]]:
+    """Outgoing messages among a chat's newest `scan` that were never delivered.
+
+    Pending ones sit in TDLib's log, and it starts them again the next time it
+    runs if they are under a day old, so a client that exited before an upload
+    finished leaves one behind, and sending the file again makes two. Failed
+    ones are not started again by TDLib. Reads the local history only, a page
+    at a time: TDLib may answer with fewer messages than asked for while more
+    are there. A courtesy check, so a failure to read it is no news.
+    """
+    stuck: list[dict[str, Any]] = []
+    pages = history_pages(client, chat_id, limit=scan, only_local=True)
+    try:
+        for message in paginate(pages, maximum=scan):
+            state = sending_state_of(message)
+            if message.get("is_outgoing") and state is not None:
+                stuck.append(
+                    {
+                        "message_id": message.get("id"),
+                        "file_name": (media_of(message) or {}).get("file_name"),
+                        "sending_state": state,
+                    }
+                )
+    except TelegramError:
+        pass
+    return stuck
