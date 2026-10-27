@@ -127,7 +127,7 @@ stripped and no formatting, silently. Use `html` if you want `<b>`/`<i>`.
 | Command | Gate | Notes |
 |---|---|---|
 | `media download <file_id>` | read | writes to local disk only, which is why it is a read |
-| `media upload` | write | `--chat`, `--path`, `--caption` — sends a file as a document |
+| `media upload` | write | `--chat`, `--path`, `--caption`, `--timeout` — sends a file as a document and waits for Telegram to confirm it; exit 1 if it was refused or the upload stalled for `--timeout` seconds (default 60) |
 | `contact list` | read | one user record per contact |
 | `user info <user>` | read | a user id, `@username`, or `me` |
 

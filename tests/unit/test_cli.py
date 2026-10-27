@@ -1986,3 +1986,73 @@ def test_a_schedule_of_now_is_refused(cli: FakeTransport) -> None:
     assert result.exit_code == 1
     assert "sendMessage" not in _sent(cli)
     assert "future" in _lines(result)[0]["error"]["message"]
+
+
+UPLOAD = ["--yes", "media", "upload", "--chat", "somechat", "--path", "/tmp/cv.pdf"]
+
+
+def _scripted_upload(cli: FakeTransport, *later: dict[str, Any]) -> None:
+    """sendMessage answers with the pending PDF; TDLib reports `later` after it, as it does."""
+    pending = {
+        "@type": "message",
+        "id": 4242,
+        "chat_id": 5,
+        "sending_state": {"@type": "messageSendingStatePending"},
+        "content": {
+            "@type": "messageDocument",
+            "document": {"@type": "document", "document": {"@type": "file", "id": 77}},
+        },
+    }
+
+    def _answer(request: dict[str, Any]) -> dict[str, Any]:
+        for update in later:
+            cli.add_update(update)
+        return pending
+
+    cli.add_simple_response("searchPublicChat", {"@type": "chat", "id": 5})
+    cli.add_response(lambda r: r.get("@type") == "sendMessage", _answer)
+
+
+def test_upload_waits_until_the_message_is_sent(cli: FakeTransport) -> None:
+    """Regression: the command returned on the pending message, and closing TDLib
+    under the upload left the PDF unsent."""
+    sent = {
+        "@type": "updateMessageSendSucceeded",
+        "old_message_id": 4242,
+        "message": {"@type": "message", "id": 99, "chat_id": 5},
+    }
+    _scripted_upload(cli, sent)
+    result = runner.invoke(cli_main.app, UPLOAD)
+    assert result.exit_code == 0
+    assert "sendMessage" in _sent(cli)
+    assert _lines(result)[0]["status"] == "sent"
+
+
+def test_upload_exits_1_when_telegram_refuses_the_file(cli: FakeTransport) -> None:
+    refused = {
+        "@type": "updateMessageSendFailed",
+        "old_message_id": 4242,
+        "message": {"@type": "message", "id": 4242, "chat_id": 5},
+        "error": {"@type": "error", "code": 400, "message": "FILE_PARTS_INVALID"},
+    }
+    _scripted_upload(cli, refused)
+    result = runner.invoke(cli_main.app, UPLOAD)
+    assert result.exit_code == 1
+    assert _lines(result)[0]["status"] == "failed"
+    assert "FILE_PARTS_INVALID" in result.stderr
+
+
+def test_upload_exits_1_when_the_outcome_never_comes(cli: FakeTransport) -> None:
+    _scripted_upload(cli)
+    result = runner.invoke(cli_main.app, [*UPLOAD, "--timeout", "0.3"])
+    assert result.exit_code == 1
+    assert _lines(result)[0]["status"] == "pending"
+    assert "Not confirmed" in result.stderr
+
+
+def test_upload_needs_a_timeout_that_can_wait(cli: FakeTransport) -> None:
+    """A zero window would give up before looking, which is the old bug again."""
+    _scripted_upload(cli)
+    result = runner.invoke(cli_main.app, [*UPLOAD, "--timeout", "0"])
+    assert result.exit_code == 2
+    assert "sendMessage" not in _sent(cli)

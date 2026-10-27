@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tdelegram"
-version = "0.2.1"
+version = "0.2.2"
 description = "A full-featured Telegram client library + CLI backed by TDLib"
 readme = "README.md"
 license = { text = "Apache-2.0" }

@@ -9,7 +9,7 @@ from tdelegram.api.chats import resolve_id
 from tdelegram.client import TelegramClient
 from tdelegram.files import download as _download
 from tdelegram.files import send_file as _send_file
-from tdelegram.files import wait_for_send
+from tdelegram.files import uploaded_file_id, wait_for_send
 
 
 def download(client: TelegramClient, file_id: int, *, timeout: float = 300.0) -> dict[str, Any]:
@@ -35,19 +35,31 @@ def upload(
     path: str | Path,
     *,
     caption: str = "",
-    wait: bool = False,
+    wait: bool = True,
+    timeout: float = 60.0,
     allow_write: bool = False,
 ) -> dict[str, Any]:
+    """Send a file as a document.
+
+    TDLib answers `sendMessage` at once with a pending message and uploads in
+    the background, so a caller that returns and closes the client straight
+    away abandons the upload and the message never leaves. `wait` holds until
+    TDLib reports the message sent or failed; `timeout` is how long that may
+    go without the upload advancing. `wait=False` is for a caller whose client
+    stays open to see the outcome.
+    """
     chat_id = resolve_id(client, chat_ref)
     pending = _send_file(client, chat_id, path, caption=caption, allow_write=allow_write)
     if not wait:
         return {
             "status": "pending",
             "pending_message": pending,
-            "note": "delivery not confirmed; pass wait=True",
+            "note": "delivery not confirmed; the upload is abandoned if the client closes now",
         }
     mid = (pending.get("message") or pending).get("id", 0)
-    return wait_for_send(client, int(mid or 0), chat_id)
+    return wait_for_send(
+        client, int(mid or 0), chat_id, timeout=timeout, file_id=uploaded_file_id(pending)
+    )
 
 
 def local_file(path: str | Path) -> dict[str, Any]:
