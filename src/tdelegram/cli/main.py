@@ -5,6 +5,7 @@ from __future__ import annotations
 import dataclasses
 import json
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any
 
 import typer
@@ -635,6 +636,40 @@ def media_download(file_id: int = typer.Argument(...)) -> None:
         _emit(normalize.file_record(media_api.download(client, file_id)))
 
 
+def _unsent_warning(earlier: list[dict[str, Any]], file_name: str) -> str:
+    """What to tell someone about to upload to a chat that holds undelivered sends.
+
+    Only a pending message is started again by TDLib; a failed one stays failed.
+    "This file may arrive twice" is said only when a pending message is that very
+    file: for any other leftover there is no evidence of a copy.
+    """
+
+    def of_state(kind: str) -> list[dict[str, Any]]:
+        return [m for m in earlier if m["sending_state"]["state"] == kind]
+
+    def listed(messages: list[dict[str, Any]]) -> str:
+        return f"{len(messages)} (ids {', '.join(str(m['message_id']) for m in messages)})"
+
+    lines = []
+    pending, failed = of_state("pending"), of_state("failed")
+    if pending:
+        lines.append(
+            f"This chat has {listed(pending)} earlier message(s) still pending. "
+            "TDLib sends such a message again itself when it runs."
+        )
+    if failed:
+        lines.append(
+            f"This chat has {listed(failed)} earlier message(s) that failed to send "
+            "and stay failed until they are deleted."
+        )
+    if any(m["file_name"] == file_name for m in pending):
+        lines.append(
+            f"One of the pending ones is a {file_name}: it may arrive as well as this one."
+        )
+    lines.append("`chat history` shows them under sending_state; `msg delete` removes one.")
+    return "\n".join(lines)
+
+
 @media_app.command("upload")
 @handle_errors
 def media_upload(
@@ -656,13 +691,7 @@ def media_upload(
     with session(_ctx()) as client:
         earlier = media_api.unsent(client, chat)
         if earlier:
-            ids = ", ".join(str(m["message_id"]) for m in earlier)
-            warn(
-                f"This chat has {len(earlier)} earlier message(s) that were never delivered "
-                f"(ids {ids}). TDLib sends them again itself when it runs, so this file may "
-                "arrive twice. `chat history` shows them under sending_state; "
-                "`msg delete` removes one."
-            )
+            warn(_unsent_warning(earlier, Path(path).name))
         result = perform(
             _ctx(),
             lambda w, d: media_api.upload(

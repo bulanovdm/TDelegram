@@ -143,8 +143,10 @@ A delivered message has `null`. What TDLib does with one:
 - **Older than that**, outside Saved Messages: it fails with *Message is too old
   to be re-sent automatically*, and stays as `failed`.
 
-So sending the same file or text again can leave two copies. `media upload` says
-so before it sends when the chat holds one. To get rid of a leftover, remove it
+A message that is already `failed` is not sent again by itself. So sending the
+same file or text again can leave two copies when the earlier one is still
+pending. `media upload` says what the chat holds before it sends, and names the
+file when a pending one is the same. To get rid of a leftover, remove it
 with `msg delete --chat <chat> --id <message_id>`; to let it go out, run
 something that stays up (`watch`) until `sending_state` is `null`.
 

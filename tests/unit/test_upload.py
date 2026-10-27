@@ -337,3 +337,45 @@ def test_a_chat_that_cannot_be_read_is_no_news(
     assert media_api.unsent(client, "1") == []
     transport.add_simple_response("searchPublicChat", {"@type": "chat"})
     assert media_api.unsent(client, "nobody") == []
+
+
+def test_unsent_reads_on_past_a_short_first_page(
+    client: TelegramClient, transport: FakeTransport
+) -> None:
+    """TDLib may answer with fewer messages than asked for while more are there, and
+    two stuck uploads are exactly what a user who tried twice has."""
+    newest, older = never_delivered()[0], never_delivered()[1]
+    pages = {0: [newest], PENDING_ID: [newest, older], 4000: [older]}
+
+    def _page(request: dict[str, Any]) -> dict[str, Any]:
+        return {"@type": "messages", "messages": pages[request["from_message_id"]]}
+
+    transport.add_simple_response("getChat", {"@type": "chat", "id": CHAT_ID})
+    transport.add_response(lambda r: r.get("@type") == "getChatHistory", _page)
+    found = media_api.unsent(client, "1")
+    assert [m["message_id"] for m in found] == [PENDING_ID, 4000]
+    asked = [r for _, r in transport.sent if r.get("@type") == "getChatHistory"]
+    assert [r["from_message_id"] for r in asked] == [0, PENDING_ID, 4000]
+    assert all(r["only_local"] is True for r in asked)
+
+
+# With offset 0 a page starts at its cursor message, which the page before already
+# gave: ten short pages' worth is one new message less each time, so fifty takes six.
+@pytest.mark.parametrize(
+    "page_size,requests", [(100, 1), (10, 6)], ids=["full pages", "short pages"]
+)
+def test_unsent_looks_at_no_more_than_the_newest_fifty(
+    client: TelegramClient, transport: FakeTransport, page_size: int, requests: int
+) -> None:
+    delivered = [{"@type": "message", "id": n, "is_outgoing": True} for n in range(500, 0, -1)]
+
+    def _page(request: dict[str, Any]) -> dict[str, Any]:
+        cursor = request["from_message_id"]
+        older = [m for m in delivered if cursor == 0 or m["id"] <= cursor]
+        return {"@type": "messages", "messages": older[: min(request["limit"], page_size)]}
+
+    transport.add_simple_response("getChat", {"@type": "chat", "id": CHAT_ID})
+    transport.add_response(lambda r: r.get("@type") == "getChatHistory", _page)
+    assert media_api.unsent(client, "1") == []
+    asked = [r for _, r in transport.sent if r.get("@type") == "getChatHistory"]
+    assert len(asked) == requests, "a scan of fifty messages, not the whole history"

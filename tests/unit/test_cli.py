@@ -2121,24 +2121,29 @@ def test_msg_send_without_yes_still_only_previews(cli: FakeTransport) -> None:
     assert "sendMessage" not in _sent(cli)
 
 
-def _earlier_unsent(cli: FakeTransport) -> None:
-    """Chat 5 holds a PDF that an earlier run never delivered."""
-    stuck = {
+def _earlier_unsent(
+    cli: FakeTransport, *, state: str = "pending", file_name: str | None = "cv.pdf"
+) -> None:
+    """Chat 5 holds a message that an earlier run never delivered."""
+    sending_state: dict[str, Any] = {"@type": f"messageSendingState{state.title()}"}
+    if state == "failed":
+        sending_state |= {"error": {"code": 400, "message": "too old"}, "can_retry": True}
+    stuck: dict[str, Any] = {
         "@type": "message",
         "id": 4000,
         "is_outgoing": True,
-        "sending_state": {"@type": "messageSendingStatePending"},
-        "content": {
-            "@type": "messageDocument",
-            "document": {"@type": "document", "file_name": "cv.pdf", "document": {"id": 70}},
-        },
+        "sending_state": sending_state,
+        "content": {"@type": "messageText", "text": {"text": "hi", "entities": []}},
     }
+    if file_name is not None:
+        stuck["content"] = {
+            "@type": "messageDocument",
+            "document": {"@type": "document", "file_name": file_name, "document": {"id": 70}},
+        }
     cli.add_simple_response("getChatHistory", {"@type": "messages", "messages": [stuck]})
 
 
-def test_upload_warns_about_an_earlier_send_that_never_went_out(cli: FakeTransport) -> None:
-    """TDLib sends it again by itself, so the same file now may arrive twice."""
-    _earlier_unsent(cli)
+def _upload_confirmed(cli: FakeTransport) -> None:
     _scripted_upload(
         cli,
         {
@@ -2147,11 +2152,50 @@ def test_upload_warns_about_an_earlier_send_that_never_went_out(cli: FakeTranspo
             "message": {"@type": "message", "id": 99, "chat_id": 5},
         },
     )
+
+
+def test_upload_warns_about_an_earlier_copy_of_the_same_file(cli: FakeTransport) -> None:
+    """TDLib sends a pending message again by itself, so this file may arrive twice."""
+    _earlier_unsent(cli)
+    _upload_confirmed(cli)
     result = runner.invoke(cli_main.app, UPLOAD)
     assert result.exit_code == 0, "a warning, not a refusal"
-    assert "never delivered" in result.stderr and "4000" in result.stderr
+    assert "still pending" in result.stderr and "4000" in result.stderr
+    assert "TDLib sends such a message again itself" in result.stderr
+    assert "cv.pdf: it may arrive as well as this one" in result.stderr
     assert _lines(result)[0]["status"] == "sent"
-    assert "never delivered" not in result.stdout, "stdout stays data"
+    assert "pending" not in result.stdout.replace('"status"', ""), "stdout stays data"
+
+
+@pytest.mark.parametrize("file_name", ["other.pdf", None], ids=["another file", "plain text"])
+def test_the_warning_does_not_call_another_message_a_copy(
+    cli: FakeTransport, file_name: str | None
+) -> None:
+    """Regression: any leftover was said to make this file arrive twice."""
+    _earlier_unsent(cli, file_name=file_name)
+    _upload_confirmed(cli)
+    result = runner.invoke(cli_main.app, UPLOAD)
+    assert result.exit_code == 0
+    assert "still pending" in result.stderr
+    assert "may arrive as well" not in result.stderr
+
+
+def test_a_failed_leftover_is_not_said_to_be_sent_again(cli: FakeTransport) -> None:
+    """Regression: only a pending message is started again; can_retry does not do it."""
+    _earlier_unsent(cli, state="failed")
+    _upload_confirmed(cli)
+    result = runner.invoke(cli_main.app, UPLOAD)
+    assert result.exit_code == 0
+    assert "failed to send" in result.stderr and "4000" in result.stderr
+    assert "sends such a message again" not in result.stderr
+    assert "may arrive as well" not in result.stderr
+
+
+def test_no_warning_when_nothing_is_stuck(cli: FakeTransport) -> None:
+    _upload_confirmed(cli)
+    result = runner.invoke(cli_main.app, UPLOAD)
+    assert result.exit_code == 0
+    assert "sending_state" not in result.stderr
 
 
 def test_the_warning_comes_before_the_preview(cli: FakeTransport) -> None:
@@ -2160,5 +2204,5 @@ def test_the_warning_comes_before_the_preview(cli: FakeTransport) -> None:
     _scripted_upload(cli)
     result = runner.invoke(cli_main.app, UPLOAD[1:])
     assert result.exit_code == 2
-    assert "never delivered" in result.stderr
+    assert "still pending" in result.stderr
     assert "sendMessage" not in _sent(cli)

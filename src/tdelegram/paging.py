@@ -63,6 +63,7 @@ def history_pages(
     limit: int = 100,
     topic_id: int | None = None,
     topic_kind: str = "forum",
+    only_local: bool = False,
 ) -> PageFn:
     from tdelegram.api.topics import topic_object
 
@@ -74,7 +75,7 @@ def history_pages(
                 "from_message_id": cursor,
                 "offset": 0,
                 "limit": limit,
-                "only_local": False,
+                "only_local": only_local,
             },
         )
         messages = result.get("messages", [])

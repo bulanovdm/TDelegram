@@ -11,6 +11,7 @@ from typing import Any
 from tdelegram.client import TelegramClient
 from tdelegram.errors import TelegramError, TelegramTimeoutError, from_td_error
 from tdelegram.normalize import media_of, sending_state_of
+from tdelegram.paging import history_pages, paginate
 
 
 def download(
@@ -217,37 +218,29 @@ def confirmed_message(outcome: dict[str, Any], *, timeout: float) -> dict[str, A
     )
 
 
-def unsent_in_chat(client: TelegramClient, chat_id: int) -> list[dict[str, Any]]:
-    """Outgoing messages in a chat that were never delivered, newest first.
+def unsent_in_chat(client: TelegramClient, chat_id: int, *, scan: int = 50) -> list[dict[str, Any]]:
+    """Outgoing messages among a chat's newest `scan` that were never delivered.
 
-    TDLib keeps a send in its log until it is delivered and starts it again the
-    next time it runs, if it is under a day old. A client that exited before an
-    upload finished therefore leaves one behind, and sending the file again
-    makes two. Reads the local history only. A courtesy check, so a failure to
-    read it is no news.
+    Pending ones sit in TDLib's log, and it starts them again the next time it
+    runs if they are under a day old, so a client that exited before an upload
+    finished leaves one behind, and sending the file again makes two. Failed
+    ones are not started again by TDLib. Reads the local history only, a page
+    at a time: TDLib may answer with fewer messages than asked for while more
+    are there. A courtesy check, so a failure to read it is no news.
     """
+    stuck: list[dict[str, Any]] = []
+    pages = history_pages(client, chat_id, limit=scan, only_local=True)
     try:
-        history = client.call(
-            "getChatHistory",
-            {
-                "chat_id": chat_id,
-                "from_message_id": 0,
-                "offset": 0,
-                "limit": 50,
-                "only_local": True,
-            },
-        )
+        for message in paginate(pages, maximum=scan):
+            state = sending_state_of(message)
+            if message.get("is_outgoing") and state is not None:
+                stuck.append(
+                    {
+                        "message_id": message.get("id"),
+                        "file_name": (media_of(message) or {}).get("file_name"),
+                        "sending_state": state,
+                    }
+                )
     except TelegramError:
-        return []
-    stuck = []
-    for message in history.get("messages") or []:
-        state = sending_state_of(message)
-        if message.get("is_outgoing") and state is not None:
-            stuck.append(
-                {
-                    "message_id": message.get("id"),
-                    "file_name": (media_of(message) or {}).get("file_name"),
-                    "sending_state": state,
-                }
-            )
+        pass
     return stuck

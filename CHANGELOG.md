@@ -21,10 +21,12 @@
 - Message records carry `sending_state`: `{"state": "pending"}`, or `{"state": "failed",
   "error": ..., "can_retry": ...}` for an outgoing message TDLib has not delivered, and
   `null` once it is. A send cut off before 0.2.2 sat in the chat looking like any other.
-- `media upload` warns, before its preview or its send, when the chat holds an earlier
-  message that never went out. TDLib sends such a message again by itself the next time it
-  runs, if it is under a day old, so the same file sent now may arrive twice. The
-  troubleshooting guide covers what TDLib does with one and how to remove it.
+- `media upload` warns, before its preview or its send, about earlier messages in the chat
+  that never went out, among the newest 50 it has locally. A pending one is sent again by
+  TDLib itself the next time it runs, if it is under a day old; if it is the same file, the
+  warning says it may arrive as well as this one. A failed one stays failed, and the warning
+  says that instead. The troubleshooting guide covers what TDLib does with each and how to
+  remove it.
 
 ## 0.2.2 — 2026-10-27
 
